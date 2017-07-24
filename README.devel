@@ -1,0 +1,20 @@
+CMIvibrot development notes
+===========================
+
+Do not use any code from third parties that restricts our rights of
+distribution.
+
+We should also very clearly separate this code form TDasyrot and maintain the
+two as separate projects.
+
+
+
+Local Variables:
+coding: utf-8
+mode: text
+mode: auto-fill
+mode: flyspell
+fill-column: 80
+ispell-dictionary: "american"
+truncate-lines: t
+End:
