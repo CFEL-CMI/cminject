@@ -1,20 +1,4 @@
-CMIvibrot development notes
-===========================
-
-Do not use any code from third parties that restricts our rights of
-distribution.
-
-We should also very clearly separate this code form TDasyrot and maintain the
-two as separate projects.
-
-
-
-Local Variables:
-coding: utf-8
-mode: text
-mode: auto-fill
-mode: flyspell
-fill-column: 80
-ispell-dictionary: "american"
-truncate-lines: t
-End:
+Some simple rules for coding on CMIstark:
+Please
+- keep the code consistent across the whole package!
+- consistently use two empty lines between functions and three empty lines above a class

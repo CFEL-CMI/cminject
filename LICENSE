@@ -1,0 +1,17 @@
+richmol is provided as is. 
+It is licensed under the GPL v3 with the additional requirements, that
+
+a) its use for scientific work must be acknowledged by the appropriate reference
+   in any resulting work (i.e., scientific publication). The correct reference
+   is:
+
+b) any corrections and enhancements must be contributed back to the development
+   of the package within an appropriate time, i.e., no later than 3 month after the
+   publication of its first use.
+
+
+
+Local Variables:
+coding: utf-8
+fill-column: 80
+End:

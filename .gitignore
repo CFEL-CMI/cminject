@@ -1,0 +1,10 @@
+*~
+*.bak
+*.egg
+*.egg-info
+*.molecule
+*.pyc
+.DS_Store
+build/
+dist/
+doc/.build
