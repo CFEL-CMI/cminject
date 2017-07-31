@@ -1,14 +1,13 @@
-CMI richmol
-===========
+CMI injector
+============
 
-This program can calculate, view, and analyze the energy levels of adiabatic
-Stark energy curves of linear, symmetric top and asymmetric top molecules.
+This program can ...
 
 The program package is developed and maintained by the Controlled Molecule
 Imaging group (CMI) at the Center for Free-Electron Laser Science (CFEL),
 Hamburg, Germany.
 
-CMI richmol uses Sphinx documentation; please see the online documentation at
+CMI injector uses Sphinx documentation; please see the online documentation at
 <to be added> or create your local documentation in ./doc/.build/ by running
     python setup.py build_sphinx
 
