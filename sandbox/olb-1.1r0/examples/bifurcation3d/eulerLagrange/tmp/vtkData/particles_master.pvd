@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<VTKFile type="Collection" version="0.1" byte_order="LittleEndian">
+<Collection>
+<DataSet timestep="0" group="" part=" 0" file="data/particles_iT0000000iC00000.vtu"/>
+<DataSet timestep="140" group="" part=" 0" file="data/particles_iT0000140iC00000.vtu"/>
+<DataSet timestep="284" group="" part=" 0" file="data/particles_iT0000284iC00000.vtu"/>
+<DataSet timestep="428" group="" part=" 0" file="data/particles_iT0000428iC00000.vtu"/>
+<DataSet timestep="572" group="" part=" 0" file="data/particles_iT0000572iC00000.vtu"/>
+<DataSet timestep="716" group="" part=" 0" file="data/particles_iT0000716iC00000.vtu"/>
+<DataSet timestep="860" group="" part=" 0" file="data/particles_iT0000860iC00000.vtu"/>
+<DataSet timestep="1004" group="" part=" 0" file="data/particles_iT0001004iC00000.vtu"/>
+<DataSet timestep="1148" group="" part=" 0" file="data/particles_iT0001148iC00000.vtu"/>
+<DataSet timestep="1292" group="" part=" 0" file="data/particles_iT0001292iC00000.vtu"/>
+<DataSet timestep="1436" group="" part=" 0" file="data/particles_iT0001436iC00000.vtu"/>
+<DataSet timestep="1580" group="" part=" 0" file="data/particles_iT0001580iC00000.vtu"/>
+<DataSet timestep="1724" group="" part=" 0" file="data/particles_iT0001724iC00000.vtu"/>
+<DataSet timestep="1868" group="" part=" 0" file="data/particles_iT0001868iC00000.vtu"/>
+<DataSet timestep="2012" group="" part=" 0" file="data/particles_iT0002012iC00000.vtu"/>
+<DataSet timestep="2156" group="" part=" 0" file="data/particles_iT0002156iC00000.vtu"/>
+<DataSet timestep="2300" group="" part=" 0" file="data/particles_iT0002300iC00000.vtu"/>
+<DataSet timestep="2444" group="" part=" 0" file="data/particles_iT0002444iC00000.vtu"/>
+<DataSet timestep="2588" group="" part=" 0" file="data/particles_iT0002588iC00000.vtu"/>
+<DataSet timestep="2732" group="" part=" 0" file="data/particles_iT0002732iC00000.vtu"/>
+<DataSet timestep="2876" group="" part=" 0" file="data/particles_iT0002876iC00000.vtu"/>
+<DataSet timestep="3020" group="" part=" 0" file="data/particles_iT0003020iC00000.vtu"/>
+<DataSet timestep="3164" group="" part=" 0" file="data/particles_iT0003164iC00000.vtu"/>
+<DataSet timestep="3308" group="" part=" 0" file="data/particles_iT0003308iC00000.vtu"/>
+<DataSet timestep="3452" group="" part=" 0" file="data/particles_iT0003452iC00000.vtu"/>
+<DataSet timestep="3596" group="" part=" 0" file="data/particles_iT0003596iC00000.vtu"/>
+<DataSet timestep="3740" group="" part=" 0" file="data/particles_iT0003740iC00000.vtu"/>
+<DataSet timestep="3884" group="" part=" 0" file="data/particles_iT0003884iC00000.vtu"/>
+<DataSet timestep="4028" group="" part=" 0" file="data/particles_iT0004028iC00000.vtu"/>
+<DataSet timestep="4172" group="" part=" 0" file="data/particles_iT0004172iC00000.vtu"/>
+<DataSet timestep="4316" group="" part=" 0" file="data/particles_iT0004316iC00000.vtu"/>
+<DataSet timestep="4460" group="" part=" 0" file="data/particles_iT0004460iC00000.vtu"/>
+<DataSet timestep="4604" group="" part=" 0" file="data/particles_iT0004604iC00000.vtu"/>
+<DataSet timestep="4748" group="" part=" 0" file="data/particles_iT0004748iC00000.vtu"/>
+<DataSet timestep="4892" group="" part=" 0" file="data/particles_iT0004892iC00000.vtu"/>
+<DataSet timestep="5036" group="" part=" 0" file="data/particles_iT0005036iC00000.vtu"/>
+<DataSet timestep="5180" group="" part=" 0" file="data/particles_iT0005180iC00000.vtu"/>
+<DataSet timestep="5324" group="" part=" 0" file="data/particles_iT0005324iC00000.vtu"/>
+<DataSet timestep="5468" group="" part=" 0" file="data/particles_iT0005468iC00000.vtu"/>
+<DataSet timestep="5612" group="" part=" 0" file="data/particles_iT0005612iC00000.vtu"/>
+<DataSet timestep="5756" group="" part=" 0" file="data/particles_iT0005756iC00000.vtu"/>
+<DataSet timestep="5900" group="" part=" 0" file="data/particles_iT0005900iC00000.vtu"/>
+<DataSet timestep="6044" group="" part=" 0" file="data/particles_iT0006044iC00000.vtu"/>
+<DataSet timestep="6188" group="" part=" 0" file="data/particles_iT0006188iC00000.vtu"/>
+</Collection>
+</VTKFile>

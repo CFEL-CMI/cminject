@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<VTKFile type="ImageData" version="0.1" byte_order="LittleEndian" compressor="vtkZLibDataCompressor">
+<ImageData WholeExtent="-1 2 -1 2 -1 3" Origin="0.13 -0.01 -0.01" Spacing="0.01 0.01 0.01">
+<Piece Extent="-1 2 -1 2 -1 3">
+<PointData>
+<DataArray type="Float32" Name="physVelocity" format="binary" encoding="base64" NumberOfComponents="3">
+AQAAAMADAADAAwAArgAAAA==eJxjYBgF+IDchv872E27tzMWPN5u2Vq9w0xJbvsszZjtubX6Oy7bX9zGW1ewjY/hx3b76snbntnYbaO1e/wefNvhMPHm9onbRc3ES0p2sEgmbd9ybb3pY021HavZm7YtzQkz/Tb5xfacTTbbvswSMFVuObbj1m3rHWblk7bxpzPtfJEav+NSbeF2o55tO6Yas+/I8j2yTdi4Zsduj73bc05MpLn7RwF1AQCADUi4
+</DataArray>
+<DataArray type="Float32" Name="physPressure" format="binary" encoding="base64">
+AQAAAEABAABAAQAARQAAAA==eJxjYKAtaF+ZvtvhF+fu9xbHdjHc6tlFSP181ZLdRlMFdm+RPLtrZcPEXVYnlHfve8a1W7Lh4K5d3R0E9dMbAABpDxpJ
+</DataArray>
+</PointData>
+</Piece>
+</ImageData>
+</VTKFile>

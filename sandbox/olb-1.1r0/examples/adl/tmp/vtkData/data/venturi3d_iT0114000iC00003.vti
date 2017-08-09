@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<VTKFile type="ImageData" version="0.1" byte_order="LittleEndian" compressor="vtkZLibDataCompressor">
+<ImageData WholeExtent="-1 3 -1 1 -1 1" Origin="0.04 0.01 0" Spacing="0.01 0.01 0.01">
+<Piece Extent="-1 3 -1 1 -1 1">
+<PointData>
+<DataArray type="Float32" Name="physVelocity" format="binary" encoding="base64" NumberOfComponents="3">
+AQAAABwCAAAcAgAABAEAAA==eJxLrM/dvVKba5fTrj87+V8r755yYv9OZ/Gand/ePN1lM71tZ+JRg52KWxfsYn5ns9P/988d7wwSdt2YzbLzwpH1OxgGCCxQf7c7wMVwd32M7q4d6st3e138tuvnlwM7//ll7q77uGaXcVzbTmVp5d2r2op2iU+z3fnt+uNdi9y0dk0NZt15/amu9bkXsrv38SyQZ5/+xeqZ5L1dIDNfFK2x2j19DpjdGFNi1fwkFszWWqtnlTdXbhelbo40LDexLt1oeu3RPdPdN/VMVAuEjU74pBgnZats+nvN1fjqbd9NB7NfbQzIWmQ4YzqD0YvbHkYvTi/fVHnabxOldpMLAJ7OeHQ=
+</DataArray>
+<DataArray type="Float32" Name="physPressure" format="binary" encoding="base64">
+AQAAALQAAAC0AAAAZAAAAA==eJz7qsWwT1Zzy94yl9q9z8SN9upb/d7DQCRYyvlrr7v6+r2bt5XuPX1aZ2/Zqc97tt/U3PPs1bvdS0tX7P60PW/3zaVau7Hpjd8kv7fjw6M9Jbnz9+wyTtjDaiBHtL0AirMt1A==
+</DataArray>
+</PointData>
+</Piece>
+</ImageData>
+</VTKFile>

@@ -1,0 +1,40 @@
+LBconverter information
+
+characteristical values
+----------------------------------------------------------------------
+Dimension(d):                     dim=3
+Characteristical length(m):       charL=1
+Characteristical speed(m/s):      charU=10
+Characteristical time(s):         charT=0.1
+Density factor(kg/m^d):           charRho=1
+Characterestical mass(kg):        charMass=1
+Characterestical force(N):        charForce=100
+Characterestical pressure(Pa):    charPressure=100
+Pressure level(Pa):               pressureLevel=0
+Phys. kinematic viscosity(m^2/s): charNu=0.01
+Phys. dynamic viscosity(N*s/m^2): dynVisco=0.01
+======================================================================
+
+lattice values
+----------------------------------------------------------------------
+DeltaX:                           deltaX=0.01
+Lattice velocity:                 latticeU=1
+DeltaT:                           deltaT=0.01
+Reynolds number:                  Re=1000
+DimlessNu:                        dNu=0.001
+Viscosity for computation:        latticeNu=0.1
+Relaxation time:                  tau=0.8
+Relaxation frequency:             omega=1.25
+======================================================================
+
+conversion factors
+----------------------------------------------------------------------
+latticeL(m):                      latticeL=0.01
+Time step (s):                    physTime=0.001
+Velocity factor(m/s):             physVelocity=10
+FlowRate factor(m^d/s):           physFlowRate=0.001
+Mass factor(kg):                  physMass=1e-06
+Force factor(N):                  physForce=0.01
+Force factor massless(N/kg):      physMasslessForce=10000
+Pressure factor(Pa):              physPressure=100
+latticePressure:                  latticeP=0.01
