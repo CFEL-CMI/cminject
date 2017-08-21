@@ -22,15 +22,19 @@ typedef double T;
 
 
 // Parameters for the simulation setup
-const T lx1   = 0.100;    // length of first part
-const T ly1   = 0.010;   // height of first part
-const T lx2   = 0.002;   // length of narrow part in meter
-const T ly2   = 0.003;    // height of narrow part in meter
-const T lx3   = 0.001;    // length of third part   
-const T ly3   = 0.002;   // height of third part
-const int N = 10;        // resolution of the model
+
+//const T U = 3.0;
+const int N = 50;        // resolution of the model
 const int M = 1;        // time discretization refinement
-const T maxPhysT = 1.; // max. simulation time in s, SI unit
+//const T Re = 30.;       // Reynolds number
+const T L = 0.01/N;     // latticeL
+const T lx1   = 0.050;    // length of first part
+const T ly1   = 0.010;   // height of first part
+const T lx2   = 0.001;   // length of narrow part in meter
+const T ly2   = 0.003;    // height of narrow part in meter
+const T lx3   = 0.005;    // length of third part   
+const T ly3   = 0.002;   // height of third part
+const T maxPhysT = 2.; // max. simulation time in s, SI unit
 
 
 // Stores geometry information in form of material numbers
@@ -59,7 +63,7 @@ void prepareGeometry( LBconverter<T> const& converter,
   superGeometry.rename( 0,2,ADL );
   superGeometry.rename( 2,1,1,1 );
 
-  Vector<T,2> extendBC( 0.001,ly1 );
+  Vector<T,2> extendBC( 0.005,ly1 );
   Vector<T,2> originBC;
   // Set material number for inflow
   IndicatorCuboid2D<T> inflow( extendBC, originBC );
@@ -99,21 +103,20 @@ void prepareLattice( LBconverter<T> const& converter,
   sLattice.defineDynamics( superGeometry, 4, &bulkDynamics );
 
   // Setting of the boundary conditions
-//  bc.addVelocityBoundary( superGeometry, 3, converter.getOmega() );
-  bc.addPressureBoundary( superGeometry, 3, converter.getOmega() );
+  bc.addVelocityBoundary( superGeometry, 3, converter.getOmega() );
   bc.addPressureBoundary( superGeometry, 4, converter.getOmega() );
 
   // Initial conditions
-  AnalyticalConst2D<T,T> ux( 0. );
-  AnalyticalConst2D<T,T> uy( 0. );
-  AnalyticalConst2D<T,T> rho( 0.002 );
-  AnalyticalComposed2D<T,T> u( ux,uy );
+//  AnalyticalConst2D<T,T> ux( 5. );
+//  AnalyticalConst2D<T,T> uy( 0. );
+//  AnalyticalConst2D<T,T> rho( 0.002 );
+//  AnalyticalComposed2D<T,T> u( ux,uy );
 
   //Initialize all values of distribution functions to their local equilibrium
 //  sLattice.defineRhoU( superGeometry, 1, rho, u );
 //  sLattice.iniEquilibrium( superGeometry, 1, rho, u );
-  sLattice.defineRhoU( superGeometry, 3, rho, u );
-  sLattice.iniEquilibrium( superGeometry, 3, rho, u );
+//    sLattice.defineRhoU( superGeometry, 3, rho, u );
+//    sLattice.iniEquilibrium( superGeometry, 3, rho, u );
 //  sLattice.defineRhoU( superGeometry, 4, rho, u );
 //  sLattice.iniEquilibrium( superGeometry, 4, rho, u );
 
@@ -144,6 +147,9 @@ void setBoundaryValues( LBconverter<T> const& converter,
     StartScale( frac,iTvec );
     T maxVelocity = converter.getLatticeU()*3./2.*frac[0];
     T distance2Wall = converter.getLatticeL()/2.;
+ 
+//    cout<<"maxVelocity   :"<<maxVelocity<<endl; 
+
     Poiseuille2D<T> poiseuilleU( superGeometry, 3, maxVelocity, distance2Wall );
     // define lattice speed on inflow
     sLattice.defineU( superGeometry, 3, poiseuilleU );
@@ -182,6 +188,19 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice,
     BlockGifWriter<T> gifWriter;
     // write image to file system
     gifWriter.write( planeReduction, iT, "vel" );
+
+
+    AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolatePressure( pressure, true );
+    AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolateVelocity( velocity, true );
+    T point1[2] = {};
+    point1[0] = 0.001;
+    point1[1] = 0.005;
+    T p1;
+    T v1;
+    intpolatePressure( &p1,point1 );
+    intpolateVelocity( &v1,point1 );
+    clout << "######################  The pressure1 at ( "<<point1[0]<<", "<<point1[1]<<") is: " << p1 <<" ########################"<<endl;
+    clout << "######################  The velocity1 at ( "<<point1[0]<<", "<<point1[1]<<") is: " << v1 <<" ########################"<<endl;
   }
 
   // Writes every 0.1 simulated
@@ -193,13 +212,6 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice,
     sLattice.getStatistics().print( iT,converter.physTime( iT ) );
   }
 
-  // Saves lattice data
-  //if ( iT%converter.numTimeSteps( 1 )==0 && iT>0 ) {
-    //clout << "Checkpointing the system at t=" << iT << std::endl;
-    // sLattice.save( "bstep2d.checkpoint" );
-    // The data can be reloaded using
-    //     sLattice.load("bstep2d.checkpoint");
-  //}
 }
 
 
@@ -210,16 +222,18 @@ int main( int argc, char* argv[] ) {
   OstreamManager clout( std::cout, "main" );
 
   LBconverter<T> converter(
-    ( int ) 2,                          // dim
-    ( T )   0.001/N,                      // latticeL_
-    ( T )   0.001/M,                    // latticeU_
-    ( T )   0.02,                       // charNu_
-    ( T )   0.01,                       // charL_
-    ( T )   10.0,                       // CharU 
-    ( T )   0.002
+    ( int ) 2,                             // dim
+    ( T )   L,                             // latticeL_
+    ( T )   0.01/M,                        // latticeU_
+    ( T )   0.0005,                  // charNu_
+    ( T )   0.01,                         // charL_ = 1
+    ( T )   2.0,                            // charU_ = 1
+    ( T )   1., 
+    ( T )   0. 
   );
   converter.print();
-  writeLogFile( converter, "adl" );
+
+  writeLogFile( converter, "bstep2d" );
 
   // === 2nd Step: Prepare Geometry ===
   Vector<T,2> extend( lx1, ly1);
