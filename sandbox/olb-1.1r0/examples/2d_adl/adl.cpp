@@ -20,13 +20,43 @@ using namespace olb::descriptors;
 typedef double T;
 #define DESCRIPTOR D2Q9Descriptor
 
+void write_v_and_p(SuperLatticePhysVelocity2D<T,DESCRIPTOR>& velocity, 
+		   SuperLatticePhysPressure2D<T,DESCRIPTOR>& pressure, 
+		   T x, T y, T res ) {
+
+    AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolatePressure( pressure, true );
+    AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolateVelocity( velocity, true );
+    T point[2] = {};
+    point[0] = 0.000;
+    point[1] = 0.000;
+    T p;
+    T v;
+
+    ofstream myfile;
+    myfile.open ("date.txt");
+    myfile << "X Y V P "<<endl;
+    for (int i=0; i<(x/res); i++) {
+     for (int j=0; j<(y/res); j++) {
+         point[1] = point[1] + res;
+         intpolatePressure( &p,point );
+         intpolateVelocity( &v,point );
+         myfile << point[0] <<" "<< point[1] << " " << p <<" "<< v<<endl;;
+     }
+         point[0] = point[0] + res;
+         point[1]= 0;
+    }
+   myfile.close();
+
+
+}
+
+
+
 
 // Parameters for the simulation setup
 
-//const T U = 3.0;
 const int N = 50;        // resolution of the model
 const int M = 1;        // time discretization refinement
-//const T Re = 30.;       // Reynolds number
 const T L = 0.01/N;     // latticeL
 const T lx1   = 0.050;    // length of first part
 const T ly1   = 0.010;   // height of first part
@@ -34,7 +64,7 @@ const T lx2   = 0.001;   // length of narrow part in meter
 const T ly2   = 0.003;    // height of narrow part in meter
 const T lx3   = 0.005;    // length of third part   
 const T ly3   = 0.002;   // height of third part
-const T maxPhysT = 2.; // max. simulation time in s, SI unit
+const T maxPhysT = 0.3; // max. simulation time in s, SI unit
 
 
 // Stores geometry information in form of material numbers
@@ -106,19 +136,6 @@ void prepareLattice( LBconverter<T> const& converter,
   bc.addVelocityBoundary( superGeometry, 3, converter.getOmega() );
   bc.addPressureBoundary( superGeometry, 4, converter.getOmega() );
 
-  // Initial conditions
-//  AnalyticalConst2D<T,T> ux( 5. );
-//  AnalyticalConst2D<T,T> uy( 0. );
-//  AnalyticalConst2D<T,T> rho( 0.002 );
-//  AnalyticalComposed2D<T,T> u( ux,uy );
-
-  //Initialize all values of distribution functions to their local equilibrium
-//  sLattice.defineRhoU( superGeometry, 1, rho, u );
-//  sLattice.iniEquilibrium( superGeometry, 1, rho, u );
-//    sLattice.defineRhoU( superGeometry, 3, rho, u );
-//    sLattice.iniEquilibrium( superGeometry, 3, rho, u );
-//  sLattice.defineRhoU( superGeometry, 4, rho, u );
-//  sLattice.iniEquilibrium( superGeometry, 4, rho, u );
 
   // Make the lattice ready for simulation
   sLattice.initialize();
@@ -148,8 +165,6 @@ void setBoundaryValues( LBconverter<T> const& converter,
     T maxVelocity = converter.getLatticeU()*3./2.*frac[0];
     T distance2Wall = converter.getLatticeL()/2.;
  
-//    cout<<"maxVelocity   :"<<maxVelocity<<endl; 
-
     Poiseuille2D<T> poiseuilleU( superGeometry, 3, maxVelocity, distance2Wall );
     // define lattice speed on inflow
     sLattice.defineU( superGeometry, 3, poiseuilleU );
@@ -178,6 +193,7 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice,
   if ( iT%converter.numTimeSteps( 0.2 )==0 ) {
     SuperLatticePhysVelocity2D<T,DESCRIPTOR> velocity( sLattice, converter );
     SuperLatticePhysPressure2D<T,DESCRIPTOR> pressure( sLattice, converter );
+
     vtmWriter.addFunctor( velocity );
     vtmWriter.addFunctor( pressure );
     // write vtk to file system
@@ -189,18 +205,8 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice,
     // write image to file system
     gifWriter.write( planeReduction, iT, "vel" );
 
+    write_v_and_p(velocity, pressure, 0.05, 0.01, 0.0001);
 
-    AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolatePressure( pressure, true );
-    AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolateVelocity( velocity, true );
-    T point1[2] = {};
-    point1[0] = 0.001;
-    point1[1] = 0.005;
-    T p1;
-    T v1;
-    intpolatePressure( &p1,point1 );
-    intpolateVelocity( &v1,point1 );
-    clout << "######################  The pressure1 at ( "<<point1[0]<<", "<<point1[1]<<") is: " << p1 <<" ########################"<<endl;
-    clout << "######################  The velocity1 at ( "<<point1[0]<<", "<<point1[1]<<") is: " << v1 <<" ########################"<<endl;
   }
 
   // Writes every 0.1 simulated
@@ -211,6 +217,9 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice,
     // Lattice statistics console output
     sLattice.getStatistics().print( iT,converter.physTime( iT ) );
   }
+
+
+
 
 }
 
