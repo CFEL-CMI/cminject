@@ -33,7 +33,7 @@ void write_v_and_p(SuperLatticePhysVelocity2D<T,DESCRIPTOR>& velocity,
     T v;
 
     ofstream myfile;
-    myfile.open ("date.txt");
+    myfile.open ("data.txt");
     myfile << "X Y V P "<<endl;
     for (int i=0; i<(x/res); i++) {
      for (int j=0; j<(y/res); j++) {
@@ -44,6 +44,7 @@ void write_v_and_p(SuperLatticePhysVelocity2D<T,DESCRIPTOR>& velocity,
      }
          point[0] = point[0] + res;
          point[1]= 0;
+         cout<<"#";
     }
    myfile.close();
 
@@ -64,7 +65,7 @@ const T lx2   = 0.001;   // length of narrow part in meter
 const T ly2   = 0.003;    // height of narrow part in meter
 const T lx3   = 0.005;    // length of third part   
 const T ly3   = 0.002;   // height of third part
-const T maxPhysT = 0.3; // max. simulation time in s, SI unit
+const T maxPhysT = 0.2; // max. simulation time in s, SI unit
 
 
 // Stores geometry information in form of material numbers
@@ -162,12 +163,19 @@ void setBoundaryValues( LBconverter<T> const& converter,
     int iTvec[1] = {iT};
     T frac[1] = {};
     StartScale( frac,iTvec );
-    T maxVelocity = converter.getLatticeU()*3./2.*frac[0];
+    T maxVelocity = converter.getLatticeU()*frac[0];
     T distance2Wall = converter.getLatticeL()/2.;
  
     Poiseuille2D<T> poiseuilleU( superGeometry, 3, maxVelocity, distance2Wall );
     // define lattice speed on inflow
     sLattice.defineU( superGeometry, 3, poiseuilleU );
+
+    std::vector<T> velocity( 2,T( 0 ) );
+    velocity[0]=280.;
+    AnalyticalConst2D<T,T> uF( velocity );
+
+
+    sLattice.defineU( superGeometry, 4, uF );
   }
 }
 
@@ -190,7 +198,7 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice,
   }
 
   // Writes every 0.2  seconds
-  if ( iT%converter.numTimeSteps( 0.2 )==0 ) {
+  if ( iT%converter.numTimeSteps( 0.1 )==0 ) {
     SuperLatticePhysVelocity2D<T,DESCRIPTOR> velocity( sLattice, converter );
     SuperLatticePhysPressure2D<T,DESCRIPTOR> pressure( sLattice, converter );
 
@@ -204,6 +212,20 @@ void getResults( SuperLattice2D<T,DESCRIPTOR>& sLattice,
     BlockGifWriter<T> gifWriter;
     // write image to file system
     gifWriter.write( planeReduction, iT, "vel" );
+
+
+    T v[2];
+    sLattice.getBlockLattice( 2 ).get(1,1).computeU(v);
+    T rho = sLattice.getBlockLattice( 5 ).get(1,1).computeRho();
+    T r;
+    sLattice.getBlockLattice( 0 ).get(1,1).computeRhoU(r,v);
+    v[0]=converter.physVelocity(v[0]);
+    v[0]=converter.physVelocity(v[1]);
+    r = converter.physRho(r);
+    cout<<"#####################  vx = "<<v[0]<<" vy =  "<<v[1]<<" P = "<<converter.physPressureFromRho(rho)<<" rho= "<<rho<<" physRho= "<<r<<endl;
+
+
+
 
     write_v_and_p(velocity, pressure, 0.05, 0.01, 0.0001);
 
@@ -233,11 +255,11 @@ int main( int argc, char* argv[] ) {
   LBconverter<T> converter(
     ( int ) 2,                             // dim
     ( T )   L,                             // latticeL_
-    ( T )   0.01/M,                        // latticeU_
-    ( T )   0.0005,                  // charNu_
+    ( T )   0.006/M,                        // latticeU_
+    ( T )   0.012,                            // charNu_
     ( T )   0.01,                         // charL_ = 1
-    ( T )   2.0,                            // charU_ = 1
-    ( T )   1., 
+    ( T )   15.0,                            // charU_ = 1
+    ( T )   0.0016, 
     ( T )   0. 
   );
   converter.print();
