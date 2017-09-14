@@ -51,14 +51,53 @@ using namespace std;
 typedef double T;
 #define DESCRIPTOR D3Q19Descriptor
 
+
+/*
+void write_v_and_p(SuperLatticePhysVelocity2D<T,DESCRIPTOR>& velocity,
+                   SuperLatticePhysPressure2D<T,DESCRIPTOR>& pressure,
+                   T x, T y, T res ) {
+
+    AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolatePressure( pressure, true );
+    AnalyticalFfromSuperLatticeF2D<T, DESCRIPTOR> intpolateVelocity( velocity, true );
+    T point[3] = {};
+    point[0] = 0.000;
+    point[1] = 0.000;
+    point[2]=  0.000;
+    T p;
+    T v;
+
+    ofstream myfile;
+    myfile.open ("data.txt");
+    myfile << "X Y V P "<<endl;
+    for (int i=0; i<(x/res); i++) {
+     for (int j=0; j<(y/res); j++) {
+         point[1] = point[1] + res;
+         intpolatePressure( &p,point );
+         intpolateVelocity( &v,point );
+         myfile << point[0] <<" "<< point[1] << " " << p <<" "<< v<<endl;;
+     }
+         point[0] = point[0] + res;
+         point[1]= 0;
+         cout<<"#";
+    }
+   myfile.close();
+
+
+}
+*/
+
+
+
 const int N = 100;    // resolution of the model
 const int M = 1;    // time discretization refinement
 T maxPhysT = 200.0; // max. simulation time in s, SI unit
 
-SuperGeometry3D<T> prepareGeometry( LBconverter<T> const& converter ) {
-
+void prepareGeometry( LBconverter<T> const& converter, IndicatorF3D<T>& indicator, SuperGeometry3D<T>& superGeometry ) {
   OstreamManager clout( std::cout,"prepareGeometry" );
   clout << "Prepare Geometry ..." << std::endl;
+
+
+  superGeometry.rename( 0,2,indicator );
 
   // Definition of the geometry of the venturi
   Vector<T,3> C0( 0,0,0 );
@@ -80,22 +119,10 @@ SuperGeometry3D<T> prepareGeometry( LBconverter<T> const& converter ) {
   IndicatorCylinder3D<T> cyl4( C4, C5, radius3 );
   IndicatorCylinder3D<T> outflow( C5, C6, radius3 );
 
-  IndicatorIdentity3D<T> venturi( cyl1 + cyl2 + cyl3 + cyl4 );
-
-
-  // Build CoboidGeometry from IndicatorF (weights are set, remove and shrink is done)
-  CuboidGeometry3D<T>* cuboidGeometry = new CuboidGeometry3D<T>( venturi, 1./N, 20*singleton::mpi().getSize() );
-
-  // Build LoadBalancer from CuboidGeometry (weights are respected)
-  HeuristicLoadBalancer<T>* loadBalancer = new HeuristicLoadBalancer<T>( *cuboidGeometry );
-
-  // Default instantiation of superGeometry
-  SuperGeometry3D<T> superGeometry( *cuboidGeometry, *loadBalancer, 2 );
 
 
   // Set boundary voxels by rename material numbers
 
-  superGeometry.rename( 0,2,venturi );
   superGeometry.rename( 2,1,cyl1 );
   superGeometry.rename( 2,1,cyl2 );
   superGeometry.rename( 2,1,cyl3 );
@@ -115,7 +142,6 @@ SuperGeometry3D<T> prepareGeometry( LBconverter<T> const& converter ) {
   superGeometry.communicate();
 
   clout << "Prepare Geometry ... OK" << std::endl;
-  return superGeometry;
 }
 
 
@@ -155,12 +181,6 @@ void prepareLattice( SuperLattice3D<T,DESCRIPTOR>& sLattice,
 
   // Initialize all values of distribution functions to their local equilibrium
   // Initial conditions
-  AnalyticalConst3D<T,T> rhoF( 0.002 );
-  std::vector<T> velocity( 2,T() );
-  AnalyticalConst3D<T,T> uF( velocity );
-
-  sLattice.defineRhoU( superGeometry,3,rhoF,uF );
-  sLattice.iniEquilibrium( superGeometry,3,rhoF,uF );
 
   // Lattice initialize
   sLattice.initialize();
@@ -199,9 +219,9 @@ void setBoundaryValues( SuperLattice3D<T, DESCRIPTOR>& sLattice,
     CirclePoiseuille3D<T> poiseuilleU( superGeometry, 3, frac*converter.getLatticeU(), converter.getLatticeL() );
     sLattice.defineU( superGeometry, 3, poiseuilleU );
 
-    clout << "step=" << iT << "; scalingFactor=" << frac <<"; lattice spead "<<converter.getLatticeU()<< std::endl;
+  //  clout << "step=" << iT << "; scalingFactor=" << frac <<"; lattice spead "<<converter.getLatticeU()<< std::endl;
   }
-  clout << "Set Boundary Values ... ok" << std::endl;
+ // clout << "Set Boundary Values ... ok" << std::endl;
 }
 
 void getResults( SuperLattice3D<T, DESCRIPTOR>& sLattice,
@@ -261,11 +281,12 @@ int main( int argc, char* argv[] ) {
 
   LBconverter<T> converter(
     ( int ) 3,                             // dim
-    ( T )   1./N,                          // latticeL_
-    ( T )   1./M,                        // latticeU_
-    ( T )   0.01,                           // charNu_
-    ( T )   1.,                           // charL_ = 1
-    ( T )   10.                             // charU_ = 1
+    ( T )   0.1/N,                          // latticeL_
+    ( T )   0.01,                        // latticeU_
+    ( T )   0.12,                           // charNu_
+    ( T )   0.01,                           // charL_ = 1
+    ( T )   10.,                             // charU_ = 1
+    ( T )   0.000164
   );
 
 
@@ -274,7 +295,21 @@ int main( int argc, char* argv[] ) {
 
   // === 2nd Step: Prepare Geometry ===
 
-  SuperGeometry3D<T> superGeometry( prepareGeometry( converter ) );
+
+  Vector<T,3> origin;
+  Vector<T,3> extend( 0.25, 0.005+2.*converter.getLatticeL(), 0.005+2.*converter.getLatticeL() );
+
+  IndicatorCuboid3D<T> cuboid( extend,origin );
+
+  CuboidGeometry3D<T> cuboidGeometry( cuboid, converter.getLatticeL(), singleton::mpi().getSize() );
+  HeuristicLoadBalancer<T> loadBalancer( cuboidGeometry );
+
+  // === 2nd Step: Prepare Geometry ===
+
+ 
+  SuperGeometry3D<T> superGeometry( cuboidGeometry, loadBalancer, 2 );
+  prepareGeometry( converter, cuboid, superGeometry );
+
 
   // === 3rd Step: Prepare Lattice ===
 
