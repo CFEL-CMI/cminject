@@ -10,20 +10,20 @@ from field.interaction_field import *
 
 
 # create a particle
-radius = 0.00001     # m
-temp = 293           # K
-density = 10         # Kg/m3
-thermal_conductivity = 1  
-index_of_ref = 1.2 
-particle = SphericalParticle( radius, temp, density, thermal_conductivity, index_of_ref )
+Radius = 0.00001     # m
+Temp = 293           # K
+Density = 10         # Kg/m3
+ThermalConductivity = 1  
+IndexOfRef = 1.2 
+particle = SphericalParticle( Radius, Temp, Density, ThermalConductivity, IndexOfRef )
 
 
 devices=[]
 
 # create a source
-number_of_particles = 1000
-sigma_of_particles_momentum = 3
-source = Source(particle, number_of_particles, sigma_of_particles_momentum)
+NumberOfParticles = 1000
+SigmaOfParticlesMomentum = 3
+source = Source(particle, NumberOfParticles, SigmaOfParticlesMomentum)
 
 
 
@@ -43,8 +43,16 @@ RadiusLens = 0.005 # m
 RadiusOutlet = 0.002 # m
 adls = AerodynamicsLensDevice(Hieght, RadiusInlet, RadiusLens, RadiusOutlet, helium)
 
+# create a laser field
+Intensity = 100000  # W/cm2
+Energy =  300       # eV
+field = EM( Intensity, Energy)
+
+# create a detector
 center = (0, 0, 100)
 length = 0.5         # m
 width =  0.5         # m
 detector = Detector( center, length, width)
 
+# create an experiment, your output files will be named after the experiment name and date
+exp = Experiment('Exp1', '22-9-2017', detector, source, adl=[adls], field=[field]) 
