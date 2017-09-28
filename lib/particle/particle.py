@@ -30,7 +30,12 @@ class SphericalParticle(Particle):
         integral.integrate(integral.t + 0.00001)    
     return integral
 
-    def InBoundary(self):
-       """ This function return true if the particle is still contained in the boundary of the problem"""
-       if self.boundary == None:
-         return True 
+  def InBoundary(self):
+    """ This function return true if the particle is still contained in the boundary of the problem"""
+    if self.boundary == None:
+       return True
+
+
+  def CalculateDragForce(self, fluid):
+    force=3*pi*mu*dParticle*velocityDifference/((rhoParticle*4/3*pi*(dParticle/2)**3)*correctionFactor)
+    return force 
