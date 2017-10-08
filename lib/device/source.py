@@ -25,6 +25,3 @@ class Source:
 
 
 
-p = Source( 1000, (0, 0.01) , 0.001, 10, 5 )
-for i in p.particles:
-  print i.velocity, i. position
