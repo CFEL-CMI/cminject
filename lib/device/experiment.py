@@ -17,13 +17,17 @@ class Experiment:
     """ Calculate the particle trajectories by integrating the equation of motion"""
     count = 0
     for i in self.source.particles:
+      traj = 0
       integral = ode( i.get_v_and_a )
       integral.set_integrator('vode',method='BDF',with_jacobian=False,atol=1e-6,rtol=1e-6,first_step=1e-5,nsteps=1000)
       integral.set_initial_value( i.position + i.velocity, tStart )
       print "Calculating particle: ", count
       while integral.successful() and integral.t < tEnd:
-        i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
+        if traj ==1:
+          i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
+          traj = 0
         integral.integrate(integral.t + 0.00001)
+        traj+=1
       count+=1
     return integral
     
