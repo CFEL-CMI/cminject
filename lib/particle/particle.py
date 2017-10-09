@@ -9,7 +9,7 @@ class Particle:
 class SphericalParticle(Particle):
   """This class define the characteristics of the particles that will be added to the simulation"""
 
-  def __init__(self, radius, temp, density, thermal_conductivity, index_of_ref, boundary=None, position=(0,0,0), velocity=(0,0,0), acceleration=(0,0,0)):
+  def __init__(self, radius, temp, density, thermal_conductivity, index_of_ref, boundary=None, position=(0,0,0), velocity=(0,0,0)):
     self.radius = radius
     self.temp = temp
     self.density = density
@@ -17,8 +17,9 @@ class SphericalParticle(Particle):
     self.index_of_ref = index_of_ref
     self.position = position
     self.velocity = velocity
-    self.acceleration = acceleration
+    self.acceleration = (0, 0, 0)
     self.boundary = boundary
+    self.trajectory =[]
 
   def CalculateTrajectory(self, tStart ):
     """ Calculate the particle trajectories by integrating the equation of motion"""
@@ -34,6 +35,10 @@ class SphericalParticle(Particle):
     """ This function return true if the particle is still contained in the boundary of the problem"""
     if self.boundary == None:
        return True
+
+
+  def get_v_and_a(self):
+    return list(self.velocity + self.acceleration)
 
 
   def CalculateDragForce(self, fluid):
