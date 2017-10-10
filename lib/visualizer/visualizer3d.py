@@ -33,8 +33,11 @@ class visualizer:
     ax.set_ylim(0, 0.03)
     ax.set_zlim(0, 0)
     for i in range(self.n):
+     if plt.fignum_exists(fig.number):
       x, y, z = self.data_gen(i)
       ax.set_ylim(min(y), max(y))
       p = ax.plot(x, y, z, 'o-', lw=0)
       plt.pause(0.01)
       p.pop(0).remove()
+     else:
+       plt.close()
