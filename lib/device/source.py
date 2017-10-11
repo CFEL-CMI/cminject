@@ -6,7 +6,7 @@ particle = imp.load_source('particle', '/Users/aminmuha/Documents/myproject/cmi-
 import numpy as np
 
 class Source:
-  def __init__(self, number_of_particles, position, sigmaP, muV, sigmaV, distribution='gaussian'):
+  def __init__(self, number_of_particles, position, sigmaP, muV, sigmaV, radius=0.00001, rho=1, distribution='gaussian'):
     self.particles = [] 
     self.number_of_particles = number_of_particles
     self.sigmaP = sigmaP
@@ -14,6 +14,8 @@ class Source:
     self.muP = position
     self.muV = muV
     self.distribution = distribution
+    self.radius = radius
+    self.rho = rho
     self.generate_particles()
 
   def generate_particles(self):
@@ -26,8 +28,8 @@ class Source:
 
 
     for i in range(self.number_of_particles):
-      self.particles.append(particle.SphericalParticle(0.00001, 0, 
-           0, 0, 0, None, position=(x[i], y[i]+0.01, z[i]), velocity=(vx[i],vy[i],vz[i])))
+      self.particles.append(particle.SphericalParticle(self.radius, self.rho, 
+   			position=(x[i], y[i], z[i]), velocity=(vx[i],vy[i],vz[i])))
 
 
 
