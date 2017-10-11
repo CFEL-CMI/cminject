@@ -28,9 +28,38 @@ class SphericalParticle(Particle):
        return True
 
 
-  def get_v_and_a(self):
-    return list(self.velocity + self.acceleration)
+  def get_v_and_a(self, t, p_and_v, fluid):
+    a=[]
+    a.append( self.DrageForceX(fluid, p_and_v)/self.mass())
+    a.append( self.DrageForceY(fluid, p_and_v)/self.mass())
+    a.append( self.DrageForceZ(fluid, p_and_v)/self.mass())
+    return list(list(p_and_v[3:]) + a)
+
+  def DrageForceX(self, fluid, p_and_v):
+    try:
+      force = 6 * pi * fluid.mu * self.radius * (
+                 fluid.fvx(p_and_v[:3]) - p_and_v[3] )
+      return force
+    except:
+      return 0
+
+  def DrageForceY(self, fluid, p_and_v):
+    try:
+      force = 6 * pi * fluid.mu * self.radius * (
+                 fluid.fvy(p_and_v[:3]) - p_and_v[4] )
+      return force
+    except:
+      return 0
+
+  def DrageForceZ(self, fluid, p_and_v):
+    try:
+      force = 6 * pi * fluid.mu * self.radius * (
+                 fluid.fvz(p_and_v[:3]) - p_and_v[5] )
+      return force
+    except:
+      return 0
 
 
+ 
   def mass(self):
     return self.rho * 4/3 * pi * (self.radius)**3  
