@@ -5,10 +5,21 @@ class ForceCalculator:
     self.particle = particle
 
   @staticmethod
-  def DrageForce(self, fluid):
-    force = 6 * pi * fluid.mu * self.particle.radius * ( fluid.velocity - 
-		self.particle.velocity ) / (( self.particle.rho * 4/3 * pi * 
-				(self.particle.radius)**3) * correctionFactor)
+  def DrageForceX(self, fluid):
+    force = 6 * pi * fluid.mu * self.particle.radius * (
+		 fluid.fvx(self.particle.position) - self.particle.velocity )
+    return force
+
+  @staticmethod
+  def DrageForceY(self, fluid):
+    force = 6 * pi * fluid.mu * self.particle.radius * (
+                 fluid.fvy(self.particle.position) - self.particle.velocity )
+    return force
+
+  @staticmethod
+  def DrageForceZ(self, fluid):
+    force = 6 * pi * fluid.mu * self.particle.radius * (
+                 fluid.fvz(self.particle.position) - self.particle.velocity )
     return force
 
   @staticmethod
