@@ -1,31 +1,29 @@
 from math import pi
 
 class ForceCalculator:
-  def __init__(self, particle):
-    self.particle = particle
 
   @staticmethod
-  def DrageForceX(self, fluid):
-    force = 6 * pi * fluid.mu * self.particle.radius * (
-		 fluid.fvx(self.particle.position) - self.particle.velocity )
+  def DrageForceX(particle, fluid):
+    force = 6 * pi * fluid.mu * particle.radius * (
+		 fluid.fvx(particle.position) - particle.velocity[0] )
     return force
 
   @staticmethod
-  def DrageForceY(self, fluid):
-    force = 6 * pi * fluid.mu * self.particle.radius * (
-                 fluid.fvy(self.particle.position) - self.particle.velocity )
+  def DrageForceY(particle, fluid):
+    force = 6 * pi * fluid.mu * particle.radius * (
+                 fluid.fvy(particle.position) - particle.velocity[1] )
     return force
 
   @staticmethod
-  def DrageForceZ(self, fluid):
-    force = 6 * pi * fluid.mu * self.particle.radius * (
-                 fluid.fvz(self.particle.position) - self.particle.velocity )
+  def DrageForceZ(particle, fluid):
+    force = 6 * pi * fluid.mu * particle.radius * (
+                 fluid.fvz(particle.position) - particle.velocity[2] )
     return force
 
   @staticmethod
-  def PhotophoreticForce(self, laser):
+  def PhotophoreticForce(particle, laser):
     return
 
   @staticmethod
-  def RadiationPressure(self, laser):
+  def RadiationPressure(particle, laser):
     return   

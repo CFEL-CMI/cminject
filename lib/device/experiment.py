@@ -1,4 +1,9 @@
+import sys
+sys.path.insert(0, '../lib')
 from scipy.integrate import ode
+from field.interaction_field import *
+from field.force_calculator import *
+
 
 class Experiment:
   """This class carry out the info about the experiment you want to simulate. 
@@ -8,7 +13,7 @@ class Experiment:
   def __init__(self, name, date, source, detector=None, adl=None, field=None):
     self.name = name
     self.date = date
-    self.field = []
+    self.field = field
     self.device = []
     self.source = source
     self.CalculateTrajectory()
@@ -18,6 +23,9 @@ class Experiment:
     count = 0
     for i in self.source.particles:
       traj = 0
+      i.acceleration = (ForceCalculator().DrageForceX(i, self.field)/i.mass(), 
+				ForceCalculator().DrageForceY(i, self.field)/i.mass(),
+					ForceCalculator().DrageForceZ(i, self.field)/i.mass())
       integral = ode( i.get_v_and_a )
       integral.set_integrator('vode',method='BDF',with_jacobian=False,atol=1e-6,rtol=1e-6,first_step=1e-5,nsteps=1000)
       integral.set_initial_value( i.position + i.velocity, tStart )
@@ -32,11 +40,3 @@ class Experiment:
     return integral
     
 
-  def add_device(self, device):
-    self.device.append(device)
-
-  def add_field(self, device):
-    self.field.append(field)
-
-  def run(self):
-   pass

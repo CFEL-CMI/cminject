@@ -1,5 +1,6 @@
 
 from scipy.integrate import ode
+from math import pi
 
 class Particle:
    def __init__(self, temp, mass, density, thermal_conductivity):
@@ -9,7 +10,7 @@ class Particle:
 class SphericalParticle(Particle):
   """This class define the characteristics of the particles that will be added to the simulation"""
 
-  def __init__(self, radius, temp, density, thermal_conductivity, index_of_ref, boundary=None, position=(0,0,0), velocity=(0,0,0)):
+  def __init__(self, radius, density, temp=0, thermal_conductivity=0, index_of_ref=0, boundary=None, position=(0,0,0), velocity=(0,0,0)):
     self.radius = radius
     self.temp = temp
     self.rho = density

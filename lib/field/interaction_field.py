@@ -22,7 +22,7 @@ class Fluid(interaction_field):
    """If the interaction field is EM field then the set_method function here will be used"""
    def __init__(self, density, kinematic_viscosity, inflow_speed, outflow_pressure, method='LBM', filename=None):
      self.density = density
-     self.kinematic_viscosity = kinematic_viscosity
+     self.mu = kinematic_viscosity
      self.inflow_speed =inflow_speed
      self.outflow_pressure = outflow_pressure
      self.method = method
