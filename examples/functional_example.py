@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 # Create Particle
 radius = 0.00001
 density = 100
-NumberOfParticles = 5
+NumberOfParticles = 10
 SourceCoordinates = (0, 0, 0)
-SigmaParticlesPosition = (0.002, 0.003, 0)
+SigmaParticlesPosition = (0.004, 0.003, 0)
 MuParticlesVelocity = (0, 0, -5)
 SigmaParticlesVelocity = (0, 0, 2)
 
