@@ -20,18 +20,12 @@ class visualizer:
            dataz.append(j.trajectory[i][2])
         return datax, datay, dataz
 
-  def init(self):
-    ax.set_ylim( 0.005, 0.015 )
-    ax.set_xlim( 0, 0.5 )
-    return line,
-
-
   def plot(self):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlim(0, 0.1)
-    ax.set_ylim(0, 0.03)
-    ax.set_zlim(0, 0)
+    ax.set_xlim(-0.01, 0.01)
+    ax.set_ylim(-0.01, 0.01)
+    ax.set_zlim(0, -0.05)
     for i in range(self.n):
      if plt.fignum_exists(fig.number):
       x, y, z = self.data_gen(i)
