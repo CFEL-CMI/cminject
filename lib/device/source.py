@@ -11,17 +11,23 @@ class Source:
     self.number_of_particles = number_of_particles
     self.sigmaP = sigmaP
     self.sigmaV = sigmaV 
-    self.muP = position[0]
+    self.muP = position
     self.muV = muV
     self.distribution = distribution
     self.generate_particles()
 
   def generate_particles(self):
-    position = np.random.normal(self.muP, self.sigmaP, self.number_of_particles)
-    velocity = np.random.normal(self.muV, self.sigmaV, self.number_of_particles)
+    x = np.random.normal(self.muP[0], self.sigmaP[0], self.number_of_particles)
+    y = np.random.normal(self.muP[1], self.sigmaP[1], self.number_of_particles) 
+    z = np.random.normal(self.muP[2], self.sigmaP[2], self.number_of_particles)
+    vx = np.random.normal(self.muV[0], self.sigmaV[0], self.number_of_particles)
+    vy = np.random.normal(self.muV[1], self.sigmaV[1], self.number_of_particles)
+    vz = np.random.normal(self.muV[2], self.sigmaV[2], self.number_of_particles)
+
+
     for i in range(self.number_of_particles):
       self.particles.append(particle.SphericalParticle(0.00001, 0, 
-           0, 0, 0, None, position=(0, position[i]+0.01, 0), velocity=(velocity[i],0,0)))
+           0, 0, 0, None, position=(x[i], y[i]+0.01, z[i]), velocity=(vx[i],vy[i],vz[i])))
 
 
 
