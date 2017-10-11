@@ -1,8 +1,7 @@
 import sys
 import imp
 
-particle = imp.load_source('particle', '/Users/aminmuha/Documents/myproject/cmi-injector/lib/particle/particle.py')
-
+import particle
 import numpy as np
 
 class Source:
