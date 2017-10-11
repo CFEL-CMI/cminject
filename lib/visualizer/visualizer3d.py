@@ -23,6 +23,17 @@ class visualizer:
   def plot(self):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
+    x=np.linspace(-0.01, 0.01, 100)
+    z=np.linspace(0.0, -0.04, 100)
+    Xc, Zc=np.meshgrid(x, z)
+    Yc = np.sqrt(0.0001-Xc**2)
+
+    # Draw parameters
+    rstride = 20
+    cstride = 10
+    ax.plot_surface(Xc, Yc, Zc, alpha=0.2, rstride=rstride, cstride=cstride)
+    ax.plot_surface(Xc, -Yc, Zc, alpha=0.2, rstride=rstride, cstride=cstride)
+
     ax.set_xlim(-0.01, 0.01)
     ax.set_xlabel("X")
     ax.set_ylim(-0.01, 0.01)
