@@ -20,20 +20,27 @@ class visualizer:
            dataz.append(j.trajectory[i][2])
         return datax, datay, dataz
 
+  def plot_device(self, ax):
+    r1 = [ (-0.01, 0.01), (-0.001, 0.001), (-0.01, 0.01), (-0.001, 0.001)]
+    z1 = [ ( 0.0, -0.025), (-0.025, -0.030), (-0.03, -0.045), (-0.045, -0.05)] 
+
+    for i,j in zip(r1,z1):
+      x = np.linspace(i[0], i[1], 100)
+      z = np.linspace(j[0], j[1], 100)
+      Xc, Zc=np.meshgrid(x, z)
+      Yc = np.sqrt(i[0]*i[0]-Xc**2)
+
+      # Draw parameters
+      rstride = 20
+      cstride = 10
+      ax.plot_surface(Xc, Yc, Zc, alpha=0.2, rstride=rstride, cstride=cstride)
+      ax.plot_surface(Xc, -Yc, Zc, alpha=0.2, rstride=rstride, cstride=cstride)
+
+
   def plot(self):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    x=np.linspace(-0.01, 0.01, 100)
-    z=np.linspace(0.0, -0.04, 100)
-    Xc, Zc=np.meshgrid(x, z)
-    Yc = np.sqrt(0.0001-Xc**2)
-
-    # Draw parameters
-    rstride = 20
-    cstride = 10
-    ax.plot_surface(Xc, Yc, Zc, alpha=0.2, rstride=rstride, cstride=cstride)
-    ax.plot_surface(Xc, -Yc, Zc, alpha=0.2, rstride=rstride, cstride=cstride)
-
+    self.plot_device(ax)
     ax.set_xlim(-0.01, 0.01)
     ax.set_xlabel("X")
     ax.set_ylim(-0.01, 0.01)
