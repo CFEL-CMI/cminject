@@ -10,14 +10,14 @@ class Experiment:
      For example, the devices and the interaction fields you will include.
      The output files will have the name of and date of your experiment""" 
 
-  def __init__(self, name, date, source, detector=None, adl=None, field=None):
+  def __init__(self, name, date, source, detector=None, als=None, field=None):
     self.name = name
     self.date = date
     self.field = field
     self.device = []
     self.source = source
+    self.als = als
     self.CalculateTrajectory()
-
     
   def CalculateTrajectory(self, tStart=0, tEnd=2 ):
     """ Calculate the particle trajectories by integrating the equation of motion"""
@@ -28,7 +28,7 @@ class Experiment:
       integral.set_integrator('vode',method='BDF',with_jacobian=False,atol=1e-6,rtol=1e-6,first_step=1e-5,nsteps=1000)
       integral.set_initial_value( (i.position + i.velocity), tStart ).set_f_params(self.field)
       print "Calculate particle", count
-      while integral.successful() and integral.t < tEnd:
+      while integral.successful() and self.ParticleInBoundary((integral.y[0], integral.y[1], integral.y[2]) ) and integral.t < tEnd:
         if traj ==1:
           i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
           traj = 0
@@ -36,5 +36,21 @@ class Experiment:
         traj+=1
       count+=1
     return integral
-    
 
+  def LongestTrajectory(self):
+    longest = 0
+    for i in self.source.particles:
+       if len(i.trajectory)>longest:
+         longest = len(i.trajectory)
+    return longest      
+
+  def ParticleInBoundary(self, position):
+    x, y, z = position
+    inside = False
+    offset = self.als.position[2]
+    for i in self.als.segments:
+       if (x**2 +y**2) < i[0]**2 and abs(z) >= abs(offset) and abs(z) < abs(offset+i[1]):
+         return True
+       offset = offset + i[1]
+    return False
+    
