@@ -29,9 +29,9 @@ adl = AerodynamicsLensStack(ADSPosition, Segments)
 
 # Define Fluid Object
 FluidDensity = 0.016 
-KinematicViscosity = 0.012
+DynamicViscosity = 0.0012
 
-f = Fluid( FluidDensity, KinematicViscosity, filename='3dfield.txt')
+f = Fluid( FluidDensity, DynamicViscosity, filename='3dfield.txt')
 
 
 ExpName = 'Particles moving with constant velocity'
