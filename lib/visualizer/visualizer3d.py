@@ -43,6 +43,7 @@ class visualizer:
   def plot(self):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
+    ax.view_init(elev=5., azim=-55)
     self.plot_device(ax)
     ax.set_xlim(-0.01, 0.01)
     ax.set_xlabel("X")
