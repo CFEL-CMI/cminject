@@ -1,6 +1,3 @@
-import sys
-import imp
-
 import particle
 import numpy as np
 
