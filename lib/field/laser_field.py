@@ -5,16 +5,31 @@ from math import pi, sqrt, exp, cos, sin, tan, asin, acos, atan
 import cmath
 import matplotlib.pyplot as plt
 
-class LaserBeam:
-  def __init__(self, power, lamda, radius, particle):
+
+class Beam:
+  def __init__(self, power, lamda, radius):
     self.power = power
     self.lamda = lamda
     self.w0 = radius
+
+  def VortexIntensity( self, x, y, z):
+    """Vortex intensity distribution propagating along the z axis"""
+    z0 = pi * self.w0**2 / self.lamda    # Beyond the Rayleigh range of
+    w = self.w0 * sqrt( 1 + (z/z0)**2 )
+    r2 = x**2 + y**2
+    I = ( 4 * self.power / pi ) * r2 / w**4 * exp( -2 * r2 / w**2 )
+    return I
+
+
+
+class CalculateAbsorption:
+  def __init__(self, beam, particle):
+    self.beam = beam
     self.nt = particle.index_of_ref
     self.position = particle.position
     self.r = particle.radius
     self.absorbed = dblquad(self.IntegratedAbsorbtion, 0, pi, lambda theta:   0, lambda theta:   2 * pi, args=('z'))
-    print self.absorbed[0] * (self.r**2) *10**4
+    print self.absorbed[0] * (self.r**2)
 
   def VortexIntensity( self, x, y, z):
     """Vortex intensity distribution propagating along the z axis"""
@@ -61,16 +76,15 @@ class LaserBeam:
     p, s = self.SplitSP(x, y, phi)
     pabs = pabs * p * z
     sabs = sabs * s * z
-    intensity = self.VortexIntensity(self.position[0]+x, self.position[1]+y, self.position[2]+z)/10**4
+    intensity = self.beam.VortexIntensity(self.position[0]+x, self.position[1]+y, self.position[2]+z)/self.r**2
     TotalAbsorpedPower = (intensity) * (pabs + sabs)
-#    print intensity, (pabs+sabs)
     return TotalAbsorpedPower, TotalAbsorpedPower*x, TotalAbsorpedPower*y, TotalAbsorpedPower*z
 
   def IntegratedAbsorbtion(self, theta, phi, comp): 
     """ integrate over a sphere"""
-    x = sin(theta)*cos(phi) 
-    y = sin(theta)*sin(phi) 
-    z = cos(theta)
+    x = sin(theta)*cos(phi) * self.r 
+    y = sin(theta)*sin(phi) * self.r
+    z = cos(theta)          * self.r
     power =  self.PowerAbsorption(x, y, z)
     if comp=='x':
        integ = abs(power[1]) * sin(phi)
