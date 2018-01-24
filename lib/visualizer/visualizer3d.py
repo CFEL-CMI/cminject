@@ -1,3 +1,4 @@
+from device.als import *
 import numpy as np
 #import matplotlib
 #matplotlib.use("Agg")
@@ -24,20 +25,21 @@ class visualizer:
         return datax, datay, dataz
 
   def plot_device(self, ax):
-
-    offset = self.exp.als.position[2]
-    for i in self.exp.als.segments:
-      x = np.linspace(self.exp.als.position[0]+i[0], self.exp.als.position[0]-i[0], 100)
-      z = np.linspace(offset, offset+i[1], 100)
-      Xc, Zc=np.meshgrid(x, z)
-      Yc = np.sqrt(i[0]*i[0]-Xc**2)
-      offset = offset + i[1]
+    for i in self.exp.devices:
+      if type(i) is AerodynamicsLensStack:
+        offset = i.position[2]
+        for j in i.segments:
+          x = np.linspace(i.position[0]+j[0], i.position[0]-j[0], 100)
+          z = np.linspace(offset, offset+j[1], 100)
+          Xc, Zc=np.meshgrid(x, z)
+          Yc = np.sqrt(j[0]*j[0]-Xc**2)
+          offset = offset + j[1]
       
       # Draw parameters
-      rstride = 20
-      cstride = 10
-      ax.plot_surface(Xc, Yc, Zc, alpha=0.2, rstride=rstride, cstride=cstride)
-      ax.plot_surface(Xc, -Yc, Zc, alpha=0.2, rstride=rstride, cstride=cstride)
+          rstride = 20
+          cstride = 10
+          ax.plot_surface(Xc, Yc, Zc, alpha=0.2, rstride=rstride, cstride=cstride)
+          ax.plot_surface(Xc, -Yc, Zc, alpha=0.2, rstride=rstride, cstride=cstride)
 
 
   def plot(self):
