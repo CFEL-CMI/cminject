@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(0, '../lib')
-from field.LBMD2Q9 import LBM #, setup_viz
+from field.LBMD2Q9 import LBM
 import threading
 
 def setup_viz():
@@ -8,7 +8,6 @@ def setup_viz():
     import matplotlib.figure
     import matplotlib.backends.backend_tkagg
     import Tkinter
-    import threading
 
     viz = {}
 
@@ -41,7 +40,6 @@ OutR = 0.10
 als = [  (0.5, 0.35) , (1, 0.3), (1.5, 0.25), (2, 0.20), (2.5, 0.18)  ] 
 
 viz = setup_viz()
-#l = LBM( Xdim, Ydim, dx, Umax, dt, time, Re, eta, als, OutR)
 thread = threading.Thread(target = LBM, args=( Xdim, Ydim, dx, Umax, dt, time, Re, eta, als, OutR, viz))
 thread.start()
 viz['tk'].mainloop()
