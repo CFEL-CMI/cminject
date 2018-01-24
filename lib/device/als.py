@@ -4,6 +4,16 @@ class AerodynamicsLensStack(object):
         self.position = position
         self.segments = segments
     
+    def ParticleInside(self, position):
+          x, y, z = position
+          inside = False
+          offset = self.position[2]
+          for j in self.segments:
+             if (x**2 +y**2) < j[0]**2 and abs(z) >= abs(offset) and abs(z) < abs(offset+j[1]):
+               return True
+             offset = offset + j[1]
+          return False
+
     def add_fluid(self, fluid):
         self.fluid = fluid
     

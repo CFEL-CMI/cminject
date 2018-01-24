@@ -49,15 +49,7 @@ class Experiment:
     if self.devices!=None:
       for i in self.devices:
         if type(i) is AerodynamicsLensStack:
-          x, y, z = position
-          inside = False
-          offset = i.position[2]
-          for j in i.segments:
-             if (x**2 +y**2) < j[0]**2 and abs(z) >= abs(offset) and abs(z) < abs(offset+j[1]):
-               return True
-             offset = offset + j[1]
-          return False
-      
+          return i.ParticleInside(position)
     else:
      print "No Device Exists in The Experiment" 
      return True
