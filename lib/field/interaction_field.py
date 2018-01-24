@@ -1,28 +1,18 @@
 from scipy.interpolate import RegularGridInterpolator
+from scipy.integrate import quad, dblquad
 import numpy as np
 
-class interaction_field:
-  """This class is represent the fields that are added to the experiment.
-     The user may introduce electromagnetic of fluid field to the experiment"""
-  
-  def __init__(self, field_type=None, field=None):
-    self.field_type = field_type
-    self.field = field
-
-class EM(interaction_field):
-  """If the interaction field is EM field then the set_method function here will be used"""
-  def __init__(self, intensity, energy):
-     self.intensity = intensity
-     self.energy = energy
-
-  def set_method(self, method='imperical'):
-     self.method = method
-  
-class Fluid(interaction_field):
+class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""
-   def __init__(self, density, kinematic_viscosity, inflow_speed=0, outflow_pressure=0, method='LBM', filename=None):
+   def __init__(self, density, dynamic_viscosity, temperature = 298, pressure=100, 
+                  molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=0, outflow_pressure=0, method='LBM', filename=None):
      self.density = density
-     self.mu = kinematic_viscosity
+     self.eta = dynamic_viscosity
+     self.mu = dynamic_viscosity/density
+     self.T = temperature
+     self.k = thermal_creep
+     self.P = pressure
+     self.mM = molar_mass # for helium (default) 0.004002602 kilograms per mole
      self.inflow_speed =inflow_speed
      self.outflow_pressure = outflow_pressure
      self.method = method
