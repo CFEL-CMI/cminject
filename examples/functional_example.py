@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # Create Particle
 Radius = 1e-8 # 0.00000001
 ParticleDensity = 100
-NumberOfParticles = 6
+NumberOfParticles = 2
 SourceCoordinates = (0, 0, 0)
 SigmaParticlesPosition = (0.003, 0.003, 0)
 MuParticlesVelocity = (1, 0.5, -50)
@@ -29,7 +29,7 @@ adl = AerodynamicsLensStack(ADSPosition, Segments)
 
 # Define Fluid Object
 FluidDensity = 0.016 
-DynamicViscosity = 0.0012
+DynamicViscosity = 0.00001992
 
 f = Fluid( FluidDensity, DynamicViscosity, filename='3dfield.txt')
 
@@ -37,7 +37,7 @@ f = Fluid( FluidDensity, DynamicViscosity, filename='3dfield.txt')
 ExpName = 'Particles moving with constant velocity'
 ExpDate = 'October'
 SourceOfParticles = s
-exp = Experiment( ExpName, ExpDate, SourceOfParticles, als=adl, field=f )
+exp = Experiment( ExpName, ExpDate, SourceOfParticles, devices=[adl], field=f )
 
 visualizer(exp)
 

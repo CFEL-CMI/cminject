@@ -1,4 +1,4 @@
-class AerodynamicsLensStack:
+class AerodynamicsLensStack(object):
     """ This class implement the aerodynamic lens stack. It is contains a several adl segments"""
     def __init__(self, position, segments):
         self.position = position
