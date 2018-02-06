@@ -60,7 +60,7 @@ def ReadVTK(path):
 
 
 
-def ReadFromFile(filename):
+def ReadText(filename):
   f = open(filename)
   x=[]; y=[]; z=[]
   vx=[]; vy=[]; vz=[]
