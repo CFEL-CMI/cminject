@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib import cm, colors
-from math import pi
+from math import pi, sqrt, atan
 
 
 #fig, ax = plt.subplots()
@@ -28,9 +28,11 @@ class visualizer:
   def data_gen(self,i):
         datax=[]
         datay=[]
+        s=1
         for j in self.exp.source.particles:
           if len(j.trajectory)>i:
-           datax.append(j.trajectory[i][0])
+           #print j.trajectory[i][1], j.trajectory[i][0]
+           datax.append(s*sqrt(j.trajectory[i][0]**2+j.trajectory[i][1]**2))
            datay.append(j.trajectory[i][2])
         return datax, datay
 
