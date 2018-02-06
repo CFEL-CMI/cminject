@@ -16,6 +16,7 @@ class Fluid:
      self.inflow_speed =inflow_speed
      self.outflow_pressure = outflow_pressure
      self.method = method
+     self.FlowField = False
      if filename is not None:
        self.ReadFromFile(filename)
 
@@ -77,3 +78,4 @@ class Fluid:
      self.fvy = RegularGridInterpolator((x, y, z), Vy)
      self.fvz = RegularGridInterpolator((x, y, z), Vz)
      self.fp = RegularGridInterpolator((x, y, z), P)
+     self.FlowField = True
