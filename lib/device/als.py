@@ -5,6 +5,7 @@ class AerodynamicsLensStack(object):
         self.segments = segments
     
     def ParticleInside(self, position):
+          """ This function take the position of the particle and return true if the particle inside the als"""
           x, y, z = position
           inside = False
           offset = self.position[2]
