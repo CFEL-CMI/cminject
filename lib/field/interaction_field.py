@@ -5,7 +5,7 @@ import numpy as np
 class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""
    def __init__(self, density, dynamic_viscosity, temperature = 298, pressure=100, 
-                  molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=0, outflow_pressure=0, method='LBM', filename=None):
+                  molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, method='LBM', directory='../../sandbox/',filename=None):
      self.density = density
      self.eta = dynamic_viscosity
      self.mu = dynamic_viscosity/density
@@ -16,7 +16,11 @@ class Fluid:
      self.inflow_speed =inflow_speed
      self.outflow_pressure = outflow_pressure
      self.method = method
+     self.inletSpeed = inflow_speed
+     self.directory = directory
      self.FlowField = False
+     if method=='LBM':
+       self.Run_LB_Code()
      if filename is not None:
        self.ReadFromFile(filename)
 
@@ -24,6 +28,11 @@ class Fluid:
      self.inflow_v = inflow_v
      self.outflow_p = outflow_p
      
+   def Run_LB_Code(self):
+     from subprocess import call
+     call(["/home/aminmuha/cmi-injector/bin/bgc",str(self.inletSpeed), str(self.eta), str(self.density), self.directory])
+
+
    def ReadFromFile(self, filename):
      f = open(filename)
      x=[]; y=[]; z=[]
