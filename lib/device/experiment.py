@@ -58,7 +58,6 @@ class Experiment:
           return i.ParticleInside(position)
         if type(i) is BufferGasCell:
           #return True
-          if not i.BufferGasCellInside(position):print "FALSE"
           return i.BufferGasCellInside(position)
            
     else:
