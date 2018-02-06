@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0, '../lib')
 from scipy.integrate import ode
-from math import pi
+from math import pi, atan, sin, cos
 from field.laser_field import *
 
 class Particle:
@@ -23,6 +23,7 @@ class SphericalParticle(Particle):
     self.acceleration = (0, 0, 0)
     self.boundary = boundary
     self.trajectory =[]
+    self.velocities =[]
 
   def InBoundary(self):
     """ This function return true if the particle is still contained in the boundary of the problem"""
@@ -32,12 +33,20 @@ class SphericalParticle(Particle):
 
   def get_v_and_a(self, t, p_and_v, fluid, beam):
     a=[]
-    a.append( self.DrageForceX(fluid, p_and_v)/self.mass())
-    a.append( self.DrageForceY(fluid, p_and_v)/self.mass())
-    a.append( self.DrageForceZ(fluid, p_and_v)/self.mass())
-#    a.append( self.FppTrans(fluid, beam)/self.mass())
-#    a.append( 0/self.mass())
-#    a.append( self.FppAxial(fluid, beam)/self.mass())
+    Fx = Fy = Fz = 0
+    if fluid.FlowField:
+      Fx = self.DrageForceX(fluid, p_and_v)
+      Fy = self.DrageForceY(fluid, p_and_v)
+      Fz = self.DrageForceZ(fluid, p_and_v)
+    if beam is not None:
+      Fx += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0]))
+      Fy += self.FppTrans(fluid, beam)*sin(atan(self.position[1]/self.position[0]))
+      Fz += self.FppAxial(fluid, beam)
+#    print Fx, Fy, Fz
+    a.append( Fx/self.mass())
+    a.append( Fy/self.mass())
+    a.append( Fz/self.mass())
+
     return list(list(p_and_v[3:]) + a)
 
   def DrageForceX(self, fluid, p_and_v):
