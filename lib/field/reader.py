@@ -16,7 +16,7 @@ def ReadVTK(fileName):
   nx, ny, nz = a.GetOutput().GetDimensions()
   c=0
   f = open('vtktotext', 'w+')
-  X=[]; Y=[]; Z=[]; VX=[]; VY=[]; VZ=[]; P=[];
+  X=[]; Y=[]; Z=[]; VX=[]; VY=[]; VZ=[]; Pr=[];
   for k in range(nz):
    for j in range(ny):
      for i in range(nx):
@@ -27,9 +27,30 @@ def ReadVTK(fileName):
        vy=a.GetOutput().GetPointData().GetArray(0).GetTuple3(c)[1]
        vz=a.GetOutput().GetPointData().GetArray(0).GetTuple3(c)[2]
        p =a.GetOutput().GetPointData().GetArray(1).GetTuple1(c)
-       X.append(x); Y.append(y); Z.append(z); VX.append(vx); VY.append(vy); VZ.append(vz); P.append(p)
+       X.append(x); Y.append(y); Z.append(z); VX.append(vx); VY.append(vy); VZ.append(vz); Pr.append(p)
   
-  return X, Y, Z, VX, VY, VZ, P
+  x=sorted(set(X))
+  y=sorted(set(Y))
+  z=sorted(set(Z))
+  n_x = len(x)
+  n_y = len(y)
+  n_z = len(z)
+  c=0
+  Vx = np.zeros((n_x, n_y, n_z))
+  Vy = np.zeros((n_x, n_y, n_z))
+  Vz = np.zeros((n_x, n_y, n_z))
+  P = np.zeros((n_x, n_y, n_z))
+  for i in range(n_z):
+    for j in range(n_y):
+      for k in range(n_x):
+         Vx[k,j,i] = VX[c]
+         Vy[k,j,i] = VY[c]
+         Vz[k,j,i] = VZ[c]
+         P[k,j,i] = Pr[c]
+         c+=1
+  return x, y, z, Vx, Vy, Vz, P
+
+
 
 def ReadFromFile(filename):
   f = open(filename)

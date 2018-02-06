@@ -34,8 +34,11 @@ class Fluid:
      call(["/home/aminmuha/cmi-injector/bin/bgc",str(self.inletSpeed), str(self.eta), str(self.density), self.directory])
 
 
-   def ReadFromFile(self, filename):
-     x, y, z, Vx, Vy, Vz, P = ReadFromFile(filename)
+   def ReadFromFile(self, filename, vtk=False):
+     if vtk:
+       x, y, z, Vx, Vy, Vz, P = ReadVTK(filename)
+     else:
+       x, y, z, Vx, Vy, Vz, P = ReadFromFile(filename)
      self.fvx = RegularGridInterpolator((x, y, z), Vx)
      self.fvy = RegularGridInterpolator((x, y, z), Vy)
      self.fvz = RegularGridInterpolator((x, y, z), Vz)
