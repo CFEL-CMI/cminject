@@ -1,33 +1,41 @@
 import vtk
 import numpy as np
+import os
+from os import listdir
+from os.path import isfile, join
 
-def ReadVTK(fileName):
-  a = vtk.vtkXMLImageDataReader()
-  a.SetFileName(fileName)
-  a.Update()
-  bound = a.GetOutput().GetBounds()
-  # (0.75, 53.25, -0.25, 30.25, -0.25, 30.25)
-  xbound = (bound[0], bound[1])
-  ybound = (bound[2], bound[3])
-  zbound = (bound[4], bound[5])
-  xspace = a.GetOutput().GetSpacing()[0]
-  yspace = a.GetOutput().GetSpacing()[1]
-  zspace = a.GetOutput().GetSpacing()[2]
-  nx, ny, nz = a.GetOutput().GetDimensions()
-  c=0
-  f = open('vtktotext', 'w+')
+def ReadVTK(path):
+  onlyfiles = [f for f in listdir(path) if isfile(join(path, f))]
   X=[]; Y=[]; Z=[]; VX=[]; VY=[]; VZ=[]; Pr=[];
-  for k in range(nz):
-   for j in range(ny):
-     for i in range(nx):
-       x = i * xspace + xbound[0]
-       y = j * yspace + ybound[0]
-       z = k * zspace + zbound[0]
-       vx=a.GetOutput().GetPointData().GetArray(0).GetTuple3(c)[0]
-       vy=a.GetOutput().GetPointData().GetArray(0).GetTuple3(c)[1]
-       vz=a.GetOutput().GetPointData().GetArray(0).GetTuple3(c)[2]
-       p =a.GetOutput().GetPointData().GetArray(1).GetTuple1(c)
-       X.append(x); Y.append(y); Z.append(z); VX.append(vx); VY.append(vy); VZ.append(vz); Pr.append(p)
+  for f in onlyfiles:
+    filename, file_extension = os.path.splitext(f)
+    if file_extension=='.vti' and (filename[:3]=='bgc'or filename[:3]=='adl'):
+      fileName =path+f
+      print "Reading File:", fileName
+      a = vtk.vtkXMLImageDataReader()
+      a.SetFileName(fileName)
+      a.Update()
+      bound = a.GetOutput().GetBounds()
+      # (0.75, 53.25, -0.25, 30.25, -0.25, 30.25)
+      xbound = (bound[0], bound[1])
+      ybound = (bound[2], bound[3])
+      zbound = (bound[4], bound[5])
+      xspace = a.GetOutput().GetSpacing()[0]
+      yspace = a.GetOutput().GetSpacing()[1]
+      zspace = a.GetOutput().GetSpacing()[2]
+      nx, ny, nz = a.GetOutput().GetDimensions()
+      c=0
+      for k in range(nz):
+        for j in range(ny):
+          for i in range(nx):
+            x = i * xspace + xbound[0]
+            y = j * yspace + ybound[0]
+            z = k * zspace + zbound[0]
+            vx=a.GetOutput().GetPointData().GetArray(0).GetTuple3(c)[0]
+            vy=a.GetOutput().GetPointData().GetArray(0).GetTuple3(c)[1]
+            vz=a.GetOutput().GetPointData().GetArray(0).GetTuple3(c)[2]
+            p =a.GetOutput().GetPointData().GetArray(1).GetTuple1(c)
+            X.append(x); Y.append(y); Z.append(z); VX.append(vx); VY.append(vy); VZ.append(vz); Pr.append(p)
   
   x=sorted(set(X))
   y=sorted(set(Y))
