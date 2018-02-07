@@ -66,8 +66,11 @@ class Experiment:
   
   def SaveTrajectories(self):
     f = open(self.name+"_"+self.date,'w+')
+    check = True
     for t in range(int(self.NoTrajectories)):
-      f.write(str(t*self.traj)+'\n') 
+      if check:
+        f.write(str(t*self.traj)+'\n')
+        check = False # incase no particles propagating no need to write the time step
       c=0
       for i in self.source.particles:
         if len(i.trajectory)>t:  
@@ -75,3 +78,4 @@ class Experiment:
                           + " " + str(i.trajectory[t][2]) + " " + str(i.velocities[t][0]) + " "
                           + str(i.velocities[t][1]) + " " + str(i.velocities[t][2]) + '\n')
           c+=1
+          check = True

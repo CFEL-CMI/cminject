@@ -1,5 +1,7 @@
 import sys
-sys.path.insert(0, '../lib')
+import os
+PATH = os.environ["CMIPATH"]
+sys.path.insert(0, PATH+'lib/')
 
 from device.source import *
 from device.bgc import *
@@ -11,7 +13,7 @@ import matplotlib.pyplot as plt
 # Create Particle
 Radius = 2e-7 # 0.00000001
 ParticleDensity = 100
-NumberOfParticles = 120
+NumberOfParticles = 1
 SourceCoordinates = (0.0005, 0.0155, 0.0155)
 SigmaParticlesPosition = (0.0001, 0.0005, 0.0005)
 MuParticlesVelocity = (15.0, 0., 0.)
@@ -27,15 +29,15 @@ bgc = BufferGasCell(BGCPosition)
 
 # Define Fluid Object
 FluidDensity = 0.016 
-DynamicViscosity = 0.00001992
+DynamicViscosity = 0.0015
 
-f = Fluid( FluidDensity, DynamicViscosity, filename='bgcfield.txt')
-
+#f = Fluid( FluidDensity, DynamicViscosity, filename='bgcfield.txt')
+f = Fluid( FluidDensity, DynamicViscosity, method='LBM')
 
 ExpName = 'BufferGasCell'
 ExpDate = 'Jan2018'
 SourceOfParticles = s
 exp = Experiment( ExpName, ExpDate, SourceOfParticles, devices=[bgc], field=f, end=30. )
 
-visualizer(exp)
+#visualizer(exp)
 

@@ -5,6 +5,7 @@ from os import listdir
 from os.path import isfile, join
 
 def ReadVTK(path):
+  flow = open(path+'flow.txt', 'w+')
   onlyfiles = [f for f in listdir(path) if isfile(join(path, f))]
   X=[]; Y=[]; Z=[]; VX=[]; VY=[]; VZ=[]; Pr=[];
   for f in onlyfiles:
@@ -36,7 +37,8 @@ def ReadVTK(path):
             vz=a.GetOutput().GetPointData().GetArray(0).GetTuple3(c)[2]
             p =a.GetOutput().GetPointData().GetArray(1).GetTuple1(c)
             X.append(x); Y.append(y); Z.append(z); VX.append(vx); VY.append(vy); VZ.append(vz); Pr.append(p)
-  
+            flow.write(str(x)+" "+str(y)+" "+str(z)+" "+str(vx)+" "+str(vy)+" "+str(vz)+" "+str(p)+'\n')
+            c+=1
   x=sorted(set(X))
   y=sorted(set(Y))
   z=sorted(set(Z))
