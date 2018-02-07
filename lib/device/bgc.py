@@ -33,7 +33,7 @@ class BufferGasCell(object):
   """ This class implement the buffer gas cell device"""
   def __init__(self, position, cylinder1=None, cone1=None, cylinder2=None, cone2=None, cylinder3=None):
     self.position = position
-    cyL1 = 0.001
+    cyL1 = 0.002
     cyR1 = 0.002
     co1bRadius = 0.002
     cotRadius = 0.015
@@ -42,7 +42,7 @@ class BufferGasCell(object):
     cyR2 = 0.015
     co2bRadius = 0.001
     cyR3 = 0.001
-
+    cyL3 = 0.001
     if cylinder1 is None:
       self.cylinder1 = Cylinder(cyR1, position, (position[0]+cyL1, position[1], position[2]))
 
@@ -57,8 +57,7 @@ class BufferGasCell(object):
 
     if cylinder3 is None:
       self.cylinder3 = Cylinder(cyR3, (position[0]+cyL1+(2*coL1)+cyL2, position[1], position[2]), 
-                                           (position[0]+(2*cyL1)+(2*coL1)+cyL2, position[1], position[2]))
-
+                                           (position[0]+(cyL1+cyL3)+(2*coL1)+cyL2, position[1], position[2]))
    
 
   def BufferGasCellInside(self, ParticlePosition):
