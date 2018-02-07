@@ -1,3 +1,6 @@
+import sys
+import os
+PATH = os.environ["CMIPATH"]+"bin/"
 from scipy.interpolate import RegularGridInterpolator
 from scipy.integrate import quad, dblquad
 import numpy as np
@@ -6,7 +9,9 @@ from reader import *
 class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""
    def __init__(self, density, dynamic_viscosity, temperature = 298, pressure=100, 
-                  molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, method='LBM', directory='../../sandbox/',filename=None):
+                  molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, 
+                  method='LBM', conv=0.01, directory=os.environ["CMIPATH"]+'/sandbox/',filename=None):
+
      self.density = density
      self.eta = dynamic_viscosity
      self.mu = dynamic_viscosity/density
@@ -19,8 +24,10 @@ class Fluid:
      self.method = method
      self.inletSpeed = inflow_speed
      self.directory = directory
+     self.conv = conv
      self.FlowField = False
      if method=='LBM' and filename is None:
+       print "Running Lattice Boltzmann Code"
        self.Run_LB_Code()
      if filename is not None:
        self.ReadFromFile(filename)
@@ -31,7 +38,7 @@ class Fluid:
      
    def Run_LB_Code(self):
      from subprocess import call
-     call(["/home/aminmuha/cmi-injector/bin/bgc",str(self.inletSpeed), str(self.eta), str(self.density), self.directory])
+     call([PATH+"bgc",str(self.inletSpeed), str(self.eta), str(self.density), str(self.conv), self.directory])
      self.ReadFromFile(self.directory+"/LBM/vtkData/data/", True)     
 
    def ReadFromFile(self, filename, vtk=False):
