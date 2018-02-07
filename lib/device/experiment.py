@@ -57,7 +57,6 @@ class Experiment:
         if type(i) is AerodynamicsLensStack:
           return i.ParticleInside(position)
         if type(i) is BufferGasCell:
-          #return True
           return i.BufferGasCellInside(position)
            
     else:
@@ -75,7 +74,7 @@ class Experiment:
       for i in self.source.particles:
         if len(i.trajectory)>t:  
           f.write(str(c) + " " + str(i.trajectory[t][0]) + " " + str(i.trajectory[t][1])
-                          + " " + str(i.trajectory[t][2]) + " " + str(i.velocities[t][0]) + " "
-                          + str(i.velocities[t][1]) + " " + str(i.velocities[t][2]) + '\n')
+                      + " " + str(i.trajectory[t][2]) + " " + str(i.velocities[t][0]) + " "
+                             + str(i.velocities[t][1]) + " " + str(i.velocities[t][2]) + '\n')
           c+=1
           check = True

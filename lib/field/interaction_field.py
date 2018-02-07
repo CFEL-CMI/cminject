@@ -10,7 +10,7 @@ class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""
    def __init__(self, density, dynamic_viscosity, temperature = 298, pressure=100, 
                   molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, 
-                  method='LBM', conv=0.01, directory=os.environ["CMIPATH"]+'/sandbox/',filename=None):
+                  method='LBM', conv=0.01, directory=os.environ["CMIPATH"]+'/sandbox/',filename=None, new=True):
 
      self.density = density
      self.eta = dynamic_viscosity
@@ -25,6 +25,7 @@ class Fluid:
      self.inletSpeed = inflow_speed
      self.directory = directory
      self.conv = conv
+     self.new = new
      self.FlowField = False
      if method=='LBM' and filename is None:
        print "Running Lattice Boltzmann Code"
@@ -38,7 +39,8 @@ class Fluid:
      
    def Run_LB_Code(self):
      from subprocess import call
-     call([PATH+"bgc",str(self.inletSpeed), str(self.eta), str(self.density), str(self.conv), self.directory])
+     if self.new:
+       call([PATH+"bgc",str(self.inletSpeed), str(self.eta), str(self.density), str(self.conv), self.directory])
      self.ReadFromFile(self.directory+"/LBM/vtkData/data/", True)     
 
    def ReadFromFile(self, filename, vtk=False):
