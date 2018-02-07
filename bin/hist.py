@@ -24,13 +24,14 @@ def BuildArray(filename, position):
      for j in p[i]:
        x.append(j[0]); y.append(j[1]); z.append(j[2])
        vx.append(j[3]); vy.append(j[4]); vz.append(j[5])
-     x = np.array(x); y = np.array(y); z=np.array(z) 
-     vx = np.array(vx); vy = np.array(vy); vz=np.array(vz) 
-     f0 = interp1d(x, y); f1 = interp1d(x, z); f2 = interp1d(x, vx)
-     f3 = interp1d(x, vy); f4 = interp1d(x, vz)
-     ys.append(float(f0(position)));
-     zs.append(float(f1(position))); vxs.append(float(f2(position)));
-     vys.append(float(f3(position))); vzs.append(float(f4(position)));
+     if x[-1]>=position:
+       x = np.array(x); y = np.array(y); z=np.array(z) 
+       vx = np.array(vx); vy = np.array(vy); vz=np.array(vz) 
+       f0 = interp1d(x, y); f1 = interp1d(x, z); f2 = interp1d(x, vx)
+       f3 = interp1d(x, vy); f4 = interp1d(x, vz)
+       ys.append(float(f0(position)));
+       zs.append(float(f1(position))); vxs.append(float(f2(position)));
+       vys.append(float(f3(position))); vzs.append(float(f4(position)));
   return ys, zs, vxs, vys, vzs
 
 y, z, vx, vy, vz = BuildArray(sys.argv[1], float(sys.argv[2]))
