@@ -35,9 +35,9 @@ class SphericalParticle(Particle):
     a=[]
     Fx = Fy = Fz = 0
     if fluid.FlowField:
-      Fx = self.DrageForceX(fluid, p_and_v)
-      Fy = self.DrageForceY(fluid, p_and_v)
-      Fz = self.DrageForceZ(fluid, p_and_v)
+      Fx = self.DrageForceX(fluid, p_and_v)/fluid.SlipCorrection
+      Fy = self.DrageForceY(fluid, p_and_v)/fluid.SlipCorrection
+      Fz = self.DrageForceZ(fluid, p_and_v)/fluid.SlipCorrection
     if beam is not None:
       Fx += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0]))
       Fy += self.FppTrans(fluid, beam)*sin(atan(self.position[1]/self.position[0]))

@@ -11,7 +11,7 @@ class Experiment:
      For example, the devices and the interaction fields you will include.
      The output files will have the name of and date of your experiment""" 
 
-  def __init__(self, name, date, source, detector=None, devices=None, field=None, beam=None, traj=1000, end=0.8, dt=0.000001):
+  def __init__(self, name, date, source, detector=None, devices=None, field=None, beam=None, traj=1000, end=0.8, dt=0.000001, directory='./'):
     self.name = name
     self.date = date
     self.field = field
@@ -21,6 +21,7 @@ class Experiment:
     self.traj = traj
     self.dt = dt
     self.NoTrajectories = (end/dt) / traj
+    self.directory = directory
     self.CalculateTrajectory(tStart=0, tEnd=end, dt=dt)
     self.SaveTrajectories()
  
@@ -64,7 +65,7 @@ class Experiment:
      return True
   
   def SaveTrajectories(self):
-    f = open(self.name+"_"+self.date,'w+')
+    f = open(self.directory+self.name+"_"+self.date,'w+')
     check = True
     for t in range(int(self.NoTrajectories)):
       if check:

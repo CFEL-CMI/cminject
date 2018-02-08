@@ -1,16 +1,18 @@
+# -*- coding: utf-8 -*-
 import sys
 import os
 PATH = os.environ["CMIPATH"]+"bin/"
 from scipy.interpolate import RegularGridInterpolator
 from scipy.integrate import quad, dblquad
 import numpy as np
+from math import exp
 from reader import *
 
 class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""
    def __init__(self, density, dynamic_viscosity, temperature = 298, pressure=100, 
-                  molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, 
-                  method='LBM', conv=0.01, directory=os.environ["CMIPATH"]+'/sandbox/',filename=None, new=True):
+                  molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, Kn=0.01, 
+                  method='LBM', conv=0.00001, directory=os.environ["CMIPATH"]+'/sandbox/',filename=None, new=True):
 
      self.density = density
      self.eta = dynamic_viscosity
@@ -21,6 +23,8 @@ class Fluid:
      self.mM = molar_mass # for helium (default) 0.004002602 kilograms per mole
      self.inflow_speed =inflow_speed
      self.outflow_pressure = outflow_pressure
+     self.Kn = Kn
+     self.SlipCorrection = 1 + Kn * (1.2310 + (0.4695 * exp(-1.1783/Kn)))
      self.method = method
      self.inletSpeed = inflow_speed
      self.directory = directory
