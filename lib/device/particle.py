@@ -3,6 +3,7 @@ sys.path.insert(0, '../lib')
 from scipy.integrate import ode
 from math import pi, atan, sin, cos
 from field.laser_field import *
+import numpy as np 
 
 class Particle:
    def __init__(self, temp, mass, density, thermal_conductivity):
@@ -22,70 +23,51 @@ class SphericalParticle(Particle):
     self.velocity = velocity
     self.acceleration = (0, 0, 0)
     self.boundary = boundary
+    self.M = self.mass()
     self.trajectory =[]
     self.velocities =[]
-
-  def InBoundary(self):
-    """ This function return true if the particle is still contained in the boundary of the problem"""
-    if self.boundary == None:
-       return True
-
+    self.called=0
 
   def get_v_and_a(self, t, p_and_v, fluid, beam):
-    a=[]
-    Fx = Fy = Fz = 0
+    """ This fuction returns the derivatives of the position and velocities for the integrator"""
+
     if fluid.FlowField:
-      Fx = self.DrageForceX(fluid, p_and_v)/fluid.SlipCorrection
-      Fy = self.DrageForceY(fluid, p_and_v)/fluid.SlipCorrection
-      Fz = self.DrageForceZ(fluid, p_and_v)/fluid.SlipCorrection
+      a = self.DragForceVector(fluid, p_and_v)/(fluid.SlipCorrection * self.M)
     if beam is not None:
-      Fx += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0]))
-      Fy += self.FppTrans(fluid, beam)*sin(atan(self.position[1]/self.position[0]))
-      Fz += self.FppAxial(fluid, beam)
-#    print Fx, Fy, Fz
-    a.append( Fx/self.mass())
-    a.append( Fy/self.mass())
-    a.append( Fz/self.mass())
+      a[0] += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0])) / self.M
+      a[1] += self.FppTrans(fluid, beam)*sin(atan(self.position[1]/self.position[0])) / self.M
+      a[2] += self.FppAxial(fluid, beam) /  self.M
+    return np.concatenate((p_and_v[3:], a))  # return the velocities and accelerations
 
-    return list(list(p_and_v[3:]) + a)
+  def DragForceVector(self,fluid, p_and_v):
+     """This function calculates the drag force using Stokes' law for spherical particles in continuum"""
 
-  def DrageForceX(self, fluid, p_and_v):
-    try:
-      force = 6 * pi * fluid.mu * self.radius * (
-                 fluid.fvx(p_and_v[:3]) - p_and_v[3] )
-      return force
-    except:
-      return 0
-
-  def DrageForceY(self, fluid, p_and_v):
-    try:
-      force = 6 * pi * fluid.mu * self.radius * (
-                 fluid.fvy(p_and_v[:3]) - p_and_v[4] )
-      return force
-    except:
-      return 0
-
-  def DrageForceZ(self, fluid, p_and_v):
-    try:
-      force = 6 * pi * fluid.mu * self.radius * (
-                 fluid.fvz(p_and_v[:3]) - p_and_v[5] )
-      return force
-    except:
-      return 0
+     if p_and_v[0]>0.0432: return np.zeros(3)  # this is hard coded for the buffer gace cell because after this point the fluid cannot be modeled by LBM
+     try:
+      force_vector = 6 * pi * fluid.mu * self.radius * (
+                 fluid.fdrag((p_and_v[0],p_and_v[1],p_and_v[2])) - p_and_v[3:] )
+      return force_vector
+     except:
+       return np.zeros(3)
 
   def FppTrans(self, fluid, beam):
+    """ This function calculates the trans component of the photophertic forces based on a semi imperical model"""
+
     if beam is not None and fluid is not None:
       fpp = CalculatePhotophoreticForces(beam, self, fluid)
       return fpp.Fpp_tr
     else:
       return 0
+
   def FppAxial(self, fluid, beam):
+    """ This function calculates the axial component of the photophertic forces based on a semi imperical model"""
     if beam is not None and fluid is not None:
-      fpp = CalculatePhotophoreticForces(beam, self, fluid) 
+      fpp = CalculatePhotophoreticForces(beam, self, fluid)
       return fpp.Fpp_ax
     else:
       return 0
 
-
   def mass(self):
-    return self.rho * 4/3 * pi * (self.radius)**3  
+   """retuen the mass of a spherical particle"""
+
+   return self.rho * 4/3 * pi * (self.radius)**3

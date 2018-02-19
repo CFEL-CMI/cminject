@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
-PATH = os.environ["CMIPATH"]+"bin/"
+#PATH = os.environ["CMIPATH"]+"bin/"
 from scipy.interpolate import RegularGridInterpolator
 from scipy.integrate import quad, dblquad
 import numpy as np
@@ -10,13 +10,13 @@ from reader import *
 
 class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""
-   def __init__(self, density, dynamic_viscosity, temperature = 298, pressure=100, 
+   def __init__(self, density, kinematic_viscosity, temperature = 298, pressure=100, 
                   molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, Kn=0.01, 
-                  method='LBM', conv=0.00001, directory=os.environ["CMIPATH"]+'/sandbox/',filename=None, new=True):
+                  method='LBM', conv=0.00001, lattice_velocity=0.01, directory=os.environ["CMIPATH"]+'/sandbox/',filename=None, new=True):
 
      self.density = density
-     self.eta = dynamic_viscosity
-     self.mu = dynamic_viscosity/density
+     self.eta = kinematic_viscosity
+     self.mu = kinematic_viscosity * density
      self.T = temperature
      self.k = thermal_creep
      self.P = pressure
@@ -29,6 +29,7 @@ class Fluid:
      self.inletSpeed = inflow_speed
      self.directory = directory
      self.conv = conv
+     self.U = lattice_velocity
      self.new = new
      self.FlowField = False
      if method=='LBM' and filename is None:
@@ -44,7 +45,8 @@ class Fluid:
    def Run_LB_Code(self):
      from subprocess import call
      if self.new:
-       call([PATH+"bgc",str(self.inletSpeed), str(self.eta), str(self.density), str(self.conv), self.directory])
+       call([PATH+"bgc",str(self.inletSpeed), str(self.eta), 
+               str(self.density), str(self.conv), str(self.U), self.directory])
      self.ReadFromFile(self.directory+"/LBM/vtkData/data/", True)     
 
    def ReadFromFile(self, filename, vtk=False):
@@ -52,8 +54,13 @@ class Fluid:
        x, y, z, Vx, Vy, Vz, P = ReadVTK(filename)
      else:
        x, y, z, Vx, Vy, Vz, P = ReadText(filename)
-     self.fvx = RegularGridInterpolator((x, y, z), Vx)
-     self.fvy = RegularGridInterpolator((x, y, z), Vy)
-     self.fvz = RegularGridInterpolator((x, y, z), Vz)
-     self.fp = RegularGridInterpolator((x, y, z), P)
+
+
+     data_grid = np.zeros((Vx.shape[0],Vx.shape[1],Vx.shape[2],3),)
+     
+     data_grid[:,:,:,0] = Vx[:,:,:]
+     data_grid[:,:,:,1] = Vy[:,:,:]
+     data_grid[:,:,:,2] = Vz[:,:,:]
+ #    data_grid[:,:,:,3] = P[:,:,:]
+     self.fdrag = RegularGridInterpolator((x, y, z), data_grid) 
      self.FlowField = True
