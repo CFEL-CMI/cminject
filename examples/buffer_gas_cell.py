@@ -1,11 +1,6 @@
-import sys
-import os
-PATH = os.environ["CMIPATH"]
-sys.path.insert(0, PATH+'lib/')
-
-from device.source import *
-from device.bgc import *
-from device.experiment import *
+from experiment.source import *
+from experiment.device.bgc import *
+from experiment.experiment import *
 from field.interaction_field import *
 import time
 # Create Particle

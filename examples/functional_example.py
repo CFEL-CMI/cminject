@@ -1,9 +1,6 @@
-import sys
-sys.path.insert(0, '../lib')
-
-from device.source import *
-from device.als import *
-from device.experiment import *
+from experiment.source import *
+from experiment.device.als import *
+from experiment.experiment import *
 from field.interaction_field import *
 from visualizer.visualizer3d import *
 import matplotlib.pyplot as plt

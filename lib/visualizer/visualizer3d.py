@@ -1,5 +1,5 @@
-from device.als import *
-from device.bgc import *
+from experiment.device.als import *
+from experiment.device.bgc import *
 import numpy as np
 #import matplotlib
 #matplotlib.use("Agg")
