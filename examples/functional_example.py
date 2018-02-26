@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # Create Particle
 Radius = 1e-8 # 0.00000001
 ParticleDensity = 100
-NumberOfParticles = 2
+NumberOfParticles = 1
 SourceCoordinates = (0, 0, 0)
 SigmaParticlesPosition = (0.003, 0.003, 0)
 MuParticlesVelocity = (1, 0.5, -50)
