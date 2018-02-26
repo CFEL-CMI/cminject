@@ -65,7 +65,8 @@ class BufferGasCell(object):
             self.cylinder2.CylinderInside(ParticlePosition) or
               self.cylinder3.CylinderInside(ParticlePosition) or
                         self.cone1.ConeInside(ParticlePosition) or
-                             self.cone2.ConeInside(ParticlePosition)):
+                             self.cone2.ConeInside(ParticlePosition) or 
+                                (ParticlePosition[0]>0.043 and ParticlePosition[0]<0.055)):
       return True
     else:
       return False
