@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
 import os
-#PATH = os.environ["CMIPATH"]+"bin/"
 from scipy.interpolate import RegularGridInterpolator
 from scipy.integrate import quad, dblquad
 import numpy as np
@@ -10,13 +9,13 @@ from reader import *
 
 class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""
-   def __init__(self, density, kinematic_viscosity, temperature = 298, pressure=100, 
+   def __init__(self, density, dynamic_viscosity, temperature = 298, pressure=100, 
                   molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, Kn=0.01, 
-                  method='LBM', conv=0.00001, lattice_velocity=0.01, directory=os.environ["CMIPATH"]+'/sandbox/',filename=None, new=True):
+                    method='LBM', conv=0.00001, lattice_velocity=0.01, directory='./',filename=None, new=True):
 
      self.density = density
-     self.eta = kinematic_viscosity
-     self.mu = kinematic_viscosity * density
+     self.eta = dynamic_viscosity/density #kinematic_viscosity
+     self.mu = dynamic_viscosity  #kinematic_viscosity * density
      self.T = temperature
      self.k = thermal_creep
      self.P = pressure
@@ -55,7 +54,7 @@ class Fluid:
      else:
        x, y, z, Vx, Vy, Vz, P = ReadText(filename)
 
-
+     self.maxZ=max(np.abs(z))
      data_grid = np.zeros((Vx.shape[0],Vx.shape[1],Vx.shape[2],3),)
      
      data_grid[:,:,:,0] = Vx[:,:,:]
