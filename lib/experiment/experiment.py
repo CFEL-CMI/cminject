@@ -4,14 +4,16 @@ from field.interaction_field import *
 from field.force_calculator import *
 from device.als import AerodynamicsLensStack
 from device.bgc import BufferGasCell
+from detector import Detector
 import numpy as np
+import os
 
 class Experiment:
   """This class carry out the info about the experiment you want to simulate.
      For example, the devices and the interaction fields you will include.
      The output files will have the name of and date of your experiment"""
 
-  def __init__(self, name, date, source, detector=None, devices=None, field=None, beam=None, traj=100000, end=0.8, dt=1.e-9, directory='./'):
+  def __init__(self, name, date, source, detector=None, devices=None, field=None, beam=None, traj=100, end=1.8, dt=1.e-5, directory='./'):
     self.name = name
     self.date = date
     self.field = field
@@ -20,13 +22,16 @@ class Experiment:
     self.beam = beam
     self.traj = traj
     self.dt = dt
+    self.detector = detector
     self.NoTrajectories = (end/dt) / traj
+    if not os.path.exists(directory):
+      os.makedirs(directory)
     self.directory = directory
     self.interp_time = 0
     self.called = 0    
     self.CalculateTrajectory(tStart=0, tEnd=end, dt=dt)
-    self.SaveTrajectories()
-
+#    self.SaveTrajectories()
+    self.detector.PlotDetector(directory)
 
   def CalculateTrajectory(self, tStart, tEnd, dt ):
     """ Calculate the trajectories for all particles by integrating the equation of motion"""
@@ -44,18 +49,32 @@ class Experiment:
     integral.set_integrator('lsoda', method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
     integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(self.field, self.beam)
     print("Calculate particle", count,  i.position)
-    while integral.successful() and self.ParticleInBoundary((integral.y[0], integral.y[1], integral.y[2]) ) and integral.t < tEnd:
-      if traj%self.traj:
-        i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
-        i.velocities.append( (integral.y[3], integral.y[4], integral.y[5]) )
+    while integral.successful() and self.ParticleInBoundary(i,integral.y[2]) and integral.t < tEnd and abs(integral.y[2]) < self.detector.after:
+#      if traj%self.traj:
+#        i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
+#        i.velocities.append( (integral.y[3], integral.y[4], integral.y[5]) )
+ #       print (self.detector.l-self.detector.l/10.0), integral.y[2]
+      if abs(integral.y[2]) > self.detector.before:
+        self.detector.x.append(integral.y[0])
+        self.detector.y.append(integral.y[1])
+        self.detector.z.append(integral.y[2])
+        self.detector.vx.append(integral.y[3])
+        self.detector.vy.append(integral.y[4])
+        self.detector.vz.append(integral.y[5])
+
       integral.integrate(integral.t + dt)
       i.position = (integral.y[0], integral.y[1], integral.y[2])
       i.velocity = (integral.y[3], integral.y[4], integral.y[5])
-      traj+=1
-    i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
-    i.velocities.append( (integral.y[3], integral.y[4], integral.y[5]) )
+#      traj+=1
+#    i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
+#    i.velocities.append( (integral.y[3], integral.y[4], integral.y[5]) )
+    try:
+      self.detector.Projection()
+    except:
+      pass
+    self.detector.x=[]; self.detector.y=[]; self.detector.z=[]
+    self.detector.vx=[]; self.detector.vy=[]; self.detector.vz=[]
     print("Final Position", i.position, i.velocity)
-
 
   """
   def FlyParticles(self, tStart, tEnd, dt):
@@ -95,7 +114,17 @@ class Experiment:
          longest = len(i.trajectory)
     return longest
 
-  def ParticleInBoundary(self, position):
+  def ParticleInBoundary(self, particle, Z):
+#####################################
+    if self.devices==None:   # if there are no devices then use the boundary of the flow field
+      if particle.insideFluid:
+         return True
+      else:
+        if abs(Z)>=self.field.maxZ:
+          return True
+        else:
+          return False
+#####################################
     if self.devices!=None:
       for i in self.devices:
         if type(i) is AerodynamicsLensStack:
@@ -116,7 +145,7 @@ class Experiment:
         check = False # incase no particles propagating no need to write the time step
       c=0
       for i in self.source.particles:
-        if len(i.trajectory)>t:
+#        if len(i.trajectory)>t:
           f.write(str(c) + " " + str(i.trajectory[t][0]) + " " + str(i.trajectory[t][1])
                       + " " + str(i.trajectory[t][2]) + " " + str(i.velocities[t][0]) + " "
                              + str(i.velocities[t][1]) + " " + str(i.velocities[t][2]) + '\n')

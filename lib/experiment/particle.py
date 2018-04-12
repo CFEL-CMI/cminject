@@ -26,7 +26,8 @@ class SphericalParticle(Particle):
     self.M = self.mass()
     self.trajectory =[]
     self.velocities =[]
-    self.called=0
+    self.insideFluid = True
+    self.called=0   # for debugging
 
   def get_v_and_a(self, t, p_and_v, fluid, beam):
     """ This fuction returns the derivatives of the position and velocities for the integrator"""
@@ -42,12 +43,13 @@ class SphericalParticle(Particle):
   def DragForceVector(self,fluid, p_and_v):
      """This function calculates the drag force using Stokes' law for spherical particles in continuum"""
 
-     if p_and_v[0]>0.0432: return np.zeros(3)  # this is hard coded for the buffer gace cell because after this point the fluid cannot be modeled by LBM
+#     if p_and_v[2]<-0.044: return np.zeros(3)  # this is hard coded for the buffer gace cell because after this point the fluid cannot be modeled by LBM
      try:
       force_vector = 6 * pi * fluid.mu * self.radius * (
                  fluid.fdrag((p_and_v[0],p_and_v[1],p_and_v[2])) - p_and_v[3:] )
       return force_vector
      except:
+       self.insideFluid = False
        return np.zeros(3)
 
   def FppTrans(self, fluid, beam):
