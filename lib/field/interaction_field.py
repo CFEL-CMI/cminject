@@ -10,7 +10,7 @@ from reader import *
 class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""
    def __init__(self, density, dynamic_viscosity, temperature = 298, pressure=100, 
-                  molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, Kn=0.01, 
+                  molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, Kn=912.0, 
                     method='LBM', conv=0.00001, lattice_velocity=0.01, directory='./',filename=None, new=True):
 
      self.density = density
@@ -55,6 +55,7 @@ class Fluid:
        x, y, z, Vx, Vy, Vz, P = ReadText(filename)
 
      self.maxZ=max(np.abs(z))
+     self.minZ=min(np.abs(z))
      data_grid = np.zeros((Vx.shape[0],Vx.shape[1],Vx.shape[2],3),)
      
      data_grid[:,:,:,0] = Vx[:,:,:]

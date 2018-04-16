@@ -49,7 +49,9 @@ class SphericalParticle(Particle):
                  fluid.fdrag((p_and_v[0],p_and_v[1],p_and_v[2])) - p_and_v[3:] )
       return force_vector
      except:
-       self.insideFluid = False
+       if abs(p_and_v[2])>=fluid.maxZ or abs(p_and_v[2])<=fluid.minZ:
+         self.insideFluid = True
+       else: self.insideFluid = False  # The particle is outside the flow field
        return np.zeros(3)
 
   def FppTrans(self, fluid, beam):

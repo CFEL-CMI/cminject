@@ -120,8 +120,8 @@ class Experiment:
       if particle.insideFluid:
          return True
       else:
-        if abs(Z)>=self.field.maxZ:
-          return True
+        if abs(Z)>=self.field.maxZ or abs(Z)<=self.field.minZ: # if the particle is out but from the outlet it shouldn't stop
+         return True               # till it reaches the detector
         else:
           return False
 #####################################

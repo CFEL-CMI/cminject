@@ -8,10 +8,10 @@ import os
 # Create Particle
 Radius = 5e-7 # 0.00000001
 ParticleDensity = 1050
-NumberOfParticles = 3000
-SourceCoordinates = (0, 0, -0.002)
-SigmaParticlesPosition = (0.0005, 0.0005, 0)
-MuParticlesVelocity = (0., 0., -50.)
+NumberOfParticles = 1
+SourceCoordinates = (0, 0, -0.000)
+SigmaParticlesPosition = (0.000, 0.000, 0.000)
+MuParticlesVelocity = (0., 0., -70.)
 SigmaParticlesVelocity = (0.0, 0.0, 0.0)
 
 SourceOfParticles = Source( NumberOfParticles, SourceCoordinates , SigmaParticlesPosition, MuParticlesVelocity, SigmaParticlesVelocity, radius=Radius, rho=ParticleDensity  )
@@ -27,5 +27,5 @@ directory='/Users/aminmuha/Documents/myproject/50sccm/0.0005mmParticlePositionIn
 
 ExpName = 'Buffer Gas Cell'
 ExpDate = 'April2018'
-exp = Experiment( ExpName, ExpDate, SourceOfParticles, end=0.8, field=f, detector=d, directory=directory )
+exp = Experiment( ExpName, ExpDate, SourceOfParticles, end=18., field=f, detector=d, directory=directory )
 
