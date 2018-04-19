@@ -20,6 +20,7 @@ class SphericalParticle(Particle):
     self.kp = thermal_conductivity     # 6.3 W/mK for carbon, 318 for Au. I made carbos as defult
     self.index_of_ref = index_of_ref
     self.position = position
+    self.initialPosition = position
     self.velocity = velocity
     self.acceleration = (0, 0, 0)
     self.boundary = boundary
@@ -27,7 +28,11 @@ class SphericalParticle(Particle):
     self.trajectory =[]
     self.velocities =[]
     self.insideFluid = True
+    self.surfaceA = 4 * pi * radius**2
+    self.collisions = 0
     self.called=0   # for debugging
+    self.pressureAround = 0
+
 
   def get_v_and_a(self, t, p_and_v, fluid, beam):
     """ This fuction returns the derivatives of the position and velocities for the integrator"""
@@ -42,26 +47,35 @@ class SphericalParticle(Particle):
 
   def DragForceVector(self,fluid, p_and_v):
      """This function calculates the drag force using Stokes' law for spherical particles in continuum"""
-
-#     if p_and_v[2]<-0.044: return np.zeros(3)  # this is hard coded for the buffer gace cell because after this point the fluid cannot be modeled by LBM
      try:
       token = fluid.fdrag((p_and_v[0],p_and_v[1],p_and_v[2]))
       vf = token[:3]
       pressure = token[3]
+      self.pressureAround = pressure
       force_vector = 6 * pi * fluid.mu * self.radius * (vf - p_and_v[3:])
-      return force_vector/self.SlipCorrection(fluid, pressure)
+      return force_vector / self.SlipCorrection(fluid, pressure)
      except Exception as e:
-  #     print str(e)
-       if abs(p_and_v[2])>=fluid.maxZ or abs(p_and_v[2])<=fluid.minZ:
-         self.insideFluid = True
-       else: self.insideFluid = False  # The particle is outside the flow field
+       self.insideFluid = False  # The particle is outside the flow field
        return np.zeros(3)
 
   def SlipCorrection(self, fluid, pressure):
     k = 1.38065e-23 #J/K
-    Kn = 2*fluid.mu/(pressure*self.radius)*sqrt(pi*k*fluid.T/(2*fluid.mGas))
+    R = 8.314
+    d = fluid.kinetic_d
+    avG= 6.022e23
+#    lamda = R * fluid.T / (sqrt(2.0)*pi*d*d*avG*pressure)
+    lamda = (fluid.mu/pressure)*sqrt(pi*k*fluid.T/(2*fluid.mGas))
+    Kn = lamda/self.radius
     S = 1 + Kn * (1.2310 + (0.4695 * exp(-1.1783/Kn)))
     return S
+
+  def CalculateCollisions(self, fluid, dt):
+    K = 1.38065e-23
+    avG = 6.022e23
+    v = sqrt(8*fluid.T*K/(fluid.mGas*pi))
+    n = self.pressureAround * avG/(8.314*fluid.T)
+    C = 0.25 * n * v * self.surfaceA * dt
+    self.collisions+=C
 
   def FppTrans(self, fluid, beam):
     """ This function calculates the trans component of the photophertic forces based on a semi imperical model"""

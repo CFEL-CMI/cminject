@@ -10,7 +10,7 @@ from reader import *
 class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""
    def __init__(self, density, dynamic_viscosity, temperature = 4.0, pressure=100, 
-                  molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, Kn=912.0, 
+                  molar_mass=0.004002602 ,thermal_creep = 1, inflow_speed=20, outflow_pressure=0, Kn=912.0, kinetic_d = 260.e-12, 
                     method='LBM', conv=0.00001, lattice_velocity=0.01, mGas=6.6e-27, mGasMol=0.004002602, directory='./',filename=None, new=True):
 
      self.density = density
@@ -23,6 +23,7 @@ class Fluid:
      self.inflow_speed =inflow_speed
      self.outflow_pressure = outflow_pressure
      self.Kn = Kn
+     self.kinetic_d = kinetic_d
      self.mGas = mGas
      self.mGasMol = mGasMol
      self.SlipCorrection = 1 + Kn * (1.2310 + (0.4695 * exp(-1.1783/Kn)))

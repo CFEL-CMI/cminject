@@ -13,7 +13,7 @@ class Experiment:
      For example, the devices and the interaction fields you will include.
      The output files will have the name of and date of your experiment"""
 
-  def __init__(self, name, date, source, detector=None, devices=None, field=None, beam=None, traj=100, end=1.8, dt=1.e-5, directory='./'):
+  def __init__(self, name, date, source, detector=None, devices=None, field=None, beam=None, traj=500, end=1.8, dt=1.e-5, directory='./'):
     self.name = name
     self.date = date
     self.field = field
@@ -50,10 +50,9 @@ class Experiment:
     integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(self.field, self.beam)
     print("Calculate particle", count,  i.position)
     while integral.successful() and self.ParticleInBoundary(i,integral.y[2]) and integral.t < tEnd and abs(integral.y[2]) < self.detector.after:
-#      if traj%self.traj:
-#        i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
-#        i.velocities.append( (integral.y[3], integral.y[4], integral.y[5]) )
- #       print (self.detector.l-self.detector.l/10.0), integral.y[2]
+      if traj%self.traj:
+        i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
+        i.velocities.append( (integral.y[3], integral.y[4], integral.y[5]) )
       if abs(integral.y[2]) > self.detector.before:
         self.detector.x.append(integral.y[0])
         self.detector.y.append(integral.y[1])
@@ -61,20 +60,18 @@ class Experiment:
         self.detector.vx.append(integral.y[3])
         self.detector.vy.append(integral.y[4])
         self.detector.vz.append(integral.y[5])
-
       integral.integrate(integral.t + dt)
+      i.CalculateCollisions(self.field, dt)
       i.position = (integral.y[0], integral.y[1], integral.y[2])
       i.velocity = (integral.y[3], integral.y[4], integral.y[5])
-#      traj+=1
-#    i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
-#    i.velocities.append( (integral.y[3], integral.y[4], integral.y[5]) )
+      traj+=1
     try:
       self.detector.Projection()
     except:
       pass
     self.detector.x=[]; self.detector.y=[]; self.detector.z=[]
     self.detector.vx=[]; self.detector.vy=[]; self.detector.vz=[]
-    print("Final Position", i.position, i.velocity)
+    print("Final Position", i.position, i.velocity, '%2E' % i.collisions)
 
   """
   def FlyParticles(self, tStart, tEnd, dt):
@@ -116,11 +113,11 @@ class Experiment:
 
   def ParticleInBoundary(self, particle, Z):
 #####################################
-    if self.devices==None:   # if there are no devices then use the boundary of the flow field
-      if particle.insideFluid:
+#    if self.devices==None:   # if there are no devices then use the boundary of the flow field
+    if particle.insideFluid:
          return True
-      else:
-        if abs(Z)>=self.field.maxZ or abs(Z)<=self.field.minZ: # if the particle is out but from the outlet it shouldn't stop
+    else:
+        if abs(Z)>=self.field.maxZ:# or abs(Z)<=self.field.minZ: # if the particle is out but from the outlet it shouldn't stop
          return True               # till it reaches the detector
         else:
           return False
