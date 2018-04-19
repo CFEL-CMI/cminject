@@ -53,7 +53,7 @@ class SphericalParticle(Particle):
       pressure = token[3]
       self.pressureAround = pressure
       force_vector = 6 * pi * fluid.mu * self.radius * (vf - p_and_v[3:])
-      return force_vector / self.SlipCorrection(fluid, pressure)
+      return force_vector/ self.SlipCorrection(fluid, pressure)
      except Exception as e:
        self.insideFluid = False  # The particle is outside the flow field
        return np.zeros(3)
@@ -63,10 +63,12 @@ class SphericalParticle(Particle):
     R = 8.314
     d = fluid.kinetic_d
     avG= 6.022e23
-#    lamda = R * fluid.T / (sqrt(2.0)*pi*d*d*avG*pressure)
-    lamda = (fluid.mu/pressure)*sqrt(pi*k*fluid.T/(2*fluid.mGas))
-    Kn = lamda/self.radius
-    S = 1 + Kn * (1.2310 + (0.4695 * exp(-1.1783/Kn)))
+    lamda = R * fluid.T / (sqrt(2.0)*pi*d*d*avG*pressure)
+#    lamda = (fluid.mu/pressure)*sqrt(pi*k*fluid.T/(2*fluid.mGas))
+#    Kn = lamda/self.radius
+    Kn = 0.0653 * 1/(pressure*self.radius) * fluid.T/296 * (1 + 110/296)/(1 + 110/fluid.T)
+#    S = 1 + Kn * (1.2310 + (0.4695 * exp(-1.1783/Kn)))
+    S = 1 + Kn * (1.246 + (0.42 * exp(-0.87/Kn)))
     return S
 
   def CalculateCollisions(self, fluid, dt):
