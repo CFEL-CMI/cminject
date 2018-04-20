@@ -28,7 +28,6 @@ class visualizer:
   def plot_device(self, ax):
     for i in self.exp.devices:
       if type(i) is AerodynamicsLensStack:
-        print "Plot ALS"
         offset = i.position[2]
         for j in i.segments:
           x = np.linspace(i.position[0]+j[0], i.position[0]-j[0], 100)
