@@ -11,6 +11,7 @@ import sys
 filename = sys.argv[1]
 vz = float(sys.argv[2])
 out = filename.split('.')[0]
+outdir = sys.arg[3]
 # Create Particle
 Radius = 5e-7 # 0.00000001
 ParticleDensity = 1050
@@ -36,7 +37,7 @@ DynamicViscosity = 1.06e-6
 f = Fluid( FluidDensity, DynamicViscosity, filename=filename)  # read flow field from comsole file
 d = Detector(-0.052)
 
-directory='/Users/aminmuha/Documents/myproject/50sccm/'+str(vz)+'_'+out+'_'
+directory = outdir+str(vz)+'_'+out+'_'
 
 ExpName = 'Buffer Gas Cell'
 ExpDate = 'April2018'
