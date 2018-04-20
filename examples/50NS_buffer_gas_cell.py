@@ -17,9 +17,9 @@ Radius = 5e-7 # 0.00000001
 ParticleDensity = 1050
 NumberOfParticles = 10
 SourceCoordinates = (0, 0, -0.00045)
-SigmaParticlesPosition = (0.0005, 0.0005, 0.000)
+SigmaParticlesPosition = (0.0005, 0.0005, 0.0005)
 MuParticlesVelocity = (0., 0., vz)
-SigmaParticlesVelocity = (.0, .0, 0.0)
+SigmaParticlesVelocity = (.1, .1, 0.1)
 
 SourceOfParticles = Source( NumberOfParticles, SourceCoordinates , SigmaParticlesPosition, MuParticlesVelocity, SigmaParticlesVelocity, radius=Radius, rho=ParticleDensity  )
 
