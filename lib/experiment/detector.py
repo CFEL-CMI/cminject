@@ -24,6 +24,7 @@ class Detector:
   def PlotDetector(self, directory):
     f = open(directory+'detector.txt', 'w+')
     x=[]; y=[]; vx=[]; vy=[]; vz=[]
+    print len(self.particles), "Particles servived"
     for i in self.particles:
       x.append(i[0])
       y.append(i[1])
