@@ -2,6 +2,7 @@ import sys
 import numpy as np
 from math import sin, cos
 from numpy.linalg import inv
+from scipy.integrate import ode
 
 class atom:
   def __init__(self, coord, mass):
@@ -21,7 +22,6 @@ def read_pdb_xyz(pdb_name):
     pdb_file = open(pdb_name, 'r')
     for line in pdb_file:
         if line.startswith("ATOM") or line.startswith("HETATM"):
-            # extract x, y, z coordinates for carbon alpha atoms
             x = float(line[30:38].strip())
             y = float(line[38:46].strip())
             z = float(line[46:54].strip())
@@ -76,52 +76,58 @@ def matriz_inercia(atoms):
 		I[6] -= a.mass * temp_x * temp_z
 		I[7] -= a.mass * temp_y * temp_z
 		I[8] += a.mass * (temp_x**2 + temp_y**2)
-
-	global tensor
 	tensor = np.array([(I[0:3]), (I[3:6]), (I[6:9])]) * 1.66053886 * 1.e-27 * 1.e-20 #SI Units
         return tensor
 
 def rotationMatrix(theta):
    tx,ty,tz = theta
-
    Rx = np.array([[1,0,0], [0, cos(tx), -sin(tx)], [0, sin(tx), cos(tx)]])
    Ry = np.array([[cos(ty), 0, -sin(ty)], [0, 1, 0], [sin(ty), 0, cos(ty)]])
    Rz = np.array([[cos(tz), -sin(tz), 0], [sin(tz), cos(tz), 0], [0,0,1]])
-
    return np.dot(Rx, np.dot(Ry, Rz))
 
 def rotateTensor(angles, tensor):
    R = rotationMatrix(angles)
-   return np.dot(R.transpose(), np.dot(tensor, R))
+   return np.dot(R, np.dot(tensor, R.transpose()))
 
 atoms = read_pdb_xyz(sys.argv[1])
 I = matriz_inercia(atoms)
-alpha = np.array([[1339.748,    0.430, 13.683],
-                   [0.430, 1258.404, 16.455],
-                   [13.683, 16.455, 1195.793]]) * (5.2918e-11)**3
+conversion =  (0.529177)**3 * (1.e-24  * 1.e-15) / 8.988
+alpha = np.array([[1406.079,   -4.035, 5.050],
+                   [-4.035, 1293.306, 3.469],
+                   [5.050, 3.469, 1213.409]]) * conversion #1.11265e-16 * (5.29177e-9)**3
 
-E = np.array([1, 0, 0])
-dipole = alpha.dot(E)
+E = np.array([10., 0, 0])
+dipole = np.dot(alpha, E)
 torque = np.cross(dipole, E)
 omega = np.array([0, 0, 0])
-theta = (0.2, 0.1, 0.)
-dt = 1.e-9
+theta = (0., 0., 0.)
 alpha1 = rotateTensor(theta, alpha)
-for i in range(5000):
-  O = np.array([[        0., -omega[2],   omega[1]],
-             [ omega[2],         0.,  -omega[0]],
-             [-omega[1],  omega[0],         0.]])
 
+
+dt=1.e-9
+def get_v_and_a(t, p_and_v, alpha, E, I):
+  theta = p_and_v[:3]
+  omega = p_and_v[3:]
   alpha = rotateTensor(theta, alpha)
-  dipole = alpha.dot(E)
+  dipole = np.dot(alpha, E)
   torque = np.cross(dipole, E)
   I = rotateTensor(theta, I)
-  Iw = I.dot(omega) 
-  OIw = O.dot(Iw)
+  Iw = I.dot(omega)
+  OIw = np.cross(omega, Iw)
   M = torque - OIw
   invI = inv(I)
   a = invI.dot(M)
-  omega = omega + a*dt 
-  theta = 0.5*a*dt**2
-print a 
-#  print alpha
+  return  np.concatenate((omega, a)) 
+  
+integral = ode( get_v_and_a )
+integral.set_integrator('lsoda') #, method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
+integral.set_initial_value( (np.array([0,0,0,0,0,0])), 0. ).set_f_params(alpha, E, I)
+print("Calculate angular trajectories")
+
+while integral.successful() and integral.t < 0.01:
+
+  integral.integrate(integral.t + dt)
+
+print integral.y[0], integral.y[1], integral.y[2]
+print integral.y[3], integral.y[4], integral.y[5]
