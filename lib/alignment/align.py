@@ -93,11 +93,11 @@ def rotateTensor(angles, tensor):
 atoms = read_pdb_xyz(sys.argv[1])
 I = matriz_inercia(atoms)
 conversion =  (0.529177)**3 * (1.e-24  * 1.e-15) / 8.988
-alpha = np.array([[1406.079,   -4.035, 5.050],
-                   [-4.035, 1293.306, 3.469],
-                   [5.050, 3.469, 1213.409]]) * conversion #1.11265e-16 * (5.29177e-9)**3
+alpha = np.array([ [ 1567.680,    -6.447,    9.392],
+                   [   -6.447,  1454.354,   -0.818],
+                   [    9.392,    -0.818, 1357.895]]) * conversion #1.11265e-16 * (5.29177e-9)**3
 
-E = np.array([10., 0, 0])
+E = np.array([1., 0, 0])
 dipole = np.dot(alpha, E)
 torque = np.cross(dipole, E)
 omega = np.array([0, 0, 0])
@@ -105,7 +105,7 @@ theta = (0., 0., 0.)
 alpha1 = rotateTensor(theta, alpha)
 
 
-dt=1.e-9
+dt=1.e-8
 def get_v_and_a(t, p_and_v, alpha, E, I):
   theta = p_and_v[:3]
   omega = p_and_v[3:]
@@ -124,10 +124,28 @@ integral = ode( get_v_and_a )
 integral.set_integrator('lsoda') #, method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
 integral.set_initial_value( (np.array([0,0,0,0,0,0])), 0. ).set_f_params(alpha, E, I)
 print("Calculate angular trajectories")
-
-while integral.successful() and integral.t < 0.01:
-
+a=[];b=[];c=[];time=[]
+va=[];vb=[];vc=[]
+while integral.successful() and integral.t < 0.001:
+  a.append(integral.y[0]); b.append(integral.y[1]); c.append(integral.y[2])
+  va.append(integral.y[3]); vb.append(integral.y[4]); vc.append(integral.y[5])
+  time.append(integral.t + dt)
   integral.integrate(integral.t + dt)
 
 print integral.y[0], integral.y[1], integral.y[2]
 print integral.y[3], integral.y[4], integral.y[5]
+import matplotlib.pyplot as plt
+fig, ax1 = plt.subplots()
+ax1.plot(time,a,'r')
+#ax1.plot(time,b)
+#ax1.plot(time,c)
+ax2 = ax1.twinx()
+ax2.plot(time,va)
+#ax2.plot(time,vb)
+#ax2.plot(time,vc)
+ax1.set_ylabel('Time (s)', color='r')
+ax1.set_ylabel('Theta', color='b')
+ax2.set_ylabel('Velocity', color='r')
+fig.tight_layout()
+plt.show()
+
