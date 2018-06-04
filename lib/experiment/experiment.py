@@ -60,6 +60,7 @@ class Experiment:
         self.detector.vx.append(integral.y[3])
         self.detector.vy.append(integral.y[4])
         self.detector.vz.append(integral.y[5])
+      print "Temperature", i.T, integral.y[2]
       integral.integrate(integral.t + dt)
       i.CalculateCollisions(self.field, dt)
       i.position = (integral.y[0], integral.y[1], integral.y[2])
