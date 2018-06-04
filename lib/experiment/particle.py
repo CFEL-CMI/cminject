@@ -59,6 +59,12 @@ class SphericalParticle(Particle):
        return np.zeros(3)
 
   def SlipCorrection(self, fluid, pressure):
+    """This function calculates the slip correction factor with temperature
+       corrections. The Sutherland constant for helium is 79.4 at reference 
+       Temperature of 273.K. I took a reference pressure of 1 Pascal, in 
+       which the mean free path of helium is 0.01254. see J.Aersol Sci. 1976
+       Vol. 7. pp 381-387 by Klaus Willeke"""
+
     k = 1.38065e-23 #J/K
     R = 8.314
     d = fluid.kinetic_d
@@ -66,7 +72,7 @@ class SphericalParticle(Particle):
     lamda = R * fluid.T / (sqrt(2.0)*pi*d*d*avG*pressure)
 #    lamda = (fluid.mu/pressure)*sqrt(pi*k*fluid.T/(2*fluid.mGas))
 #    Kn = lamda/self.radius
-    Kn = 0.0653 * 1/(pressure*self.radius) * fluid.T/296 * (1 + 110/296)/(1 + 110/fluid.T)
+    Kn = 0.01254 * 1/(pressure*self.radius) * fluid.T/273. * (1 + 79.4/273.)/(1 + 79.4/fluid.T) 
 #    S = 1 + Kn * (1.2310 + (0.4695 * exp(-1.1783/Kn)))
     S = 1 + Kn * (1.246 + (0.42 * exp(-0.87/Kn)))
     return S
