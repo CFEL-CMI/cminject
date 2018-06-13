@@ -5,6 +5,7 @@ from field.force_calculator import *
 from device.als import AerodynamicsLensStack
 from device.bgc import BufferGasCell
 from detector import Detector
+from multiprocessing import Pool
 import numpy as np
 import os
 
@@ -13,7 +14,7 @@ class Experiment:
      For example, the devices and the interaction fields you will include.
      The output files will have the name of and date of your experiment"""
 
-  def __init__(self, name, date, source, detector=None, devices=None, field=None, beam=None, traj=500, end=1.8, dt=1.e-5, directory='./'):
+  def __init__(self, name, date, source, detector=None, devices=None, field=None, beam=None, traj=500, end=1.8, dt=1.e-5, directory='./', filename="v_and_p"):
     self.name = name
     self.date = date
     self.field = field
@@ -28,10 +29,10 @@ class Experiment:
       os.makedirs(directory)
     self.directory = directory
     self.interp_time = 0
-    self.called = 0    
+    self.called = 0
     self.CalculateTrajectory(tStart=0, tEnd=end, dt=dt)
 #    self.SaveTrajectories()
-    self.detector.PlotDetector(directory)
+    self.detector.PlotDetector(directory, filename)
 
   def CalculateTrajectory(self, tStart, tEnd, dt ):
     """ Calculate the trajectories for all particles by integrating the equation of motion"""
@@ -46,7 +47,7 @@ class Experiment:
         if the particle outside the boundary of the devices or the integration was not successful"""
     traj = 0
     integral = ode( i.get_v_and_a )
-    integral.set_integrator('lsoda', method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
+    integral.set_integrator('lsoda') #, method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
     integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(self.field, self.beam)
     print("Calculate particle", count,  i.position)
     while integral.successful() and self.ParticleInBoundary(i,integral.y[2]) and integral.t < tEnd and abs(integral.y[2]) < self.detector.after:
@@ -60,9 +61,8 @@ class Experiment:
         self.detector.vx.append(integral.y[3])
         self.detector.vy.append(integral.y[4])
         self.detector.vz.append(integral.y[5])
-      print "Temperature", i.T, integral.y[2]
       integral.integrate(integral.t + dt)
-      i.CalculateCollisions(self.field, dt)
+#      i.CalculateCollisions(self.field, dt)
       i.position = (integral.y[0], integral.y[1], integral.y[2])
       i.velocity = (integral.y[3], integral.y[4], integral.y[5])
       traj+=1
@@ -90,7 +90,6 @@ class Experiment:
     print 'interpolation: ',self.interp_time
     print "number of calls", self.called
     return integral
-    """
 
   def get_v_a(self,  t, p_and_v):
    self.called+=1
@@ -103,7 +102,7 @@ class Experiment:
    self.interp_time+=time.time()-t1
    v_a = np.concatenate((p_and_v[self.source.number_of_particles:], a))
    return v_a.flatten()
-
+  """
 
   def LongestTrajectory(self):
     longest = 0

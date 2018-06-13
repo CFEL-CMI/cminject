@@ -34,7 +34,8 @@ class SphericalParticle(Particle):
     self.collisions = 0
     self.called=0   # for debugging
     self.pressureAround = 0
-
+    self.Tt = 298.
+    self.time=0 
 
   def get_v_and_a(self, t, p_and_v, fluid, beam):
     """ This fuction returns the derivatives of the position and velocities for the integrator"""
@@ -42,6 +43,9 @@ class SphericalParticle(Particle):
     if fluid.FlowField:
       a = self.DragForceVector(fluid, p_and_v)/self.M
       self.CalculateTemp(fluid, t)
+      self.CalculateCollisions(fluid, t)
+      self.time+=t
+#      print self.time, self.T, self.Tt
     if beam is not None:
       a[0] += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0])) / self.M
       a[1] += self.FppTrans(fluid, beam)*sin(atan(self.position[1]/self.position[0])) / self.M
@@ -52,9 +56,9 @@ class SphericalParticle(Particle):
      """This function calculates the drag force using Stokes' law for spherical particles in continuum"""
      try:
       token = fluid.fdrag((p_and_v[0],p_and_v[1],p_and_v[2]))
-      fluid.vel = token[:3]
+      fluid.vel = token[:3] - p_and_v[3:] # fuild velocity relative to the particle
       fluid.pressure = token[3]
-      force_vector = 6 * pi * fluid.mu * self.radius * (fluid.vel - p_and_v[3:])
+      force_vector = 6 * pi * fluid.mu * self.radius * fluid.vel
       return force_vector/ self.SlipCorrection(fluid)
      except Exception as e:
        self.insideFluid = False  # The particle is outside the flow field
@@ -81,10 +85,16 @@ class SphericalParticle(Particle):
     return S
 
   def CalculateTemp(self, fluid, t):
+    """This function calculates the particle temperature based on Newton Law of Cooling"""
+
     C = self.cp * self.M # The total heat capacity C of a system
     D = 2*self.radius
     muS = 1.96e-5        # dynamic viscosity at room temperature
-    Nu = fluid.Nusselt(D, muS)
+    Re = fluid.Reynolds(D)
+    Pr = fluid.Pr()
+    M = fluid.Mach()
+    Nu0 = fluid.Nusselt(D, muS)
+    Nu = Nu0/ (1 + 3.42 * (M * Nu0/(Re * Pr)))
     h = fluid.h(Nu, D)
     r = h * self.surfaceA / C
     self.T = fluid.T + (self.T - fluid.T) * exp(-r*t)
@@ -94,10 +104,14 @@ class SphericalParticle(Particle):
 
     K = 1.38065e-23
     avG = 6.022e23
-#    v = sqrt(8*fluid.T*K/(fluid.mGas*pi))  # I should change this to velocity obtained from
-    v = sqrt(fluid.vel[0]**2 + fluid.vel[1]**2 +fluid.vel[2]**2)
+    v = sqrt(8*fluid.T*K/(fluid.mGas*pi))  # I should change this to velocity obtained from
+    v += sqrt(fluid.vel[0]**2 + fluid.vel[1]**2 +fluid.vel[2]**2)
     n = fluid.pressure * avG/(8.314*fluid.T) # flow field
-    C = 0.25 * n * v * self.surfaceA * dt
+    C = 0.50 * n * v * self.surfaceA * dt
+    k = (self.M + fluid.mGas)**2 / (2 * self.M * fluid.mGas)
+    dT = (self.Tt - fluid.T)/k
+    dT = C * dT
+    self.Tt = fluid.T + (self.Tt - fluid.T) * exp(-C/k)
     self.collisions+=C
     
   def FppTrans(self, fluid, beam):
