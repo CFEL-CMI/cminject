@@ -13,8 +13,9 @@ class Particle:
 class SphericalParticle(Particle):
   """This class define the characteristics of the particles that will be added to the simulation"""
 
-  def __init__(self, radius, density, temp=298., thermal_conductivity=6.3, index_of_ref=0, 
+  def __init__(self, ID, radius, density, temp=298., thermal_conductivity=6.3, index_of_ref=0, 
                                              cp=1400., boundary=None, position=(0,0,0), velocity=(0,0,0)):
+    self.ID = ID
     self.radius = radius
     self.T = temp
     self.rho = density
@@ -34,8 +35,9 @@ class SphericalParticle(Particle):
     self.collisions = 0
     self.called=0   # for debugging
     self.pressureAround = 0
-    self.Tt = 298.
-    self.time=0 
+    self.Tt = temp
+#    self.time=0 
+#    self.f = open("forces.txt", "w+")
 
   def get_v_and_a(self, t, p_and_v, fluid, beam):
     """ This fuction returns the derivatives of the position and velocities for the integrator"""
@@ -44,8 +46,8 @@ class SphericalParticle(Particle):
       a = self.DragForceVector(fluid, p_and_v)/self.M
       self.CalculateTemp(fluid, t)
       self.CalculateCollisions(fluid, t)
-      self.time+=t
-#      print self.time, self.T, self.Tt
+#      self.time+=t
+#      self.f.write(str(p_and_v[2])+" "+ str(a[2])+" "+ str(fluid.MeanFreePath())+'\n') #self.time, self.T, self.Tt
     if beam is not None:
       a[0] += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0])) / self.M
       a[1] += self.FppTrans(fluid, beam)*sin(atan(self.position[1]/self.position[0])) / self.M

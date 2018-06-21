@@ -29,7 +29,7 @@ class Source:
     vz = np.random.normal(self.muV[2], self.sigmaV[2], self.number_of_particles)
     
     for i in range(self.number_of_particles): # create an object for each particle
-      self.particles.append(particle.SphericalParticle(self.radius, self.rho, 
+      self.particles.append(particle.SphericalParticle(i, self.radius, self.rho, 
    			position=(x[i], y[i], z[i]), velocity=(vx[i],vy[i],vz[i])))
 
 

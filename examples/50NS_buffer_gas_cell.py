@@ -3,7 +3,7 @@ from experiment.device.als import *
 from experiment.experiment import *
 from field.interaction_field import *
 from experiment.detector import Detector
-from visualizer.visualizer3d import *
+#from visualizer.visualizer3d import *
 from experiment.device.als import *
 import os
 import sys
@@ -13,11 +13,11 @@ vz = float(sys.argv[2])
 out = filename.split('.')[0]
 outdir = sys.argv[3]
 # Create Particle
-Radius = 5e-7 # 0.00000001
+Radius = 1.e-7 # 0.00000001
 ParticleDensity = 1050
-NumberOfParticles = 10
-SourceCoordinates = (0, 0, -0.00045)
-SigmaParticlesPosition = (0.0005, 0.0005, 0.0005)
+NumberOfParticles = 100
+SourceCoordinates = (0, 0, 0.0065)
+SigmaParticlesPosition = (0.0000001, 0.0000001, 0.0000001)
 MuParticlesVelocity = (0., 0., vz)
 SigmaParticlesVelocity = (.1, .1, 0.1)
 
@@ -32,14 +32,14 @@ adl = AerodynamicsLensStack(ADSPosition, Segments)
 
 # Define Fluid Object
 FluidDensity = 0.0009 
-DynamicViscosity = 1.06e-6
+DynamicViscosity = 1.02e-6
 
 f = Fluid( FluidDensity, DynamicViscosity, filename=filename)  # read flow field from comsole file
-d = Detector(-0.052)
+d = Detector([-0.01, -0.052])
 
-directory = 'v'+outdir+str(vz)+'_'+out+'_'
+filename = 'v'+str(vz).replace("-","")+'_'+out+'_'
 
 ExpName = 'Buffer Gas Cell'
 ExpDate = 'April2018'
-exp = Experiment( ExpName, ExpDate, SourceOfParticles, end=2.5, dt=1.e-5, field=f, devices=[adl], detector=d, directory=directory )
-visualizer(exp)
+exp = Experiment( ExpName, ExpDate, SourceOfParticles, end=1., dt=1.e-5, field=f, devices=[adl], detector=d, directory=outdir, filename=filename )
+#visualizer(exp)

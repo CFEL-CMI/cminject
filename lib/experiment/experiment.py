@@ -27,17 +27,21 @@ class Experiment:
     self.NoTrajectories = (end/dt) / traj
     if not os.path.exists(directory):
       os.makedirs(directory)
+    if not os.path.exists(directory+"/images/"):
+      os.makedirs(directory+"/images/")
+
     self.directory = directory
     self.interp_time = 0
     self.called = 0
     self.CalculateTrajectory(tStart=0, tEnd=end, dt=dt)
 #    self.SaveTrajectories()
-    self.detector.PlotDetector(directory, filename)
+    self.detector.PlotDetector(directory, filename, source)
 
   def CalculateTrajectory(self, tStart, tEnd, dt ):
     """ Calculate the trajectories for all particles by integrating the equation of motion"""
     count = 0
     for i in self.source.particles:
+      self.detector.ID = i.ID
       self.IntegrateSingeParticle(i, count, tStart, tEnd, dt )
       count+=1
     return True
@@ -50,19 +54,12 @@ class Experiment:
     integral.set_integrator('lsoda') #, method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
     integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(self.field, self.beam)
     print("Calculate particle", count,  i.position)
-    while integral.successful() and self.ParticleInBoundary(i,integral.y[2]) and integral.t < tEnd and abs(integral.y[2]) < self.detector.after:
+    while integral.successful() and self.ParticleInBoundary(i,integral.y[2]) and integral.t < tEnd and abs(integral.y[2]) < self.detector.end:
       if traj%self.traj:
         i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
         i.velocities.append( (integral.y[3], integral.y[4], integral.y[5]) )
-      if abs(integral.y[2]) > self.detector.before:
-        self.detector.x.append(integral.y[0])
-        self.detector.y.append(integral.y[1])
-        self.detector.z.append(integral.y[2])
-        self.detector.vx.append(integral.y[3])
-        self.detector.vy.append(integral.y[4])
-        self.detector.vz.append(integral.y[5])
+      self.CheckNearDetector(integral, i)
       integral.integrate(integral.t + dt)
-#      i.CalculateCollisions(self.field, dt)
       i.position = (integral.y[0], integral.y[1], integral.y[2])
       i.velocity = (integral.y[3], integral.y[4], integral.y[5])
       traj+=1
@@ -72,7 +69,21 @@ class Experiment:
       pass
     self.detector.x=[]; self.detector.y=[]; self.detector.z=[]
     self.detector.vx=[]; self.detector.vy=[]; self.detector.vz=[]
+    self.detector.T=[]; self.detector.Tt=[]
     print("Final Position", i.position, i.velocity, '%2E' % i.collisions)
+
+
+  def CheckNearDetector(self, integral, P):
+    if self.detector.Check(abs(integral.y[2])):
+        self.detector.T.append(P.T)
+        self.detector.Tt.append(P.Tt)
+        self.detector.x.append(integral.y[0])
+        self.detector.y.append(integral.y[1])
+        self.detector.z.append(integral.y[2])
+        self.detector.vx.append(integral.y[3])
+        self.detector.vy.append(integral.y[4])
+        self.detector.vz.append(integral.y[5])
+       
 
   """
   def FlyParticles(self, tStart, tEnd, dt):
