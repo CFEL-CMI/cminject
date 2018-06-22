@@ -3,8 +3,11 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.interpolate import interp1d
 import numpy as np
 import h5py
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import rc
+import matplotlib.pyplot as plt
+plt.ioff()
 from scipy import optimize
 from scipy.stats import norm
 
@@ -37,7 +40,6 @@ class Detector:
     x = np.array(self.x); y = np.array(self.y); z=np.array(self.z)
     vx = np.array(self.vx); vy = np.array(self.vy); vz=np.array(self.vz)
     T = np.array(self.T); Tt = np.array(self.Tt)
-    print len(z), len(T), len(Tt)
     f0 = interp1d(z, x); f1 = interp1d(z, y); f2 = interp1d(z, vx)
     f3 = interp1d(z, vy); f4 = interp1d(z, vz); f5 = interp1d(z, T); f6 = interp1d(z, Tt)
     self.particles.append((f0(self.l), f1(self.l), f2(self.l), f3(self.l), f4(self.l), f5(self.l), f6(self.l), self.ID))

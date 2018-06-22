@@ -3,7 +3,6 @@ from scipy.integrate import quad, dblquad
 import numpy as np
 from math import pi, sqrt, exp, cos, sin, tan, asin, acos, atan
 import cmath
-import matplotlib.pyplot as plt
 
 R = 8.314 # UNIVERSAL GAS CONSTANT
 
