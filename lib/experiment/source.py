@@ -14,7 +14,7 @@ class Source:
     self.distribution = distribution
     self.radius = radius
     self.rho = rho
-    np.random.seed(0)
+    np.random.seed(1000)
     self.generate_particles()
 
   def generate_particles(self):

@@ -22,9 +22,11 @@ class SphericalParticle(Particle):
     self.kp = thermal_conductivity     # 6.3 W/mK for carbon, 318 for Au. I made carbos as defult
     self.index_of_ref = index_of_ref
     self.position = position
+    self.iposition = position
     self.cp = cp # specific heat
     self.initialPosition = position
     self.velocity = velocity
+    self.ivelocity = velocity
     self.acceleration = (0, 0, 0)
     self.boundary = boundary
     self.M = self.mass()

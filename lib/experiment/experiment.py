@@ -51,9 +51,9 @@ class Experiment:
         if the particle outside the boundary of the devices or the integration was not successful"""
     traj = 0
     integral = ode( i.get_v_and_a )
-    integral.set_integrator('lsoda') #, method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
+    integral.set_integrator('lsoda', method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
     integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(self.field, self.beam)
-    print("Calculate particle", count,  i.position)
+    print("Calculate particle", count,  i.position, i.velocity, i.ID)
     while integral.successful() and self.ParticleInBoundary(i,integral.y[2]) and integral.t < tEnd and abs(integral.y[2]) < self.detector.end:
       if traj%self.traj:
         i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
@@ -129,7 +129,7 @@ class Experiment:
          return True
     else:
         if abs(Z)>=self.field.maxZ-self.field.maxZ/100.0:# or abs(Z)<=self.field.minZ: # if the particle is out but from the outlet it shouldn't stop
-         return True               # till it reaches the detector
+          return True               # till it reaches the detector
         else:
           return False
 #####################################
