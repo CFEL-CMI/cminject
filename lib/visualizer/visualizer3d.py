@@ -92,7 +92,7 @@ class visualizer:
          x, y, z = self.data_gen(i)
          p = ax.plot(x, y, z, 'o-', lw=0)
 #         writer.grab_frame()
-         plt.pause(0.01)
+         plt.pause(0.0001)
          p.pop(0).remove()
    
        else:

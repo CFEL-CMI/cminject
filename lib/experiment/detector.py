@@ -4,10 +4,10 @@ from scipy.interpolate import interp1d
 import numpy as np
 import h5py
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 from matplotlib import rc
 import matplotlib.pyplot as plt
-plt.ioff()
+#plt.ioff()
 from scipy import optimize
 from scipy.stats import norm
 
@@ -109,16 +109,16 @@ class Detector:
         ID.append(i[7])
       data = np.array([x,y,vx,vy,vz,T, Tt, ID])
       detectors.create_dataset(str(self.l[j]), data=data)
-      self.FitandPlot(x, y, str(self.l[j]), "Positions", directory)
-      self.FitandPlot(vx, vy, str(self.l[j]), "Velocities", directory)
+#      self.FitandPlot(x, y, str(self.l[j]), "Positions", directory)
+#      self.FitandPlot(vx, vy, str(self.l[j]), "Velocities", directory)
     x=[]; y=[]; z=[]; vx=[]; vy=[]; vz=[]; ID=[];
     for i in source.particles:
-        x.append(i.position[0])
-        y.append(i.position[1])
-        z.append(i.position[2])
-        vx.append(i.velocity[0])
-        vy.append(i.velocity[1])
-        vz.append(i.velocity[2])
+        x.append(i.iposition[0])
+        y.append(i.iposition[1])
+        z.append(i.iposition[2])
+        vx.append(i.ivelocity[0])
+        vy.append(i.ivelocity[1])
+        vz.append(i.ivelocity[2])
         ID.append(i.ID)
     data = np.array([x,y,z,vx,vy,vz,ID])
     source = f.create_group("source")
