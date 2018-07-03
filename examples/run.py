@@ -18,7 +18,7 @@ outdir = sys.argv[3]
 # Create Particle
 Radius = 1.e-7 # 0.00000001
 ParticleDensity = 1050
-NumberOfParticles = 10
+NumberOfParticles = 100
 SourceCoordinates = (0, 0, 5.0000000000000E-4)
 SigmaParticlesPosition = (0.00025, 0.00025, 0.0000001)
 MuParticlesVelocity = (0., 0., vz)
@@ -45,6 +45,5 @@ filename = 'v'+str(vz).replace("-","")+'_'+out+'_'
 ExpName = 'Buffer Gas Cell'
 ExpDate = 'April2018'
 exp = Experiment( ExpName, ExpDate, SourceOfParticles, end=1., dt=1.e-5, field=f, devices=[adl], detector=d, directory=outdir, filename=filename )
-print "Visualizing"
 #visualizer(exp)
 
