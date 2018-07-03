@@ -39,7 +39,7 @@ Xrange = (-1.0, 1.0)
 Yrange = (-1.0, 1.0)
 VXrange = (-80., 80.)
 VYrange = (-80., 80.)
-VZrange = (-80., 80.)
+VZrange = (-100., 80.)
 
 x = None
 for i in range(3, len(sys.argv)):
