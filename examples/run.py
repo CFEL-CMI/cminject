@@ -9,6 +9,8 @@ import sys
 import time
 import datetime
 
+sys.stdout = open(os.devnull, 'w') #supress print statements. use for multiprocessing
+
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H-%M-%S')
 filename = sys.argv[1] #flow-field file
@@ -18,11 +20,11 @@ outdir = sys.argv[3] #output directory
 # Create Particle
 Radius = 1.e-7 # 0.00000001 #in meters
 ParticleDensity = 1050 #in kg/m^3
-NumberOfParticles = 100
+NumberOfParticles = int(sys.argv[4])
 SourceCoordinates = (0, 0, 5.0000000000000E-4) #0,0,0 center front surface of inlet
 SigmaParticlesPosition = (0.00025, 0.00025, 0.0000001) # normal distribution
 MuParticlesVelocity = (0., 0., vz) #m/s
-SigmaParticlesVelocity = (5.00, 5.00, 0.001) # normal distribution
+SigmaParticlesVelocity = (2.00, 2.00, 5.00) #
 
 SourceOfParticles = Source( NumberOfParticles, SourceCoordinates , SigmaParticlesPosition, MuParticlesVelocity, SigmaParticlesVelocity, radius=Radius, rho=ParticleDensity  )
 

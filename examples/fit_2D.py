@@ -36,11 +36,11 @@ def filter(x, y, vx, vy, vz, ID, X, Y, VX, VY, VZ):
 
 
 
-Xrange = (-1.0, 1.0)
-Yrange = (-1.0, 1.0)
+Xrange = (-10.0, 10.0)
+Yrange = (-10.0, 10.0)
 VXrange = (-80., 80.)
 VYrange = (-80., 80.)
-VZrange = (-100., 80.)
+VZrange = (-500., 80.)
 
 x = None
 for i in range(3, len(sys.argv)):
@@ -84,7 +84,7 @@ print ('number of particles', len(x))
 print ("======================Initial Guess================")
 print ('mean X',mux, 'mean Y', muy, 'sig X', sigmax, 'sig Y', sigmay)
 
-n = 100
+n = 50
 #plt.hist2d(histx, histy, bins=n)
 xedges, yedges = np.linspace(min(histx), max(histx), n), np.linspace(min(histy), max(histy), n)
 h, x, y = np.histogram2d(histx,histy, (xedges, yedges))
@@ -108,7 +108,9 @@ print ('Offset', popt[6])
 
 data_fitted = Gaussian2D((X, Y), *popt)
 fig, ax = plt.subplots(1, 1)
-cax = ax.imshow(data_fitted.reshape(n-1,n-1), cmap=plt.cm.jet, origin='bottom',
+#cax = ax.imshow(data_fitted.reshape(n-1,n-1), cmap=plt.cm.jet, origin='bottom',
+    #extent=(X.min(), X.max(), Y.min(), Y.max()))
+cax = ax.imshow(H_rot, cmap=plt.cm.jet, origin='bottom',
     extent=(X.min(), X.max(), Y.min(), Y.max()))
 ax.contour(X, Y, data_fitted.reshape(n-1,n-1), 8, colors='w')
 cbar = fig.colorbar(cax)
