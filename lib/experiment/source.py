@@ -1,4 +1,4 @@
-import particle
+import experiment.particle as particle
 import numpy as np
 
 class Source:

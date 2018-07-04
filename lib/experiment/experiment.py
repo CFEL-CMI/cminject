@@ -4,7 +4,7 @@ from field.interaction_field import *
 from field.force_calculator import *
 from device.als import AerodynamicsLensStack
 from device.bgc import BufferGasCell
-from detector import Detector
+from experiment.detector import Detector
 from multiprocessing import Pool
 import numpy as np
 import os

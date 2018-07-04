@@ -5,7 +5,7 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.integrate import quad, dblquad
 import numpy as np
 from math import exp, sqrt, pi
-from reader import *
+from field.reader import *
 
 class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""
@@ -45,7 +45,7 @@ class Fluid:
      self.vel = (0,0,0)
 
      if method=='LBM' and filename is None:
-       print "Running Lattice Boltzmann Code"
+       print("Running Lattice Boltzmann Code")
        self.Run_LB_Code()
      if filename is not None:
        self.ReadFromFile(filename)

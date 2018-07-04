@@ -1,4 +1,4 @@
-from particle import *
+from experiment.particle import *
 from scipy.interpolate import RegularGridInterpolator
 from scipy.interpolate import interp1d
 import numpy as np
@@ -92,7 +92,7 @@ class Detector:
     """This function save the detectors' data to hdf5 file
        it also draw the detectors with the 2D fitting"""
 
-    print len(self.particles), "Particles servived"
+    print(len(self.particles), "Particles servived")
     f = h5py.File(directory+filename+".hdf5", "w")
     detectors = f.create_group("detectors")
     for j in range(self.n):

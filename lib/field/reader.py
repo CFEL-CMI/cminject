@@ -1,4 +1,4 @@
-import vtk
+#import vtk
 import numpy as np
 import os
 from os import listdir
@@ -12,12 +12,12 @@ def ReadVTK(path):
     filename, file_extension = os.path.splitext(f)
     if file_extension=='.vti' and (filename[:3]=='bgc'or filename[:3]=='adl'):
       fileName =path+f
-      print "Reading File:", fileName
+      print("Reading File:", fileName)
       a = vtk.vtkXMLImageDataReader()
       a.SetFileName(fileName)
       a.Update()
       bound = a.GetOutput().GetBounds()
-      print bound
+      print(bound)
       # (0.75, 53.25, -0.25, 30.25, -0.25, 30.25)
       xbound = (bound[0], bound[1])
       ybound = (bound[2], bound[3])
@@ -26,7 +26,7 @@ def ReadVTK(path):
       yspace = a.GetOutput().GetSpacing()[1]
       zspace = a.GetOutput().GetSpacing()[2]
       nx, ny, nz = a.GetOutput().GetDimensions()
-      print nx, ny, nz
+      print(nx, ny, nz)
       c=0
       for k in range(nz):
         for j in range(ny):
@@ -91,7 +91,7 @@ def ReadText(filename):
   Vy = np.zeros((n_x, n_y, n_z))
   Vz = np.zeros((n_x, n_y, n_z))
   P = np.zeros((n_x, n_y, n_z))
-  print "preparing the grids"
+  print("preparing the grids")
   for i in range(n_z):
     for j in range(n_y):
       for k in range(n_x):
