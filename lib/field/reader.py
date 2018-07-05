@@ -72,13 +72,14 @@ def ReadText(filename):
 
   for i in f:
     token = i.split()
-    x.append(float(token[0]))
-    y.append(float(token[1]))
-    z.append(float(token[2]))
-    vx[(float(token[0]),float(token[1]),float(token[2]))]=float(token[3])
-    vy[(float(token[0]),float(token[1]),float(token[2]))]=float(token[4])
-    vz[(float(token[0]),float(token[1]),float(token[2]))]=float(token[5])
-    p[(float(token[0]),float(token[1]),float(token[2]))]=float(token[6])
+    if ('%' not in token) and ('NaN' not in token):
+      x.append(float(token[0]))
+      y.append(float(token[1]))
+      z.append(float(token[2]))
+      vx[(float(token[0]),float(token[1]),float(token[2]))]=float(token[3])
+      vy[(float(token[0]),float(token[1]),float(token[2]))]=float(token[4])
+      vz[(float(token[0]),float(token[1]),float(token[2]))]=float(token[5])
+      p[(float(token[0]),float(token[1]),float(token[2]))]=float(token[6])
 
   x=sorted(set(x))
   y=sorted(set(y))
