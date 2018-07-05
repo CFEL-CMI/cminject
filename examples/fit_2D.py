@@ -23,7 +23,7 @@ def Gaussian2D(xdata_tuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
 
 def filter(x, y, vx, vy, vz, ID, X, Y, VX, VY, VZ):
   if x is not None and y is not None:
-    mask = np.zeros(len(x), dtype=bool)
+    mask = np.zeros(len(ID), dtype=bool)
     for i in range(len(ID)):
       print(int(ID[i]))
       if (x[int(ID[i])]>X[0] and x[int(ID[i])]<X[1]
