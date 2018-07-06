@@ -57,7 +57,7 @@ print(strftime("%Y-%m-%d %H:%M:%S"), ": Simulating a total of "+str(args.jobs*ar
 #define function call for flying particles. This will be called args.jobs number of times
 def worker(i):
     print(strftime("%Y-%m-%d %H:%M:%S"), ": Running job "+str(i+1)+"  of "+str(args.jobs)+"!")
-    subprocess.call("python run.py "+str(args.flowfield) +" "+str(args.velocity)+" "+str(args.directory)+"/"+str(i).zfill(4)+"/ "+str(args.particles), shell=True)
+    subprocess.call("python run.py "+str(args.flowfield) +" "+str(args.velocity)+" "+str(args.directory)+"/"+str(i).zfill(4)+"_ "+str(args.particles), shell=True)
 
 def main(argp=None):
     # Create the number of threads you want
