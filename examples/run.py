@@ -11,8 +11,8 @@ import datetime
 
 sys.stdout = open(os.devnull, 'w') #supress print statements. use for multiprocessing
 
-PATH_flowfield = '/Volumes/cmilabs/cryo-2/simulation_BGC/Final_flow_field/Cone_1mmHeight/'
-PATH_output = '/Volumes/cmilabs/cryo-2/simulation_BGC/2018-07-06/'
+PATH_flowfield = '/gpfs/cfel/cmi/labs/cryo-2/simulation_BGC/flow_fields/HalfCircle_1mm/'
+PATH_output = '/gpfs/cfel/cmi/labs/cryo-2/simulation_BGC/2018-07-27/'
 
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d-%H-%M-%S')
@@ -21,13 +21,13 @@ vz = float(sys.argv[2]) #velocity in z direction. particle fly in -z
 out = filename.split('.')[0] +'_'+st
 outdir = sys.argv[3] #output directory
 # Create Particle
-Radius = 2.e-7 # 0.00000001 #in meters
+Radius = 2.5e-7 # 0.00000001 #in meters
 ParticleDensity = 1050 #in kg/m^3
 NumberOfParticles = int(sys.argv[4])
 SourceCoordinates = (0, 0, 5.0000000000000E-4) #0,0,0 center front surface of inlet
-SigmaParticlesPosition = (0.00025, 0.00025, 0.0000001) # normal distribution
+SigmaParticlesPosition = (0.0005, 0.0005, 0.0000001) # normal distribution
 MuParticlesVelocity = (0., 0., vz) #m/s
-SigmaParticlesVelocity = (5.00, 5.00, 50.00) #
+SigmaParticlesVelocity = (10.00, 10.00, 30.00) #
 
 SourceOfParticles = Source( NumberOfParticles, SourceCoordinates , SigmaParticlesPosition, MuParticlesVelocity, SigmaParticlesVelocity, radius=Radius, rho=ParticleDensity  )
 
