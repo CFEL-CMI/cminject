@@ -14,7 +14,7 @@ class Fluid:
                     outflow_pressure=0, Kn=912.0, kinetic_d = 260.e-12, specific_gas_const = 2077., 
                       molar_heat_capacity = 12.5, method='LBM', conv=0.00001, lattice_velocity=0.01, 
                          specific_heat_capacity = 3116., mGas=6.6e-27, mGasMol=0.004002602,  directory='./',
-                            speed_of_sound = 117.7, filename=None, new=True):
+                            speed_of_sound = 117.7, ScaleSlip=1., filename=None, new=True):
 
      self.density = density
      self.eta = dynamic_viscosity/density #kinematic_viscosity
@@ -39,6 +39,7 @@ class Fluid:
      self.directory = directory
      self.conv = conv
      self.U = lattice_velocity
+     self.ScaleSlip = ScaleSlip
      self.new = new
      self.FlowField = False
      self.pressure = 0

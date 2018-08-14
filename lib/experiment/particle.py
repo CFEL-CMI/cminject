@@ -77,7 +77,7 @@ class SphericalParticle(Particle):
 
     Kn = 0.01254 * 1/(fluid.pressure*self.radius) * fluid.T/273. * (1 + 79.4/273.)/(1 + 79.4/fluid.T) 
     S = 1 + Kn * (1.246 + (0.42 * exp(-0.87/Kn)))
-    return S
+    return S * fluid.ScaleSlip
 
 
   def SlipCorrectionRoomTemp(self, fluid):

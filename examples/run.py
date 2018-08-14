@@ -41,8 +41,8 @@ adl = AerodynamicsLensStack(ADSPosition, Segments)
 # Define Fluid Object
 FluidDensity = 0.0009
 DynamicViscosity = 1.02e-6
-
-f = Fluid( FluidDensity, DynamicViscosity, filename=(PATH_flowfield+filename))  # read flow field from comsole file
+ScaleSlip = 5.
+f = Fluid( FluidDensity, DynamicViscosity, filename=(PATH_flowfield+filename), ScaleSlip = ScaleSlip)  # read flow field from comsole file
 d = Detector([-0.052])
 
 filename = 'v'+str(vz).replace("-","")+'_'+out+'_'
