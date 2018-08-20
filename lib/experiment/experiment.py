@@ -6,8 +6,26 @@ from device.als import AerodynamicsLensStack
 from device.bgc import BufferGasCell
 from experiment.detector import Detector
 from multiprocessing import Pool
+from functools import partial
 import numpy as np
 import os
+
+
+def SingeParticleTrajectory(i, count, field, beam, detector, tStart, tEnd, dt ):
+  """ This function integrate the trajectory of a single particle. The propagation of particles in time stops 
+      if the particle outside the boundary of the devices or the integration was not successful"""
+  print(i)
+  integral = ode( i.get_v_and_a )
+  integral.set_integrator('lsoda', method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
+  integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(field, beam)
+  print("Calculate particle", count,  i.position, i.velocity, i.ID)
+  while integral.successful() and integral.t < tEnd and abs(integral.y[2]) < detector.end:
+    integral.integrate(integral.t + dt)
+    i.position = (integral.y[0], integral.y[1], integral.y[2])
+    i.velocity = (integral.y[3], integral.y[4], integral.y[5])
+  print("Final Position", i.position, i.velocity, '%2E' % i.collisions)
+
+
 
 class Experiment:
   """This class carry out the info about the experiment you want to simulate.
@@ -33,17 +51,23 @@ class Experiment:
     self.directory = directory
     self.interp_time = 0
     self.called = 0
+    
     self.CalculateTrajectory(tStart=0, tEnd=end, dt=dt)
 #    self.SaveTrajectories()
-    self.detector.PlotDetector(directory, filename, source)
+#    self.detector.PlotDetector(directory, filename, source)
 
   def CalculateTrajectory(self, tStart, tEnd, dt ):
     """ Calculate the trajectories for all particles by integrating the equation of motion"""
-    count = 0
-    for i in self.source.particles:
-      self.detector.ID = i.ID
-      self.IntegrateSingeParticle(i, count, tStart, tEnd, dt )
-      count+=1
+    count = 1
+#    for i in self.source.particles:
+#      self.detector.ID = i.ID
+#      SingeParticleTrajectory(i, count, self.field, self.beam, self.detector, tStart, tEnd, dt )
+#      count+=1
+    p = Pool()
+    parallel_traj = partial(SingeParticleTrajectory, count=count, field=self.field, 
+                         beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt)
+    p.map(parallel_traj, self.source.particles)
+
     return True
 
   def IntegrateSingeParticle(self, i, count, tStart, tEnd, dt ):
@@ -116,6 +140,8 @@ class Experiment:
   """
 
   def LongestTrajectory(self):
+    """ This function returns the longest trajectory of all particles and used only for trajectories visualizations"""
+
     longest = 0
     for i in self.source.particles:
        if len(i.trajectory)>longest:

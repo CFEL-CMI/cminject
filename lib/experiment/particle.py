@@ -23,6 +23,7 @@ class SphericalParticle(Particle):
     self.index_of_ref = index_of_ref
     self.position = position
     self.iposition = position
+    self.fposition = position
     self.cp = cp # specific heat
     self.initialPosition = position
     self.velocity = velocity
@@ -32,6 +33,7 @@ class SphericalParticle(Particle):
     self.M = self.mass()
     self.trajectory =[]
     self.velocities =[]
+    self.fvelocities =[]
     self.insideFluid = True
     self.surfaceA = 4 * pi * radius**2
     self.collisions = 0
@@ -48,8 +50,8 @@ class SphericalParticle(Particle):
       a = self.DragForceVector(fluid, p_and_v)/self.M
       self.CalculateTemp(fluid, t)
       self.CalculateCollisions(fluid, t)
-#      self.time+=t
-#      self.f.write(str(p_and_v[2])+" "+ str(a[2])+" "+ str(fluid.MeanFreePath())+'\n') #self.time, self.T, self.Tt
+
+
     if beam is not None:
       a[0] += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0])) / self.M
       a[1] += self.FppTrans(fluid, beam)*sin(atan(self.position[1]/self.position[0])) / self.M
@@ -118,6 +120,15 @@ class SphericalParticle(Particle):
     self.Tt = fluid.T + (self.Tt - fluid.T) * exp(-C/k)
     self.collisions+=C
     
+  def CalculatePositionOnDetector(self, p_and_v, dz):
+    """ This function project the particle on the detector"""
+    x, y, z, vx, vy, vz = p_and_v
+    d = abs(z - dz)
+    t = d/abs(vz)
+    x = x - vx * t
+    y = y - vy * t
+    return x, y
+ 
   def FppTrans(self, fluid, beam):
     """ This function calculates the trans component of the photophertic forces based on a semi imperical model"""
 
