@@ -23,7 +23,7 @@ class Detector:
     self.particles=[]         # save phase space for all particles
     locations = np.absolute(locations)
     maximum = max(locations)
-    self.end = maximum + maximum/20.0  # This is to know where to stop the particles
+    self.end = maximum #+ maximum/20.0  # This is to know where to stop the particles
                                        # the particles should stop at the last detector
   def Check(self, z):
     """ This function checks if the particle is near any of the detectors to save
@@ -99,6 +99,7 @@ class Detector:
       x=[]; y=[]; vx=[]; vy=[]; vz=[]
       ID=[]; T=[]; Tt=[]
       for i in self.particles:
+        print("Data on detector", i[0][j], i[1][j], i[2][j], i[3][j], i[4][j], i[5][j], i[6][j], i[7])
         x.append(i[0][j])
         y.append(i[1][j])
         vx.append(i[2][j])

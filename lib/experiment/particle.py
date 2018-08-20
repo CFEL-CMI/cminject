@@ -23,7 +23,7 @@ class SphericalParticle(Particle):
     self.index_of_ref = index_of_ref
     self.position = position
     self.iposition = position
-    self.fposition = position
+    self.FinalPhaseSpace = position + velocity
     self.cp = cp # specific heat
     self.initialPosition = position
     self.velocity = velocity
@@ -33,7 +33,6 @@ class SphericalParticle(Particle):
     self.M = self.mass()
     self.trajectory =[]
     self.velocities =[]
-    self.fvelocities =[]
     self.insideFluid = True
     self.surfaceA = 4 * pi * radius**2
     self.collisions = 0
@@ -46,11 +45,13 @@ class SphericalParticle(Particle):
   def get_v_and_a(self, t, p_and_v, fluid, beam):
     """ This fuction returns the derivatives of the position and velocities for the integrator"""
 
+#    if abs(p_and_v[2])>0.052: return -1
     if fluid.FlowField:
       a = self.DragForceVector(fluid, p_and_v)/self.M
       self.CalculateTemp(fluid, t)
       self.CalculateCollisions(fluid, t)
-
+      self.position = p_and_v[:3]
+      self.velocity = p_and_v[3:]
 
     if beam is not None:
       a[0] += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0])) / self.M
@@ -66,9 +67,30 @@ class SphericalParticle(Particle):
       fluid.pressure = token[3]
       force_vector = 6 * pi * fluid.mu * self.radius * fluid.vel
       return force_vector/ self.SlipCorrection(fluid)
-     except Exception as e:
+     except:
        self.insideFluid = False  # The particle is outside the flow field
        return np.zeros(3)
+
+  def CheckParticleIn(self, p_and_v, zlimit, zdetector):
+    """This is called each integration step to check if the particle still in the boundary"""
+    
+    Z = abs(p_and_v[2])
+    zdetector = abs(zdetector)
+    zlimit = abs(zlimit)
+    if Z > zdetector:
+      detectorx, detectory = self.CalculatePositionOnDetector(np.concatenate((self.position,self.velocity)), zdetector)
+      self.FinalPhaseSpace = [detectorx, detectory, p_and_v[3], p_and_v[4], p_and_v[5], self.T, self.Tt]
+      return -1
+
+    if self.insideFluid and Z < zdetector:
+      return 0
+
+    if not self.insideFluid and Z < zlimit:
+      return -1
+
+    if not self.insideFluid and Z >= zlimit:
+      return 0
+
 
   def SlipCorrection(self, fluid):
     """This function calculates the slip correction factor with temperature
@@ -123,7 +145,7 @@ class SphericalParticle(Particle):
   def CalculatePositionOnDetector(self, p_and_v, dz):
     """ This function project the particle on the detector"""
     x, y, z, vx, vy, vz = p_and_v
-    d = abs(z - dz)
+    d = abs(z) - abs(dz)
     t = d/abs(vz)
     x = x - vx * t
     y = y - vy * t

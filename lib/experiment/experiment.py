@@ -14,16 +14,18 @@ import os
 def SingeParticleTrajectory(i, count, field, beam, detector, tStart, tEnd, dt ):
   """ This function integrate the trajectory of a single particle. The propagation of particles in time stops 
       if the particle outside the boundary of the devices or the integration was not successful"""
-  print(i)
   integral = ode( i.get_v_and_a )
   integral.set_integrator('lsoda', method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
   integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(field, beam)
   print("Calculate particle", count,  i.position, i.velocity, i.ID)
-  while integral.successful() and integral.t < tEnd and abs(integral.y[2]) < detector.end:
-    integral.integrate(integral.t + dt)
-    i.position = (integral.y[0], integral.y[1], integral.y[2])
-    i.velocity = (integral.y[3], integral.y[4], integral.y[5])
-  print("Final Position", i.position, i.velocity, '%2E' % i.collisions)
+
+  while integral.successful() and integral.t < tEnd:
+    if i.CheckParticleIn(integral.y, -0.043, detector.end)==0:
+      integral.integrate(integral.t + dt)
+    else:
+      break
+
+  print("Final Position", i.FinalPhaseSpace, '%2E' % i.collisions)
 
 
 
@@ -32,7 +34,8 @@ class Experiment:
      For example, the devices and the interaction fields you will include.
      The output files will have the name of and date of your experiment"""
 
-  def __init__(self, name, date, source, detector=None, devices=None, field=None, beam=None, traj=500, end=1.8, dt=1.e-5, directory='./', filename="v_and_p"):
+  def __init__(self, name, date, source, detector=None, devices=None, field=None, 
+                         beam=None, traj=500, end=1.8, dt=1.e-5, directory='./', filename="v_and_p"):
     self.name = name
     self.date = date
     self.field = field
@@ -58,16 +61,23 @@ class Experiment:
 
   def CalculateTrajectory(self, tStart, tEnd, dt ):
     """ Calculate the trajectories for all particles by integrating the equation of motion"""
-    count = 1
+    count = 0
 #    for i in self.source.particles:
 #      self.detector.ID = i.ID
-#      SingeParticleTrajectory(i, count, self.field, self.beam, self.detector, tStart, tEnd, dt )
+    #  self.SingeParticleTrajectory(i, count, self.field, self.beam, self.detector, tStart, tEnd, dt )
+#      self.IntegrateSingeParticle(i, count, tStart, tEnd, dt )
 #      count+=1
-    p = Pool()
-    parallel_traj = partial(SingeParticleTrajectory, count=count, field=self.field, 
+    try:
+      p = Pool()
+      parallel_traj = partial(SingeParticleTrajectory, count=count, field=self.field, 
                          beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt)
-    p.map(parallel_traj, self.source.particles)
+      p.map(parallel_traj, self.source.particles)
 
+    finally:
+      p.close()
+      p.join()    
+
+    
     return True
 
   def IntegrateSingeParticle(self, i, count, tStart, tEnd, dt ):
@@ -82,7 +92,7 @@ class Experiment:
       if traj%self.traj:
         i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
         i.velocities.append( (integral.y[3], integral.y[4], integral.y[5]) )
-      self.CheckNearDetector(integral, i)
+      #self.CheckNearDetector(integral, i)
       integral.integrate(integral.t + dt)
       i.position = (integral.y[0], integral.y[1], integral.y[2])
       i.velocity = (integral.y[3], integral.y[4], integral.y[5])
