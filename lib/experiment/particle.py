@@ -39,6 +39,7 @@ class SphericalParticle(Particle):
     self.called=0   # for debugging
     self.pressureAround = 0
     self.Tt = temp
+    self.reached = False
 #    self.time=0 
 #    self.f = open("forces.txt", "w+")
 
@@ -79,7 +80,10 @@ class SphericalParticle(Particle):
     zlimit = abs(zlimit)
     if Z > zdetector:
       detectorx, detectory = self.CalculatePositionOnDetector(np.concatenate((self.position,self.velocity)), zdetector)
-      self.FinalPhaseSpace = [detectorx, detectory, p_and_v[3], p_and_v[4], p_and_v[5], self.T, self.Tt]
+      self.FinalPhaseSpace = [self.iposition[0], self.iposition[1], self.iposition[2], 
+                                self.ivelocity[0], self.ivelocity[1], self.ivelocity[2],
+                                   detectorx, detectory, p_and_v[3], p_and_v[4], p_and_v[5], self.T, self.Tt]
+      self.reached = True
       return -1
 
     if self.insideFluid and Z < zdetector:
