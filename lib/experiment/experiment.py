@@ -5,26 +5,26 @@ from field.force_calculator import *
 from device.als import AerodynamicsLensStack
 from device.bgc import BufferGasCell
 from experiment.detector import Detector
-from multiprocessing import Pool
+from multiprocessing import Pool, Array, Process, Manager
 from functools import partial
 import numpy as np
+import h5py
 import os
 
 
-def SingeParticleTrajectory(i, count, field, beam, detector, tStart, tEnd, dt ):
+def SingeParticleTrajectory(i, field, beam, detector, tStart, tEnd, dt,l ):
   """ This function integrate the trajectory of a single particle. The propagation of particles in time stops 
       if the particle outside the boundary of the devices or the integration was not successful"""
   integral = ode( i.get_v_and_a )
   integral.set_integrator('lsoda', method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
   integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(field, beam)
-  print("Calculate particle", count,  i.position, i.velocity, i.ID)
 
   while integral.successful() and integral.t < tEnd:
     if i.CheckParticleIn(integral.y, -0.043, detector.end)==0:
       integral.integrate(integral.t + dt)
     else:
       break
-
+  l.append(i)
   print("Final Position", i.FinalPhaseSpace, '%2E' % i.collisions)
 
 
@@ -48,36 +48,39 @@ class Experiment:
     self.NoTrajectories = (end/dt) / traj
     if not os.path.exists(directory):
       os.makedirs(directory)
-    if not os.path.exists(directory+"/images/"):
-      os.makedirs(directory+"/images/")
+#    if not os.path.exists(directory+"/images/"):
+#      os.makedirs(directory+"/images/")
 
     self.directory = directory
     self.interp_time = 0
     self.called = 0
-    
+    self.filename = filename
     self.CalculateTrajectory(tStart=0, tEnd=end, dt=dt)
+ 
 #    self.SaveTrajectories()
 #    self.detector.PlotDetector(directory, filename, source)
 
   def CalculateTrajectory(self, tStart, tEnd, dt ):
     """ Calculate the trajectories for all particles by integrating the equation of motion"""
-    count = 0
+    print("Calculating particles trajecories........")
 #    for i in self.source.particles:
 #      self.detector.ID = i.ID
     #  self.SingeParticleTrajectory(i, count, self.field, self.beam, self.detector, tStart, tEnd, dt )
 #      self.IntegrateSingeParticle(i, count, tStart, tEnd, dt )
 #      count+=1
-    try:
-      p = Pool()
-      parallel_traj = partial(SingeParticleTrajectory, count=count, field=self.field, 
-                         beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt)
-      p.map(parallel_traj, self.source.particles)
-
-    finally:
-      p.close()
-      p.join()    
-
-    
+#    try:
+    p = Pool()
+    l = Manager().list()  # shared list to save the particles across the processes
+    parallel_traj = partial(SingeParticleTrajectory, field=self.field, 
+                         beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt, l=l)
+    p.map(parallel_traj, self.source.particles)
+#    finally:
+    p.close()
+    p.join()    
+    #for i in l: #self.source.particles:
+    #    print("Final Position", i.FinalPhaseSpace, '%2E' % i.collisions)
+      
+    self.SaveParticles(l)
     return True
 
   def IntegrateSingeParticle(self, i, count, tStart, tEnd, dt ):
@@ -118,7 +121,21 @@ class Experiment:
         self.detector.vy.append(integral.y[4])
         self.detector.vz.append(integral.y[5])
        
+  def SaveParticles(self, l):
+    """This function saves the initial and final particles' phase space and temperatures
+        to hdf5 files"""
 
+    allParticles=[]
+    for i in l:
+      if i.reached:
+        allParticles.append(i.FinalPhaseSpace)
+    print(len(allParticles), "Particles Servived")
+    f = h5py.File(self.directory+self.filename+".hdf5", "w")
+    data = np.array(allParticles)
+    f.create_dataset("particles", data=data)
+    f.close()
+        
+ 
   """
   def FlyParticles(self, tStart, tEnd, dt):
     # This function integrates the trajecoties in parallel. It has faster interpolation but it is slower because the integrator
