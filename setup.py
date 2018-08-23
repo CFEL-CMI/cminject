@@ -6,36 +6,55 @@
 
 import os
 from setuptools import setup
+from setuptools import setup, find_packages
 
-extra_compile_args = []
-library_dirs = []
-
-long_description = """CMI RichMol -- time-dependent wave packet propagation
+long_description = """CMI Injector -- Simulating particles' trajectories in different forcefields
 
 
-Python extensions for Stark effect calculations of molecules.
-
-Developed by Andrey Yachmenev and the Controlled Molecule Imaging Group at the Center for
+Developed by Muhamed Amin and the Controlled Molecule Imaging Group at the Center for
 Free-Electron Laser Science, Deutsches Elektronen-Synchrotron DESY and Universität Hamburg, Hamburg,
 Germany.
 
-Original author:    Andrey Yachmenev <andrey.yachmenev@cfel.de>
-Current maintainer: Andrey Yachmenev <andrey.yachmenev@cfel.de>
-See the distribution files AUTHORS and THANKS for further contributions.
+Original author:    Muhamed Amin <muhamed.amin@cfel.de>
+Current maintainer: Muhamed Amin <muhamed.amin@cfel.de>
 """
 
+package_dir = {"": "lib"}
 
-setup(name="richmol",
-      author              = "Andrey Yachmenev and the CFEL-CMI group",
-      author_email        = "andrey.yachmenev@cfel.de",
-      maintainer          = "Andrey Yachmenev and the CFEL-CMI group",
-      maintainer_email    = "andrey.yachmenev@cfel.de",
-      url                 = "https://controlled-molecule-imaging.org/software/richmol",
-      description         = "CMI richmol",
-      version             = "0.0.dev1",
+packages = find_packages(where="lib")
+
+provides = [
+    'cmiinject',
+]
+
+
+requires = [
+    'Python (>=3.0)',
+    'scipy (>=0.14.1)',
+    'numpy (>= 1.7.1)']
+
+install_requires = [
+    'Python>=3.3',
+    'scipy>=0.14.1',
+    'numpy>=1.7.1',
+]
+
+
+setup(name="cmi-inject",
+      author              = "Muhamed Amin and the CFEL-CMI group",
+      author_email        = "muhamed.amin@cfel.de",
+      maintainer          = "muhamed amin and the CFEL-CMI group",
+      maintainer_email    = "muhamed.amin@cfel.de",
+      url                 = "https://stash.desy.de/projects/CMIFLY/repos/cmi-injector/browse",
+      description         = "CMI inject",
+      version             = "0.0.0",
       long_description    = long_description,
       license             = "GPL",
-      packages            = ['lib'],
-      scripts             = ['bin/richmol'],
-      test_suite          = 'tests',
+      package_dir         = package_dir,
+      packages            = packages,
+      scripts             = None,
+      requires            = requires,
+      install_requires    = install_requires,
       )
+
+
