@@ -26,19 +26,27 @@ packages = find_packages(where="lib")
 provides = [
     'cmiinject',
 ]
+<<<<<<< HEAD
 
 
+=======
+
+
+>>>>>>> ffdfa51757a902f68b7e08f02c2e56c4443a2692
 requires = [
     'Python (>=3.0)',
     'scipy (>=0.14.1)',
     'numpy (>= 1.7.1)']
 
+<<<<<<< HEAD
 install_requires = [
     'Python>=3.3',
     'scipy>=0.14.1',
     'numpy>=1.7.1',
 ]
 
+=======
+>>>>>>> ffdfa51757a902f68b7e08f02c2e56c4443a2692
 
 setup(name="cmi-inject",
       author              = "Muhamed Amin and the CFEL-CMI group",
@@ -54,7 +62,13 @@ setup(name="cmi-inject",
       packages            = packages,
       scripts             = None,
       requires            = requires,
+<<<<<<< HEAD
       install_requires    = install_requires,
       )
 
 
+=======
+      install_requires    = requires,
+      )
+
+>>>>>>> ffdfa51757a902f68b7e08f02c2e56c4443a2692
