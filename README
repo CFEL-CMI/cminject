@@ -1,7 +1,7 @@
 CMI injector
 ============
 
-This program can ...
+This program is a simulation framework that integrates particles' trajectories guided by several forcefields (i.e. drag and optical forces)
 
 The program package is developed and maintained by the Controlled Molecule
 Imaging group (CMI) at the Center for Free-Electron Laser Science (CFEL),

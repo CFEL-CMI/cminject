@@ -5,7 +5,7 @@ from field.force_calculator import *
 from device.als import AerodynamicsLensStack
 from device.bgc import BufferGasCell
 from experiment.detector import Detector
-from multiprocessing import Pool, Array, Process, Manager
+from multiprocessing import Pool, Array, Process, Manager, cpu_count
 from functools import partial
 import numpy as np
 import h5py
@@ -61,25 +61,24 @@ class Experiment:
 #    self.detector.PlotDetector(directory, filename, source)
 
   def CalculateTrajectory(self, tStart, tEnd, dt ):
-    """ Calculate the trajectories for all particles by integrating the equation of motion"""
+    """ Calculate the trajectories for all particles by integrating the equation of motion
+    count = 0  # uncomment this if you want to run the serial version.
+    for i in self.source.particles:
+      self.detector.ID = i.ID
+      self.IntegrateSingeParticle(i, count, tStart, tEnd, dt )
+      count+=1"""
     print("Calculating particles trajecories........")
-#    for i in self.source.particles:
-#      self.detector.ID = i.ID
-    #  self.SingeParticleTrajectory(i, count, self.field, self.beam, self.detector, tStart, tEnd, dt )
-#      self.IntegrateSingeParticle(i, count, tStart, tEnd, dt )
-#      count+=1
-#    try:
-    p = Pool()
-    l = Manager().list()  # shared list to save the particles across the processes
-    parallel_traj = partial(SingeParticleTrajectory, field=self.field, 
+    print("Running on "+str(cpu_count())+" cores")
+    try:
+      p = Pool()
+      l = Manager().list()  # shared list to save the particles across the processes
+      parallel_traj = partial(SingeParticleTrajectory, field=self.field, 
                          beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt, l=l)
-    p.map(parallel_traj, self.source.particles)
-#    finally:
-    p.close()
-    p.join()    
-    #for i in l: #self.source.particles:
-    #    print("Final Position", i.FinalPhaseSpace, '%2E' % i.collisions)
-      
+      p.map(parallel_traj, self.source.particles)
+    finally:
+      p.close()
+      p.join()    
+     
     self.SaveParticles(l)
     return True
 

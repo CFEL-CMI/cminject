@@ -5,7 +5,7 @@ class Source:
   """This class generate particles with normal distribution of their initial position and momentum"""
 
   def __init__(self, number_of_particles, position, sigmaP, muV, sigmaV, radius=0.00001, rho=1, distribution='gaussian'):
-    self.particles = [] 
+    self.particles = [] #multiprocessing.Manager().list() 
     self.number_of_particles = number_of_particles
     self.sigmaP = sigmaP
     self.sigmaV = sigmaV 
@@ -14,7 +14,7 @@ class Source:
     self.distribution = distribution
     self.radius = radius
     self.rho = rho
-#    np.random.seed(1000)
+    np.random.seed(1000)
     self.generate_particles()
 
   def generate_particles(self):
