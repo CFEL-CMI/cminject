@@ -26,7 +26,7 @@ ParticleDensity = 1050 #in kg/m^3
 NumberOfParticles = 100 #int(sys.argv[4])
 SourceCoordinates = (0, 0, 5.0000000000000E-4) #0,0,0 center front surface of inlet
 SigmaParticlesPosition = (0.0000001, 0.0000001, 0.0000001) # normal distribution
-MuParticlesVelocity = (20., 20., vz) #m/s
+MuParticlesVelocity = (2., 2., vz) #m/s
 SigmaParticlesVelocity = (0.000001, 0.000001, 0.0000001) #
 #print("HERE")
 SourceOfParticles = Source( NumberOfParticles, SourceCoordinates , SigmaParticlesPosition, MuParticlesVelocity, SigmaParticlesVelocity, radius=Radius, rho=ParticleDensity  )
