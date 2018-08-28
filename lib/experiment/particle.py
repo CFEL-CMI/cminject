@@ -49,8 +49,9 @@ class SphericalParticle(Particle):
 #    if abs(p_and_v[2])>0.052: return -1
     if fluid.FlowField:
       a = self.DragForceVector(fluid, p_and_v)/self.M
-      self.CalculateTemp(fluid, t)
-      self.CalculateCollisions(fluid, t)
+      if fluid.pressure>0:
+        self.CalculateTemp(fluid, t)
+        self.CalculateCollisions(fluid, t)
       self.position = p_and_v[:3]
       self.velocity = p_and_v[3:]
 
@@ -64,8 +65,9 @@ class SphericalParticle(Particle):
      """This function calculates the drag force using Stokes' law for spherical particles in continuum"""
      try:
       token = fluid.fdrag((p_and_v[0],p_and_v[1],p_and_v[2]))
-      fluid.vel = token[:3] - p_and_v[3:] # fuild velocity relative to the particle
       fluid.pressure = token[3]
+      if fluid.pressure<=0: return np.zeros(3)   # if pressure is zero no fluid
+      fluid.vel = token[:3] - p_and_v[3:] # fuild velocity relative to the particle
       force_vector = 6 * pi * fluid.mu * self.radius * fluid.vel
       return force_vector/ self.SlipCorrection(fluid)
      except:
@@ -82,7 +84,7 @@ class SphericalParticle(Particle):
       detectorx, detectory = self.CalculatePositionOnDetector(np.concatenate((self.position,self.velocity)), zdetector)
       self.FinalPhaseSpace = [self.iposition[0], self.iposition[1], self.iposition[2], 
                                 self.ivelocity[0], self.ivelocity[1], self.ivelocity[2],
-                                   detectorx, detectory, p_and_v[3], p_and_v[4], p_and_v[5], self.T, self.Tt]
+                                   detectorx, detectory, p_and_v[3], p_and_v[4], p_and_v[5], self.T, self.Tt, self.ID]
       self.reached = True
       return -1
 
@@ -102,7 +104,7 @@ class SphericalParticle(Particle):
        Temperature of 273.K. I took a reference pressure of 1 Pascal, in 
        which the mean free path of helium is 0.01254. see J.Aersol Sci. 1976
        Vol. 7. pp 381-387 by Klaus Willeke"""
-
+    
     Kn = 0.01254 * 1/(fluid.pressure*self.radius) * fluid.T/273. * (1 + 79.4/273.)/(1 + 79.4/fluid.T) 
     S = 1 + Kn * (1.246 + (0.42 * exp(-0.87/Kn)))
     return S * fluid.ScaleSlip
