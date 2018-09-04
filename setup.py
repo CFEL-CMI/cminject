@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.4
 # -*- coding: utf-8; fill-column: 100 -*-
 #
 # Copyright (C) 2008,2017 Jochen Küpper <jochen.kuepper@cfel.de>
@@ -7,6 +7,7 @@
 import os
 from setuptools import setup
 from setuptools import setup, find_packages
+import sys
 
 long_description = """CMI Injector -- Simulating particles' trajectories in different forcefields
 
@@ -36,7 +37,7 @@ requires = [
     'numpy (>= 1.7.1)']
 
 install_requires = [
-    'Python>=3.3',
+    'Python>=3.0',
     'scipy>=0.14.1',
     'numpy>=1.7.1',
 ]
@@ -56,6 +57,6 @@ setup(name="cmi-inject",
       packages            = packages,
       scripts             = None,
       requires            = requires,
-      install_requires    = install_requires,
+#      install_requires    = install_requires,
       )
 
