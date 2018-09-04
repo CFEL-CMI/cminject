@@ -2,3 +2,5 @@ Some simple rules for coding on CMI injector:
 Please
 - keep the code consistent across the whole package!
 - consistently use two empty lines between functions and three empty lines above a class
+
+and use git-flow for branching/merging in git...
