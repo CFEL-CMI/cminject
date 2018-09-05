@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of CMInject
+
+
 import sys
 
 from scipy.interpolate import interp1d
@@ -17,7 +22,7 @@ def LoadParticles(filename):
   return particles
 
 def BuildArray(filename, position):
-  ys=[]; zs=[]; vxs=[]; vys=[]; vzs=[]  
+  ys=[]; zs=[]; vxs=[]; vys=[]; vzs=[]
   p = LoadParticles(filename)
   for i in p.keys():
      x=[]; y=[]; z=[]; vx=[]; vy=[]; vz=[]
@@ -25,8 +30,8 @@ def BuildArray(filename, position):
        x.append(j[0]); y.append(j[1]); z.append(j[2])
        vx.append(j[3]); vy.append(j[4]); vz.append(j[5])
      if x[-1]>=position:
-       x = np.array(x); y = np.array(y); z=np.array(z) 
-       vx = np.array(vx); vy = np.array(vy); vz=np.array(vz) 
+       x = np.array(x); y = np.array(y); z=np.array(z)
+       vx = np.array(vx); vy = np.array(vy); vz=np.array(vz)
        f0 = interp1d(x, y); f1 = interp1d(x, z); f2 = interp1d(x, vx)
        f3 = interp1d(x, vy); f4 = interp1d(x, vz)
        ys.append(float(f0(position)));
@@ -51,6 +56,17 @@ if sys.argv[3]=='vz':
   hist = np.array(vz)
 if hist is not None:
   plt.hist(hist)
-  plt.show() 
+  plt.show()
 else:
   print "Please enter the required input"
+
+
+
+
+
+
+### Local Variables:
+### mode: python
+### fill-column: 80
+### truncate-lines: t
+### End:
