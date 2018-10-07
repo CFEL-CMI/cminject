@@ -40,6 +40,8 @@ class SphericalParticle(Particle):
     self.pressureAround = 0
     self.Tt = temp
     self.reached = False
+    self.TimeLN = [0.,0.]      # time taken to cool particle to liquid nitrogen temp
+    self.TOF = 0. # time of flight
 #    self.time=0 
 #    self.f = open("forces.txt", "w+")
 
@@ -49,9 +51,15 @@ class SphericalParticle(Particle):
 #    if abs(p_and_v[2])>0.052: return -1
     if fluid.FlowField:
       a = self.DragForceVector(fluid, p_and_v)/self.M
+#      a = self.CollisionForce(fluid, p_and_v)/self.M
       if fluid.pressure>0:
         self.CalculateTemp(fluid, t)
         self.CalculateCollisions(fluid, t)
+        if self.T > 77.:
+            self.TimeLN[0]+=t
+        if self.Tt > 77.:
+            self.TimeLN[1]+=t
+      self.TOF += t
       self.position = p_and_v[:3]
       self.velocity = p_and_v[3:]
 
@@ -82,9 +90,10 @@ class SphericalParticle(Particle):
     zlimit = abs(zlimit)
     if Z > zdetector:
       detectorx, detectory = self.CalculatePositionOnDetector(np.concatenate((self.position,self.velocity)), zdetector)
-      self.FinalPhaseSpace = [self.iposition[0], self.iposition[1], self.iposition[2], 
+      self.FinalPhaseSpace = [  self.iposition[0], self.iposition[1], self.iposition[2], 
                                 self.ivelocity[0], self.ivelocity[1], self.ivelocity[2],
-                                   detectorx, detectory, p_and_v[3], p_and_v[4], p_and_v[5], self.T, self.Tt, self.ID]
+                                detectorx, detectory, p_and_v[3], p_and_v[4], p_and_v[5], self.T, self.Tt, 
+                                self.TimeLN[0], self.TimeLN[1], self.TOF, self.ID ]
       self.reached = True
       return -1
 
@@ -105,7 +114,7 @@ class SphericalParticle(Particle):
        which the mean free path of helium is 0.01254. see J.Aersol Sci. 1976
        Vol. 7. pp 381-387 by Klaus Willeke"""
     
-    Kn = 0.01254 * 1/(fluid.pressure*self.radius) * fluid.T/273. * (1 + 79.4/273.)/(1 + 79.4/fluid.T) 
+    Kn = 0.01754 * 1/(fluid.pressure*self.radius) * fluid.T/273. * (1 + 79.4/273.)/(1 + 79.4/fluid.T) 
     S = 1 + Kn * (1.246 + (0.42 * exp(-0.87/Kn)))
     return S * fluid.ScaleSlip
 
@@ -148,6 +157,24 @@ class SphericalParticle(Particle):
     self.Tt = fluid.T + (self.Tt - fluid.T) * exp(-C/k)
     self.collisions+=C
     
+  def CollisionForce(self, fluid, p_and_v):
+     try:
+       token = fluid.fdrag((p_and_v[0],p_and_v[1],p_and_v[2]))
+       vf = token[:3]
+       pressure = token[3]
+       if pressure<=0: return np.zeros(3)   # if pressure is zero no fluid
+       avG = 6.022140857e23
+       R = 2077.
+       n = (pressure * avG/(R * fluid.T * fluid.mGasMol))*(abs(vf[2] - p_and_v[5]) + abs(vf[1] - p_and_v[4]) + abs(vf[0] - p_and_v[3]))
+       A = 2 * pi * self.radius**2
+       force_vector =  2 * n * A * (vf - p_and_v[3:]) * fluid.mGas
+#       force_vector1 =  8./3. * self.radius**2 * (vf - p_and_v[3:]) * n * sqrt(pi * self.M * fluid.mGas/(self.M * fluid.mGas)**2)
+#       print force_vector - force_vector1
+       return force_vector
+     except:
+       self.insideFluid = False  # The particle is outside the flow field
+       return np.zeros(3)
+
   def CalculatePositionOnDetector(self, p_and_v, dz):
     """ This function project the particle on the detector"""
     x, y, z, vx, vy, vz = p_and_v
