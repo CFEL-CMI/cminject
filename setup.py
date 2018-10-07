@@ -25,7 +25,7 @@ package_dir = {"": "lib"}
 packages = find_packages(where="lib")
 
 provides = [
-    'cmiinject',
+    'cminject',
 ]
 
 
@@ -57,6 +57,7 @@ setup(name="cmi-inject",
       packages            = packages,
       scripts             = None,
       requires            = requires,
+      provides            = provides,
 #      install_requires    = install_requires,
       )
 
