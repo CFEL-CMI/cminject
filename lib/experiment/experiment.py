@@ -16,16 +16,16 @@ def SingeParticleTrajectory(i, field, beam, detector, tStart, tEnd, dt,l ):
   """ This function integrate the trajectory of a single particle. The propagation of particles in time stops 
       if the particle outside the boundary of the devices or the integration was not successful"""
   integral = ode( i.get_v_and_a )
-  integral.set_integrator('lsoda', method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
+  integral.set_integrator('lsoda') #, method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
   integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(field, beam)
 
   while integral.successful() and integral.t < tEnd:
-    if i.CheckParticleIn(integral.y, -0.043, detector.end)==0:
+    if i.CheckParticleIn(integral.y, -0.044, detector.end)==0:
       integral.integrate(integral.t + dt)
     else:
       break
   l.append(i)
-  print("Final Position", i.FinalPhaseSpace, '%2E' % i.collisions)
+#  print("Final Position", i.FinalPhaseSpace, '%2E' % i.collisions)
 
 
 
@@ -36,6 +36,7 @@ class Experiment:
 
   def __init__(self, name, date, source, detector=None, devices=None, field=None, 
                          beam=None, traj=500, end=1.8, dt=1.e-5, directory='./', filename="v_and_p"):
+    print("Changed the Integrator again to lsoda")
     self.name = name
     self.date = date
     self.field = field
