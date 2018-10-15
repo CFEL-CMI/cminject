@@ -12,7 +12,7 @@ import h5py
 import os
 
 
-def SingeParticleTrajectory(i, field, beam, detector, tStart, tEnd, dt,l ):
+def SingeParticleTrajectory(i, field, beam, detector, tStart, tEnd, dt, l, traj=False):
   """ This function integrate the trajectory of a single particle. The propagation of particles in time stops 
       if the particle outside the boundary of the devices or the integration was not successful"""
   integral = ode( i.get_v_and_a )
@@ -21,6 +21,9 @@ def SingeParticleTrajectory(i, field, beam, detector, tStart, tEnd, dt,l ):
 
   while integral.successful() and integral.t < tEnd:
     if i.CheckParticleIn(integral.y, -0.044, detector.end)==0:
+      if traj:
+        i.trajectory.append([integral.t, integral.y[0], integral.y[1], integral.y[2],
+                             integral.y[3], integral.y[4], integral.y[5], i.T, i.Tt])
       integral.integrate(integral.t + dt)
     else:
       break
@@ -35,7 +38,7 @@ class Experiment:
      The output files will have the name of and date of your experiment"""
 
   def __init__(self, name, date, source, detector=None, devices=None, field=None, 
-                         beam=None, traj=500, end=1.8, dt=1.e-5, directory='./', filename="v_and_p"):
+                         beam=None, traj=False, end=1.8, dt=1.e-5, directory='./', filename="v_and_p"):
     print("Changed the Integrator again to lsoda")
     self.name = name
     self.date = date
@@ -74,13 +77,13 @@ class Experiment:
       p = Pool()
       l = Manager().list()  # shared list to save the particles across the processes
       parallel_traj = partial(SingeParticleTrajectory, field=self.field, 
-                         beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt, l=l)
+                         beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt, l=l, traj=self.traj)
       p.map(parallel_traj, self.source.particles)
     finally:
       p.close()
       p.join()    
      
-    self.SaveParticles(l)
+    self.SaveParticles(l, traj=self.traj)
     return True
 
   def IntegrateSingeParticle(self, i, count, tStart, tEnd, dt ):
@@ -121,7 +124,7 @@ class Experiment:
         self.detector.vy.append(integral.y[4])
         self.detector.vz.append(integral.y[5])
        
-  def SaveParticles(self, l):
+  def SaveParticles(self, l, traj=False):
     """This function saves the initial and final particles' phase space and temperatures
         to hdf5 files"""
 
@@ -134,7 +137,14 @@ class Experiment:
     data = np.array(allParticles)
     f.create_dataset("particles", data=data)
     f.close()
-        
+    if traj:
+      c=1
+      f = h5py.File(self.directory+self.filename+"_traj.hdf5", "w")
+      for i in l:
+        data = np.array(i.trajectory)
+        f.create_dataset("particles"+str(c), data=data)    
+        c+=1
+      f.close()
  
   """
   def FlyParticles(self, tStart, tEnd, dt):
