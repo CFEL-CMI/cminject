@@ -23,7 +23,8 @@ def SingeParticleTrajectory(i, field, beam, detector, tStart, tEnd, dt, l, traj=
     if i.CheckParticleIn(integral.y, -0.044, detector.end)==0:
       if traj:
         i.trajectory.append([integral.t, integral.y[0], integral.y[1], integral.y[2],
-                             integral.y[3], integral.y[4], integral.y[5], i.T, i.Tt])
+                             integral.y[3], integral.y[4], integral.y[5], i.T, i.Tt,
+                             i.Vf[0], i.Vf[1], i.Vf[2]])
       integral.integrate(integral.t + dt)
     else:
       break
@@ -49,7 +50,7 @@ class Experiment:
     self.traj = traj
     self.dt = dt
     self.detector = detector
-    self.NoTrajectories = (end/dt) / traj
+#    self.NoTrajectories = (end/dt) / traj
     if not os.path.exists(directory):
       os.makedirs(directory)
 #    if not os.path.exists(directory+"/images/"):
