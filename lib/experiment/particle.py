@@ -21,12 +21,12 @@ class SphericalParticle(Particle):
     self.rho = density
     self.kp = thermal_conductivity     # 6.3 W/mK for carbon, 318 for Au. I made carbos as defult
     self.index_of_ref = index_of_ref
-    self.position = position
+    self.position = np.array(position)
     self.iposition = position
     self.FinalPhaseSpace = position + velocity
     self.cp = cp # specific heat
     self.initialPosition = position
-    self.velocity = velocity
+    self.velocity = np.array(velocity)
     self.ivelocity = velocity
     self.acceleration = (0, 0, 0)
     self.boundary = boundary
@@ -39,22 +39,24 @@ class SphericalParticle(Particle):
     self.called=0   # for debugging
     self.pressureAround = 0
     self.Tt = temp
+    self.dt = 0.
     self.reached = False
     self.TimeLN = [0.,0.]      # time taken to cool particle to liquid nitrogen temp
     self.TOF = 0. # time of flight
+    self.Vf=[0,0,0]
 #    self.time=0 
 #    self.f = open("forces.txt", "w+")
 
   def get_v_and_a(self, t, p_and_v, fluid, beam):
     """ This fuction returns the derivatives of the position and velocities for the integrator"""
 
-#    if abs(p_and_v[2])>0.052: return -1
     if fluid.FlowField:
       a = self.DragForceVector(fluid, p_and_v)/self.M
-#      a = self.CollisionForce(fluid, p_and_v)/self.M
+      """
+      self.dt = t - self.dt
       if fluid.pressure>0:
-        self.CalculateTemp(fluid, t)
-        self.CalculateCollisions(fluid, t)
+        self.CalculateTemp(fluid, self.dt)
+        self.CalculateCollisions(fluid, self.dt)
         if self.T > 77.:
             self.TimeLN[0]+=t
         if self.Tt > 77.:
@@ -62,11 +64,12 @@ class SphericalParticle(Particle):
       self.TOF += t
       self.position = p_and_v[:3]
       self.velocity = p_and_v[3:]
-
+      """
     if beam is not None:
       a[0] += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0])) / self.M
       a[1] += self.FppTrans(fluid, beam)*sin(atan(self.position[1]/self.position[0])) / self.M
       a[2] += self.FppAxial(fluid, beam) /  self.M
+    self.dt = t
     return np.concatenate((p_and_v[3:], a))  # return the velocities and accelerations
 
   def DragForceVector(self,fluid, p_and_v):
@@ -74,7 +77,10 @@ class SphericalParticle(Particle):
      try:
       token = fluid.fdrag((p_and_v[0],p_and_v[1],p_and_v[2]))
       fluid.pressure = token[3]
-      if fluid.pressure<=0: return np.zeros(3)   # if pressure is zero no fluid
+      if fluid.pressure<=0:
+        self.insideFluid = False 
+        return np.zeros(3)   # if pressure is zero no fluid
+      self.Vf = token[:3]   # I just added this to make sure the particle is following the fluid
       fluid.vel = token[:3] - p_and_v[3:] # fuild velocity relative to the particle
       force_vector = 6 * pi * fluid.mu * self.radius * fluid.vel
       return force_vector/ self.SlipCorrection(fluid)
@@ -118,7 +124,6 @@ class SphericalParticle(Particle):
     S = 1 + Kn * (1.246 + (0.42 * exp(-0.87/Kn)))
     return S * fluid.ScaleSlip
 
-
   def SlipCorrectionRoomTemp(self, fluid):
     """This function calculates the standard slip correction factor at room temperature"""
  
@@ -126,6 +131,17 @@ class SphericalParticle(Particle):
     Kn = lamda/self.radius
     S = 1 + Kn * (1.2310 + (0.4695 * exp(-1.1783/Kn)))
     return S
+
+  def Brownian(self, fluid, dt):
+    if dt>0:
+      K = 1.38065e-23
+      s = 216 * fluid.mu * K * fluid.T/(pi**2 * (2*self.radius)**5 *
+          self.rho**2 * self.SlipCorrection(fluid))
+      force = np.random.normal(0,1,3) * sqrt(pi*s / dt)
+    else:
+      force = np.array([0., 0., 0.])
+    return force
+   
 
   def CalculateTemp(self, fluid, t):
     """This function calculates the particle temperature based on Newton Law of Cooling"""

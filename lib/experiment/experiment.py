@@ -12,26 +12,53 @@ import h5py
 import os
 
 
-def SingeParticleTrajectory(i, field, beam, detector, tStart, tEnd, dt, l, traj=False):
+def SingeParticleTrajectory(particle, field, beam, detector, tStart, tEnd, dt, l, traj=False):
   """ This function integrate the trajectory of a single particle. The propagation of particles in time stops 
       if the particle outside the boundary of the devices or the integration was not successful"""
-  integral = ode( i.get_v_and_a )
+  integral = ode( particle.get_v_and_a )
   integral.set_integrator('lsoda') #, method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
-  integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(field, beam)
+#  integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(field, beam)
+  integral.set_initial_value( np.concatenate((particle.position, 
+                              particle.velocity)), tStart ).set_f_params(field, beam)
 
   while integral.successful() and integral.t < tEnd:
-    if i.CheckParticleIn(integral.y, -0.044, detector.end)==0:
+    if particle.CheckParticleIn(integral.y, -0.044, detector.end)==0:
       if traj:
-        i.trajectory.append([integral.t, integral.y[0], integral.y[1], integral.y[2],
-                             integral.y[3], integral.y[4], integral.y[5], i.T, i.Tt,
-                             i.Vf[0], i.Vf[1], i.Vf[2]])
+        particle.trajectory.append([integral.t, integral.y[0], integral.y[1], integral.y[2],
+                             integral.y[3], integral.y[4], integral.y[5], particle.T, particle.Tt])
+#                             i.Vf[0], i.Vf[1], i.Vf[2]])
+      if field.pressure>0:
+        particle.CalculateTemp(field, dt)
+        particle.CalculateCollisions(field, dt)
+        if particle.T > 77.:
+            particle.TimeLN[0] = integral.t
+        if particle.Tt > 77.:
+            particle.TimeLN[1] = integral.t
+      particle.position = integral.y[:3]
+      particle.velocity = integral.y[3:]
+      particle.TOF = integral.t     
       integral.integrate(integral.t + dt)
     else:
       break
-  l.append(i)
-#  print("Final Position", i.FinalPhaseSpace, '%2E' % i.collisions)
+  l.append(particle)
+
+"""
+def SingeParticleTrajectoryVerlet(particle, field, beam, detector, tStart, tEnd, dt, l, traj=False):
+  N = int(tEnd/dt)
+  for i in range(N):
+    if particle.CheckParticleIn(np.concatenate((particle.position, particle.velocity)), -0.044, detector.end)==0:
+      a = particle.DragForceVector(field, np.concatenate((particle.position, particle.velocity)))/particle.M
+      particle.position = particle.position + particle.velocity * dt + 0.5 * a * dt**2
+      particle.velocity = particle.velocity + a * dt 
+      particle.trajectory.append([dt*i, particle.position[0], particle.position[1], particle.position[2],
+                             particle.velocity[0], particle.velocity[1], particle.velocity[2], particle.T, particle.Tt])
 
 
+    else:
+      break
+  l.append(particle)
+  print('Particle number', len(l))
+"""
 
 class Experiment:
   """This class carry out the info about the experiment you want to simulate.
@@ -50,28 +77,17 @@ class Experiment:
     self.traj = traj
     self.dt = dt
     self.detector = detector
-#    self.NoTrajectories = (end/dt) / traj
     if not os.path.exists(directory):
       os.makedirs(directory)
-#    if not os.path.exists(directory+"/images/"):
-#      os.makedirs(directory+"/images/")
-
     self.directory = directory
     self.interp_time = 0
     self.called = 0
     self.filename = filename
     self.CalculateTrajectory(tStart=0, tEnd=end, dt=dt)
- 
-#    self.SaveTrajectories()
-#    self.detector.PlotDetector(directory, filename, source)
 
   def CalculateTrajectory(self, tStart, tEnd, dt ):
-    """ Calculate the trajectories for all particles by integrating the equation of motion
-    count = 0  # uncomment this if you want to run the serial version.
-    for i in self.source.particles:
-      self.detector.ID = i.ID
-      self.IntegrateSingeParticle(i, count, tStart, tEnd, dt )
-      count+=1"""
+    """ Calculate the trajectories for all particles by integrating the equation of motion"""
+
     print("Calculating particles trajecories........")
     print("Running on "+str(cpu_count())+" cores")
     try:
@@ -79,6 +95,9 @@ class Experiment:
       l = Manager().list()  # shared list to save the particles across the processes
       parallel_traj = partial(SingeParticleTrajectory, field=self.field, 
                          beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt, l=l, traj=self.traj)
+#      parallel_traj = partial(SingeParticleTrajectoryVerlet, field=self.field,
+#                         beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt, l=l, traj=self.traj)
+
       p.map(parallel_traj, self.source.particles)
     finally:
       p.close()
@@ -87,44 +106,6 @@ class Experiment:
     self.SaveParticles(l, traj=self.traj)
     return True
 
-  def IntegrateSingeParticle(self, i, count, tStart, tEnd, dt ):
-    """ This function integrate the trajectory of a single particle. The propagation of particles in time stops 
-        if the particle outside the boundary of the devices or the integration was not successful"""
-    traj = 0
-    integral = ode( i.get_v_and_a )
-    integral.set_integrator('lsoda', method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
-    integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(self.field, self.beam)
-    print("Calculate particle", count,  i.position, i.velocity, i.ID)
-    while integral.successful() and self.ParticleInBoundary(i,integral.y[2]) and integral.t < tEnd and abs(integral.y[2]) < self.detector.end:
-      if traj%self.traj:
-        i.trajectory.append( (integral.y[0], integral.y[1], integral.y[2]) )
-        i.velocities.append( (integral.y[3], integral.y[4], integral.y[5]) )
-      #self.CheckNearDetector(integral, i)
-      integral.integrate(integral.t + dt)
-      i.position = (integral.y[0], integral.y[1], integral.y[2])
-      i.velocity = (integral.y[3], integral.y[4], integral.y[5])
-      traj+=1
-    try:
-      self.detector.Projection()
-    except:
-      pass
-    self.detector.x=[]; self.detector.y=[]; self.detector.z=[]
-    self.detector.vx=[]; self.detector.vy=[]; self.detector.vz=[]
-    self.detector.T=[]; self.detector.Tt=[]
-    print("Final Position", i.position, i.velocity, '%2E' % i.collisions)
-
-
-  def CheckNearDetector(self, integral, P):
-    if self.detector.Check(abs(integral.y[2])):
-        self.detector.T.append(P.T)
-        self.detector.Tt.append(P.Tt)
-        self.detector.x.append(integral.y[0])
-        self.detector.y.append(integral.y[1])
-        self.detector.z.append(integral.y[2])
-        self.detector.vx.append(integral.y[3])
-        self.detector.vy.append(integral.y[4])
-        self.detector.vz.append(integral.y[5])
-       
   def SaveParticles(self, l, traj=False):
     """This function saves the initial and final particles' phase space and temperatures
         to hdf5 files"""
@@ -146,36 +127,6 @@ class Experiment:
         f.create_dataset("particles"+str(c), data=data)    
         c+=1
       f.close()
- 
-  """
-  def FlyParticles(self, tStart, tEnd, dt):
-    # This function integrates the trajecoties in parallel. It has faster interpolation but it is slower because the integrator
-    #   uses a small time step for all particles. Thus, it is not used. I left it there in case I found a solution to this issue
-
-    print("Calculate particle")
-    integral = ode(self.get_v_a)
-    integral.set_integrator('lsoda',  method='BDF',with_jacobian=False, atol=1e-6,rtol=1e-4,first_step=1e-5,nsteps=300)
-    initial = np.concatenate((self.source.allParticlesPositions, self.source.allParticlesVelocities))
-    integral.set_initial_value( initial.flatten(), tStart ) #.set_f_params()
-    while integral.successful() and integral.t < tEnd:
-        integral.integrate(integral.t + dt)
-    print integral.y
-    print 'interpolation: ',self.interp_time
-    print "number of calls", self.called
-    return integral
-
-  def get_v_a(self,  t, p_and_v):
-   self.called+=1
-   p_and_v = p_and_v.reshape((2 * self.source.number_of_particles, 3))
-   m = self.source.rho * 4/3 * pi * (self.source.radius)**3
-   t1=time.time()
-   a =  6 * pi * self.field.mu * self.source.radius * (
-           self.field.fdrag(p_and_v[:self.source.number_of_particles])
-                  - p_and_v[self.source.number_of_particles:] )/ (m * self.field.SlipCorrection)
-   self.interp_time+=time.time()-t1
-   v_a = np.concatenate((p_and_v[self.source.number_of_particles:], a))
-   return v_a.flatten()
-  """
 
   def LongestTrajectory(self):
     """ This function returns the longest trajectory of all particles and used only for trajectories visualizations"""
@@ -186,27 +137,6 @@ class Experiment:
          longest = len(i.trajectory)
     return longest
 
-  def ParticleInBoundary(self, particle, Z):
-#####################################
-#    if self.devices==None:   # if there are no devices then use the boundary of the flow field
-    if particle.insideFluid:
-         return True
-    else:
-        if abs(Z)>=self.field.maxZ-self.field.maxZ/100.0:# or abs(Z)<=self.field.minZ: # if the particle is out but from the outlet it shouldn't stop
-          return True               # till it reaches the detector
-        else:
-          return False
-#####################################
-    if self.devices!=None:
-      for i in self.devices:
-        if type(i) is AerodynamicsLensStack:
-          return i.ParticleInside(position)
-        if type(i) is BufferGasCell:
-          return i.BufferGasCellInside(position)
-
-    else:
-     #print "No Device Exists in The Experiment"
-     return True
 
   def SaveTrajectories(self):
     f = open(self.directory+self.name+"_"+self.date,'w+')
