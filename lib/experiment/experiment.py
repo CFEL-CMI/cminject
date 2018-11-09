@@ -21,6 +21,11 @@ def SingeParticleTrajectory(particle, field, beam, detector, tStart, tEnd, dt, l
   integral.set_initial_value( np.concatenate((particle.position, 
                               particle.velocity)), tStart ).set_f_params(field, beam)
 
+  if traj:    # If trajectory is true then store the initial position
+    particle.trajectory.append([0., particle.position[0], particle.position[1], particle.position[2], 
+                                particle.velocity[0], particle.velocity[1], particle.velocity[2], 
+                                particle.T, particle.Tt])  
+
   while integral.successful() and integral.t < tEnd:
     if particle.CheckParticleIn(integral.y, -0.044, detector.end)==0:
       if traj:
