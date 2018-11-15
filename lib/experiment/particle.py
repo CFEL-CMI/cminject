@@ -2,7 +2,7 @@ import sys
 sys.path.insert(0, '../lib')
 from scipy.integrate import ode
 from math import pi, atan, sin, cos
-from field.laser_field import *
+from experiment.field.laser_field import *
 import numpy as np 
 
 class Particle:
@@ -43,33 +43,17 @@ class SphericalParticle(Particle):
     self.reached = False
     self.TimeLN = [0.,0.]      # time taken to cool particle to liquid nitrogen temp
     self.TOF = 0. # time of flight
-    self.Vf=[0,0,0]
-#    self.time=0 
-#    self.f = open("forces.txt", "w+")
+    #self.Vf=[0,0,0] I just added this to make sure the particle is following the fluid
 
   def get_v_and_a(self, t, p_and_v, fluid, beam):
     """ This fuction returns the derivatives of the position and velocities for the integrator"""
 
     if fluid.FlowField:
       a = self.DragForceVector(fluid, p_and_v)/self.M
-      """
-      self.dt = t - self.dt
-      if fluid.pressure>0:
-        self.CalculateTemp(fluid, self.dt)
-        self.CalculateCollisions(fluid, self.dt)
-        if self.T > 77.:
-            self.TimeLN[0]+=t
-        if self.Tt > 77.:
-            self.TimeLN[1]+=t
-      self.TOF += t
-      self.position = p_and_v[:3]
-      self.velocity = p_and_v[3:]
-      """
     if beam is not None:
       a[0] += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0])) / self.M
       a[1] += self.FppTrans(fluid, beam)*sin(atan(self.position[1]/self.position[0])) / self.M
       a[2] += self.FppAxial(fluid, beam) /  self.M
-    self.dt = t
     return np.concatenate((p_and_v[3:], a))  # return the velocities and accelerations
 
   def DragForceVector(self,fluid, p_and_v):
@@ -80,7 +64,7 @@ class SphericalParticle(Particle):
       if fluid.pressure<=0:
         self.insideFluid = False 
         return np.zeros(3)   # if pressure is zero no fluid
-      self.Vf = token[:3]   # I just added this to make sure the particle is following the fluid
+      #self.Vf = token[:3]   # I just added this to make sure the particle is following the fluid
       fluid.vel = token[:3] - p_and_v[3:] # fuild velocity relative to the particle
       force_vector = 6 * pi * fluid.mu * self.radius * fluid.vel
       return force_vector/ self.SlipCorrection(fluid)
@@ -184,8 +168,6 @@ class SphericalParticle(Particle):
        n = (pressure * avG/(R * fluid.T * fluid.mGasMol))*(abs(vf[2] - p_and_v[5]) + abs(vf[1] - p_and_v[4]) + abs(vf[0] - p_and_v[3]))
        A = 2 * pi * self.radius**2
        force_vector =  2 * n * A * (vf - p_and_v[3:]) * fluid.mGas
-#       force_vector1 =  8./3. * self.radius**2 * (vf - p_and_v[3:]) * n * sqrt(pi * self.M * fluid.mGas/(self.M * fluid.mGas)**2)
-#       print force_vector - force_vector1
        return force_vector
      except:
        self.insideFluid = False  # The particle is outside the flow field
