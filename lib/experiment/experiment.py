@@ -17,7 +17,6 @@ def SingeParticleTrajectory(particle, field, beam, detector, tStart, tEnd, dt, l
       if the particle outside the boundary of the devices or the integration was not successful"""
   integral = ode( particle.get_v_and_a )
   integral.set_integrator('lsoda') #, method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
-#  integral.set_initial_value( (np.array(i.position + i.velocity)), tStart ).set_f_params(field, beam)
   integral.set_initial_value( np.concatenate((particle.position, 
                               particle.velocity)), tStart ).set_f_params(field, beam)
 
@@ -27,11 +26,10 @@ def SingeParticleTrajectory(particle, field, beam, detector, tStart, tEnd, dt, l
                                 particle.T, particle.Tt])  
 
   while integral.successful() and integral.t < tEnd:
-    if particle.CheckParticleIn(integral.y, -0.044, detector.end)==0:
+    if particle.CheckParticleIn(integral.y, -0.043, detector.end)==0:
       if traj:
         particle.trajectory.append([integral.t, integral.y[0], integral.y[1], integral.y[2],
                              integral.y[3], integral.y[4], integral.y[5], particle.T, particle.Tt])
-#                             i.Vf[0], i.Vf[1], i.Vf[2]])
       if field.pressure>0:
         particle.CalculateTemp(field, dt)
         particle.CalculateCollisions(field, dt)
@@ -46,24 +44,6 @@ def SingeParticleTrajectory(particle, field, beam, detector, tStart, tEnd, dt, l
     else:
       break
   l.append(particle)
-
-"""
-def SingeParticleTrajectoryVerlet(particle, field, beam, detector, tStart, tEnd, dt, l, traj=False):
-  N = int(tEnd/dt)
-  for i in range(N):
-    if particle.CheckParticleIn(np.concatenate((particle.position, particle.velocity)), -0.044, detector.end)==0:
-      a = particle.DragForceVector(field, np.concatenate((particle.position, particle.velocity)))/particle.M
-      particle.position = particle.position + particle.velocity * dt + 0.5 * a * dt**2
-      particle.velocity = particle.velocity + a * dt 
-      particle.trajectory.append([dt*i, particle.position[0], particle.position[1], particle.position[2],
-                             particle.velocity[0], particle.velocity[1], particle.velocity[2], particle.T, particle.Tt])
-
-
-    else:
-      break
-  l.append(particle)
-  print('Particle number', len(l))
-"""
 
 class Experiment:
   """This class carry out the info about the experiment you want to simulate.
@@ -100,8 +80,6 @@ class Experiment:
       l = Manager().list()  # shared list to save the particles across the processes
       parallel_traj = partial(SingeParticleTrajectory, field=self.field, 
                          beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt, l=l, traj=self.traj)
-#      parallel_traj = partial(SingeParticleTrajectoryVerlet, field=self.field,
-#                         beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt, l=l, traj=self.traj)
 
       p.map(parallel_traj, self.source.particles)
     finally:
@@ -141,20 +119,3 @@ class Experiment:
        if len(i.trajectory)>longest:
          longest = len(i.trajectory)
     return longest
-
-
-  def SaveTrajectories(self):
-    f = open(self.directory+self.name+"_"+self.date,'w+')
-    check = True
-    for t in range(int(self.NoTrajectories)):
-      if check:
-        f.write(str(t*self.traj)+'\n')
-        check = False # incase no particles propagating no need to write the time step
-      c=0
-      for i in self.source.particles:
-#        if len(i.trajectory)>t:
-          f.write(str(c) + " " + str(i.trajectory[t][0]) + " " + str(i.trajectory[t][1])
-                      + " " + str(i.trajectory[t][2]) + " " + str(i.velocities[t][0]) + " "
-                             + str(i.velocities[t][1]) + " " + str(i.velocities[t][2]) + '\n')
-          c+=1
-          check = True
