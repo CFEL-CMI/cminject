@@ -2,7 +2,7 @@ import time
 from scipy.integrate import ode
 from device.als import AerodynamicsLensStack
 from device.bgc import BufferGasCell
-from experiment.detector import Detector
+#from experiment.detector import Detector
 from multiprocessing import Pool, Array, Process, Manager, cpu_count
 from functools import partial
 import numpy as np
@@ -44,13 +44,13 @@ def SingeParticleTrajectory(particle, field, beam, detector, tStart, tEnd, dt, l
   l.append(particle)
 
 class Experiment:
-  """This class carry out the info about the experiment you want to simulate.
+  """This class carry the info about the experiment you want to simulate.
      For example, the devices and the interaction fields you will include.
      The output files will have the name of and date of your experiment"""
 
   def __init__(self, name, date, source, detector=None, devices=None, field=None, 
-                         beam=None, traj=False, end=1.8, dt=1.e-5, directory='./', filename="v_and_p"):
-    print("Changed the Integrator again to lsoda")
+                         beam=None, traj=False, end=1.8, dt=1.e-5, directory='./', filename="Particles_Trajectories"):
+   
     self.name = name
     self.date = date
     self.field = field
@@ -88,8 +88,8 @@ class Experiment:
     return True
 
   def SaveParticles(self, l, traj=False):
-    """This function saves the initial and final particles' phase space and temperatures
-        to hdf5 files"""
+    """This function saves the initial and final particles' phase space 
+       and temperatures to hdf5 files"""
 
     allParticles=[]
     for i in l:
@@ -110,7 +110,8 @@ class Experiment:
       f.close()
 
   def LongestTrajectory(self):
-    """ This function returns the longest trajectory of all particles and used only for trajectories visualizations"""
+    """ This function returns the longest trajectory of all particles 
+        and used only for trajectories visualizations"""
 
     longest = 0
     for i in self.source.particles:
