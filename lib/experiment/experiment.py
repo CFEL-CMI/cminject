@@ -1,7 +1,5 @@
 import time
 from scipy.integrate import ode
-from field.interaction_field import *
-from field.force_calculator import *
 from device.als import AerodynamicsLensStack
 from device.bgc import BufferGasCell
 from experiment.detector import Detector
