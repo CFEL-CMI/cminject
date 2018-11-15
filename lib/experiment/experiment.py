@@ -1,9 +1,5 @@
-import time
 from scipy.integrate import ode
-from device.als import AerodynamicsLensStack
-from device.bgc import BufferGasCell
-#from experiment.detector import Detector
-from multiprocessing import Pool, Array, Process, Manager, cpu_count
+from multiprocessing import Pool, Manager, cpu_count
 from functools import partial
 import numpy as np
 import h5py
@@ -63,8 +59,6 @@ class Experiment:
     if not os.path.exists(directory):
       os.makedirs(directory)
     self.directory = directory
-    self.interp_time = 0
-    self.called = 0
     self.filename = filename
     self.CalculateTrajectory(tStart=0, tEnd=end, dt=dt)
 
