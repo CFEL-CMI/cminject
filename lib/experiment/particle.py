@@ -2,7 +2,7 @@ import sys
 sys.path.insert(0, '../lib')
 from scipy.integrate import ode
 from math import pi, atan, sin, cos
-from experiment.field.laser_field import *
+from experiment.field.laser_field import * 
 import numpy as np 
 
 class Particle:
