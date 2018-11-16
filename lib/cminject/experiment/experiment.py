@@ -6,7 +6,7 @@ import h5py
 import os
 
 
-def SingeParticleTrajectory(particle, field, beam, detector, tStart, tEnd, dt, l, traj=False):
+def SingeParticleTrajectory(particle, field, beam, detector, tStart, tEnd, dt, zlim, l, traj=False):
   """ This function integrate the trajectory of a single particle. The propagation of particles in time stops 
       if the particle outside the boundary of the devices or the integration was not successful"""
   integral = ode( particle.get_v_and_a )
@@ -20,7 +20,7 @@ def SingeParticleTrajectory(particle, field, beam, detector, tStart, tEnd, dt, l
                                 particle.T, particle.Tt])  
 
   while integral.successful() and integral.t < tEnd:
-    if particle.CheckParticleIn(integral.y, -0.043, detector.end)==0:
+    if particle.CheckParticleIn(integral.y, zlim, detector.end)==0:
       if traj:
         particle.trajectory.append([integral.t, integral.y[0], integral.y[1], integral.y[2],
                              integral.y[3], integral.y[4], integral.y[5], particle.T, particle.Tt])
@@ -45,7 +45,7 @@ class Experiment:
      The output files will have the name of and date of your experiment"""
 
   def __init__(self, name, date, source, detector=None, devices=None, field=None, 
-                         beam=None, traj=False, end=1.8, dt=1.e-5, directory='./', filename="Particles_Trajectories"):
+                         beam=None, traj=False, end=1.8, dt=1.e-5, directory='./', Zlimit=-0.043, filename="Particles_Trajectories"):
    
     self.name = name
     self.date = date
@@ -56,12 +56,13 @@ class Experiment:
     self.traj = traj
     self.dt = dt
     self.detector = detector
+    self.Zlimit = Zlimit
     if not os.path.exists(directory):
       os.makedirs(directory)
     self.directory = directory
     self.filename = filename
     self.CalculateTrajectory(tStart=0, tEnd=end, dt=dt)
-
+   
   def CalculateTrajectory(self, tStart, tEnd, dt ):
     """ Calculate the trajectories for all particles by integrating the equation of motion"""
 
@@ -71,7 +72,7 @@ class Experiment:
       p = Pool()
       l = Manager().list()  # shared list to save the particles across the processes
       parallel_traj = partial(SingeParticleTrajectory, field=self.field, 
-                         beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt, l=l, traj=self.traj)
+                         beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt, zlim=self.Zlimit, l=l, traj=self.traj)
 
       p.map(parallel_traj, self.source.particles)
     finally:

@@ -10,7 +10,6 @@ class Cone:
           permRadius = self.bRadius - (self.bRadius - self.tRadius) * float(z)/self.height
           pointRadius = ((ParticlePosition[1] - self.position[1]) ** 2 + (ParticlePosition[2] - self.position[2]) ** 2)
           if (z <= self.height and z >=0) and (pointRadius <= permRadius**2):
-#           print "InSide Cone"
            return True
           else:
            return False
@@ -24,7 +23,6 @@ class Cylinder:
    def CylinderInside(self, ParticlePosition):
      if (((ParticlePosition[1]-self.start[1])**2 + (ParticlePosition[2]-self.start[2])**2 <= self.radius**2) 
                               and (ParticlePosition[0] >= self.start[0] and ParticlePosition[0] <= self.end[0])):
-#        print "InSide Cyliner"
         return True
      else:
         return False
@@ -43,6 +41,8 @@ class BufferGasCell(object):
     co2bRadius = 0.001
     cyR3 = 0.001
     cyL3 = 0.001
+    self.maxZ = cyL1 + cyL3 + 2*coL1 + cyL2
+
     if cylinder1 is None:
       self.cylinder1 = Cylinder(cyR1, position, (position[0]+cyL1, position[1], position[2]))
 
@@ -66,7 +66,7 @@ class BufferGasCell(object):
               self.cylinder3.CylinderInside(ParticlePosition) or
                         self.cone1.ConeInside(ParticlePosition) or
                              self.cone2.ConeInside(ParticlePosition) or 
-                                (ParticlePosition[0]>0.043 and ParticlePosition[0]<0.055)):
+                                             (ParticlePosition[0]> self.maxZ) ):
       return True
     else:
       return False
