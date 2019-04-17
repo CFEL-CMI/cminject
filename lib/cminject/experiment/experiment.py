@@ -1,12 +1,13 @@
+import traceback
 from scipy.integrate import ode
 from multiprocessing import Pool, Manager, cpu_count
 from functools import partial
 import numpy as np
 import h5py
 import os
+import sys
 
-
-def SingeParticleTrajectory(particle, field, beam, detector, tStart, tEnd, dt, zlim, l, traj=False):
+def SingeParticleTrajectory(particle, devices, field, beam, detector, tStart, tEnd, dt, zlim, l, traj=False):
   """ This function integrate the trajectory of a single particle. The propagation of particles in time stops 
       if the particle outside the boundary of the devices or the integration was not successful"""
   integral = ode( particle.get_v_and_a )
@@ -20,11 +21,11 @@ def SingeParticleTrajectory(particle, field, beam, detector, tStart, tEnd, dt, z
                                 particle.T, particle.Tt])  
 
   while integral.successful() and integral.t < tEnd:
-    if particle.CheckParticleIn(integral.y, zlim, detector.end)==0:
+    if particle.CheckParticleIn(integral.y, zlim, detector.end, devices)==0:
       if traj:
         particle.trajectory.append([integral.t, integral.y[0], integral.y[1], integral.y[2],
                              integral.y[3], integral.y[4], integral.y[5], particle.T, particle.Tt])
-      if field.pressure>0:
+      if  field is not None and field.pressure>0:
         particle.CalculateTemp(field, dt)
         particle.CalculateCollisions(field, dt)
         if particle.T > 77.:
@@ -71,10 +72,15 @@ class Experiment:
     try:
       p = Pool()
       l = Manager().list()  # shared list to save the particles across the processes
-      parallel_traj = partial(SingeParticleTrajectory, field=self.field, 
-                         beam=self.beam, detector=self.detector, tStart=tStart, tEnd=tEnd, dt=dt, zlim=self.Zlimit, l=l, traj=self.traj)
+      parallel_traj = partial(SingeParticleTrajectory, devices=self.devices, field=self.field, 
+                              beam=self.beam, detector=self.detector, tStart=tStart, 
+                              tEnd=tEnd, dt=dt, zlim=self.Zlimit, l=l, traj=self.traj)
 
       p.map(parallel_traj, self.source.particles)
+
+    except Exception as e:
+      print('Exception', e)
+
     finally:
       p.close()
       p.join()    

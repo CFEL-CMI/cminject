@@ -47,13 +47,18 @@ class SphericalParticle(Particle):
   def get_v_and_a(self, t, p_and_v, fluid, beam):
     """ This fuction returns the derivatives of the position and velocities for the integrator"""
 
-    if fluid.FlowField:
+    if fluid is None and beam is None: # constant velocity propagation
+      a = np.zeros(3)
+
+    elif fluid.FlowField:
       a = self.DragForceVector(fluid, p_and_v)/self.M
-    if beam is not None:
-      a[0] += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0])) / self.M
-      a[1] += self.FppTrans(fluid, beam)*sin(atan(self.position[1]/self.position[0])) / self.M
-      a[2] += self.FppAxial(fluid, beam) /  self.M
+
+      if beam is not None:
+        a[0] += self.FppTrans(fluid, beam)*cos(atan(self.position[1]/self.position[0])) / self.M
+        a[1] += self.FppTrans(fluid, beam)*sin(atan(self.position[1]/self.position[0])) / self.M
+        a[2] += self.FppAxial(fluid, beam) /  self.M
     return np.concatenate((p_and_v[3:], a))  # return the velocities and accelerations
+    
 
   def DragForceVector(self,fluid, p_and_v):
      """This function calculates the drag force using Stokes' law for spherical particles in continuum"""
@@ -71,30 +76,48 @@ class SphericalParticle(Particle):
        self.insideFluid = False  # The particle is outside the flow field
        return np.zeros(3)
 
-  def CheckParticleIn(self, p_and_v, zlimit, zdetector):
+  def CheckParticleIn(self, p_and_v, zlimit, zdetector, devices):
     """This is called each integration step to check if the particle still in the boundary"""
-    
+
     Z = abs(p_and_v[2])
     zdetector = abs(zdetector)
-    zlimit = abs(zlimit)
-    if Z > zdetector:
+
+    if Z > zdetector:  # it the particle reached the detector then safe the phase space end exit
       detectorx, detectory = self.CalculatePositionOnDetector(np.concatenate((self.position,self.velocity)), zdetector)
-      self.FinalPhaseSpace = [  self.iposition[0], self.iposition[1], self.iposition[2], 
+      self.FinalPhaseSpace = [  self.iposition[0], self.iposition[1], self.iposition[2],
                                 self.ivelocity[0], self.ivelocity[1], self.ivelocity[2],
-                                detectorx, detectory, p_and_v[3], p_and_v[4], p_and_v[5], self.T, self.Tt, 
+                                detectorx, detectory, p_and_v[3], p_and_v[4], p_and_v[5], self.T, self.Tt,
                                 self.TimeLN[0], self.TimeLN[1], self.TOF, self.ID ]
       self.reached = True
       return -1
 
-    if self.insideFluid and Z < zdetector:
-      return 0
+    if devices is None:
+      zlimit = abs(zlimit)
 
-    if not self.insideFluid and Z < zlimit:
-      return -1
+      if self.insideFluid and Z < zdetector: # if the particle inside the fluid and didn't reach 
+        return 0                             # the detector then continue the integration
 
-    if not self.insideFluid and Z >= zlimit:
-      return 0
+      if not self.insideFluid and Z < zlimit: # if the particle is not in the fluid and didn't come out 
+        return -1                             # from the outlet then it shoudl stop
 
+      if not self.insideFluid and Z >= zlimit:  # if the particle is not in the fluid but it came out from 
+        return 0                                # the outlet then continue till it reach the detector
+
+    else:  # There are devices, so check if the particle exist in any of them or between them
+      for i in devices:  # if the particle exist in any of the devices then continue integration
+        if i.ParticleInside(p_and_v[:3]):
+          return 0
+      if Z < devices[0].minz:
+        return 0
+      if len(devices)==1:
+        if Z > devices[0].maxz and Z <= zdetector:
+          return 0
+      for i in range(len(devices)-1): # if the particle exists between devices then continue integration
+        if Z > devices[i].maxz and Z <= devices[i+1].minz:
+          return 0  
+        elif Z > devices[i].maxz and Z <= zdetector:
+          return 0
+      return -1  # particle is outside the boundaries
 
   def SlipCorrection(self, fluid):
     """This function calculates the slip correction factor with temperature

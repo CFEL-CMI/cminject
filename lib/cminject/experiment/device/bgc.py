@@ -1,31 +1,5 @@
-class Cone:
-   def __init__(self, position, bRadius, tRadius, height):
-     self.position = position
-     self.bRadius = bRadius
-     self.tRadius = tRadius
-     self.height = height
-
-   def ConeInside(self, ParticlePosition):
-          z = ParticlePosition[0] - self.position[0]
-          permRadius = self.bRadius - (self.bRadius - self.tRadius) * float(z)/self.height
-          pointRadius = ((ParticlePosition[1] - self.position[1]) ** 2 + (ParticlePosition[2] - self.position[2]) ** 2)
-          if (z <= self.height and z >=0) and (pointRadius <= permRadius**2):
-           return True
-          else:
-           return False
-     
-class Cylinder:
-   def __init__(self, radius, start, end):
-     self.radius = radius
-     self.start = start
-     self.end = end
-   
-   def CylinderInside(self, ParticlePosition):
-     if (((ParticlePosition[1]-self.start[1])**2 + (ParticlePosition[2]-self.start[2])**2 <= self.radius**2) 
-                              and (ParticlePosition[0] >= self.start[0] and ParticlePosition[0] <= self.end[0])):
-        return True
-     else:
-        return False
+from cminject.experiment.device.cylinder import Cylinder
+from cminject.experiment.device.cone import Cone
 
 class BufferGasCell(object):
   """ This class implement the buffer gas cell device"""
@@ -44,29 +18,28 @@ class BufferGasCell(object):
     self.maxZ = cyL1 + cyL3 + 2*coL1 + cyL2
 
     if cylinder1 is None:
-      self.cylinder1 = Cylinder(cyR1, position, (position[0]+cyL1, position[1], position[2]))
+      self.cylinder1 = Cylinder(cyR1, position, (position[0], position[1], position[2]+cyL1))
 
     if cone1 is None:
-      self.cone1 = Cone((position[0]+cyL1, position[1], position[2]), co1bRadius, cotRadius, coL1)
+      self.cone1 = Cone((position[0], position[1], position[2]+cyL1), co1bRadius, cotRadius, coL1)
 
     if cylinder2 is None:
-      self.cylinder2 = Cylinder(cyR2, (position[0]+cyL1+coL1, position[1], position[2]), 
-                                           (position[0]+cyL1+coL1+cyL2, position[1], position[2]))
+      self.cylinder2 = Cylinder(cyR2, (position[0], position[1], position[2]+cyL1+coL1), 
+                                           (position[0], position[1], position[2]+cyL1+coL1+cyL2))
     if cone2 is None:
-      self.cone2 = Cone((position[0]+cyL1+coL1+cyL2, position[1], position[2]), cotRadius, co2bRadius, coL1)
+      self.cone2 = Cone((position[0], position[1], position[2]+cyL1+coL1+cyL2), cotRadius, co2bRadius, coL1)
 
     if cylinder3 is None:
-      self.cylinder3 = Cylinder(cyR3, (position[0]+cyL1+(2*coL1)+cyL2, position[1], position[2]), 
-                                           (position[0]+(cyL1+cyL3)+(2*coL1)+cyL2, position[1], position[2]))
+      self.cylinder3 = Cylinder(cyR3, (position[0], position[1], position[2]+cyL1+(2*coL1)+cyL2), 
+                                           (position[0], position[1], position[2]+(cyL1+cyL3)+(2*coL1)+cyL2))
    
 
-  def BufferGasCellInside(self, ParticlePosition):
-    if ( self.cylinder1.CylinderInside(ParticlePosition) or
-            self.cylinder2.CylinderInside(ParticlePosition) or
-              self.cylinder3.CylinderInside(ParticlePosition) or
-                        self.cone1.ConeInside(ParticlePosition) or
-                             self.cone2.ConeInside(ParticlePosition) or 
-                                             (ParticlePosition[0]> self.maxZ) ):
+  def ParticleInside(self, ParticlePosition):
+    if ( self.cylinder1.ParticleInside(ParticlePosition) or
+            self.cylinder2.ParticleInside(ParticlePosition) or
+              self.cylinder3.ParticleInside(ParticlePosition) or
+                        self.cone1.ParticleInside(ParticlePosition) or
+                             self.cone2.ParticleInside(ParticlePosition) ):
       return True
     else:
       return False
