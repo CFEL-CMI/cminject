@@ -1,6 +1,7 @@
-from typing import List
+from typing import List, Tuple
 from multiprocessing import Pool, Manager
 from functools import partial
+import pprofile
 
 import numpy as np
 from scipy.integrate import ode
@@ -12,30 +13,69 @@ def calculate_v_and_a(time: float, position_and_velocity: np.array,
                       particle: Particle, devices: List[Device]):
     total_acceleration = np.zeros(3, dtype=float)
     for device in devices:
-        if device.field.needs_full_particle_data:
-            total_acceleration += device.field.calculate_acceleration(position_and_velocity, particle)
-        else:
-            total_acceleration += device.field.calculate_acceleration(position_and_velocity)
+        if not device.is_particle_inside(particle):
+            continue
+        total_acceleration += device.field.calculate_acceleration(position_and_velocity, particle, time)
     return np.concatenate((position_and_velocity[3:], total_acceleration))
 
 
-def simulate_particle(particle: Particle, devices: List[Device],
+def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], devices: List[Device]):
+    if z_boundary[0] <= particle.position[2] <= z_boundary[1]:
+        return False
+    else:
+        return not any(device.boundary.is_particle_inside(particle) for device in devices)
+
+
+def simulate_particle(particle: Particle, devices: List[Device], detectors: List[Detector],
                       t_start: float, t_end: float, dt: float,
+                      z_boundary: Tuple[float, float],
                       track_trajectories: bool):
     integral = ode(calculate_v_and_a)
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(np.concatenate([particle.position, particle.velocity]), t_start)
     integral.set_f_params(particle, devices)
 
-    while integral.successful() and integral.t < t_end:
-        if True:  # TODO check if particle is not yet lost (outside the boundary of the whole experiment)
-            particle.position = integral.y[:3]
-            particle.velocity = integral.y[3:]
+    while integral.successful() and integral.t < t_end and not particle.lost:
+        # Check conditions for having lost particle.
+        if not is_particle_lost(particle, z_boundary, devices):
+            # If particle is not lost:
+            integral_result = integral.y
+            # - Store the position and velocity calculated by the integrator on the particle
+            particle.position = integral_result[:3]
+            particle.velocity = integral_result[3:]
+
+            # - Have each detector store a hit position if there was a hit
+            for detector in detectors:
+                if detector.has_reached_detector(particle):
+                    hit_position = detector.get_hit_position(particle)
+                    particle.store_hit(detector.identifier, hit_position)
+
+            # - If we want to track trajectories, store them
+            if track_trajectories:
+                particle.trajectory.append(
+                    np.concatenate([[integral.t], integral_result[0:6]])
+                )
+
             integral.integrate(integral.t + dt)
         else:
-            break
+            # If particle is lost, store this and (implicitly) break the loop
+            particle.lost = True
 
     return particle
+
+
+def profiling_wrapper(particle: Particle, devices: List[Device], detectors: List[Detector],
+                      t_start: float, t_end: float, dt: float,
+                      z_boundary: Tuple[float, float],
+                      track_trajectories: bool):
+    result = None
+    prof = pprofile.Profile()
+    with prof():
+        result = simulate_particle(particle, devices, detectors,
+                                   t_start, t_end, dt,
+                                   z_boundary, track_trajectories)
+    prof.dump_stats("cachegrind.out.%d" % particle.identifier)
+    return result
 
 
 class Experiment:
@@ -48,7 +88,7 @@ class Experiment:
 
         # Store numerical data
         self.dt = dt
-        self.t_start = t_start  # TODO needed?
+        self.t_start = t_start
         self.t_end = t_end
         self.track_trajectories = track_trajectories
 
@@ -58,23 +98,41 @@ class Experiment:
             source_particles = source.generate_particles()
             self.particles += source_particles
 
-    def run(self):
+        # Initialise the min/max Z boundary of the whole experiment
+        min_z = float('inf')
+        max_z = float('-inf')
+        for device in self.devices:
+            device_min_z, device_max_z = device.get_z_boundary()
+            min_z = min(min_z, device_min_z)
+            max_z = max(max_z, device_max_z)
+            self.z_boundary = (min_z, max_z)
+
+    def run(self, do_profiling=False):
         print("Running experiment...")
         pool = Pool()
         try:
             parallel_simulate = partial(
-                simulate_particle,
+                (simulate_particle if not do_profiling else profiling_wrapper),
                 devices=self.devices,
                 t_start=self.t_start,
                 t_end=self.t_end,
                 dt=self.dt,
-                track_trajectories=self.track_trajectories
-            )  # TODO further params
-            result = pool.imap(parallel_simulate, self.particles, chunksize=32)
+                track_trajectories=self.track_trajectories,
+                detectors=self.detectors,
+                z_boundary=self.z_boundary
+            )
+            result = pool.imap_unordered(parallel_simulate, self.particles)
         except Exception as e:
             raise e
         finally:
-            pool.close()
-            pool.join()
+            if do_profiling:
+                prof = pprofile.Profile()
+                with prof():
+                    pool.close()
+                    pool.join()
+                prof.dump_stats("cachegrind.out.main")
+            else:
+                pool.close()
+                pool.join()
 
         return list(result)

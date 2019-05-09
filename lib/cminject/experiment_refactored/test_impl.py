@@ -19,42 +19,45 @@ class SphericalParticle(Particle):
 
 
 class OneToZeroBoundary(Boundary):
-    def is_particle_inside(self, particle: Particle):
-        z = particle.position[2]
-        return 0.0 <= z <= 1.0
-
     def get_z_boundary(self) -> Tuple[float, float]:
         return 0.0, 1.0
 
+    def is_particle_inside(self, particle: Particle):
+        return 0.0 <= particle.position[2] <= 1.0
 
-class GravityField(Field):
+
+class GravityForceField(Field):
     def __init__(self):
-        super().__init__(needs_full_particle_data=True)
-        self.g = -9.81  # m/s^2
+        super().__init__()
+        self.g = -9.81 * 20  # m/s^2
 
     def get_z_boundary(self) -> Tuple[float, float]:
         return infinite_interval
 
     def calculate_acceleration(self,
                                position_and_velocity: np.array,
+                               time: float,
                                particle: Particle = None) -> np.array:
-        return np.array([0, 0, self.g * particle.mass])  # TODO this is physical nonsense, just for demo
+        return np.array([
+            0, 0, self.g
+        ])
 
 
-class GravityDevice(Device):
+class ExampleDevice(Device):
     def __init__(self):
-        super().__init__(field=GravityField(), boundary=OneToZeroBoundary())
+        super().__init__(field=GravityForceField(), boundary=OneToZeroBoundary())
 
 
-class BlindDetector(Detector):
+class AtZEqualsOneHalfDetector(Detector):
     def has_reached_detector(self, particle: Particle) -> bool:
-        return False
+        if abs(particle.position[2] - 0.5) < 1e-3 and particle.position[2] >= 0.5:
+            return True
 
     def get_hit_position(self, particle: Particle) -> Optional[np.array]:
-        return None
+        return particle.position
 
     def get_z_boundary(self) -> Tuple[float, float]:
-        return infinite_interval
+        return 0.5, 0.5
 
 
 class GaussianSphericalSource(Source):
@@ -108,39 +111,71 @@ class GaussianSphericalSource(Source):
         return self.particles
 
 
-def run_gravity_experiment(vz):
-    devices = [GravityDevice()]
-    detectors = [BlindDetector()]
+def run_example_experiment(vz, do_profiling=False):
+    devices = [ExampleDevice()]
+    detectors = [AtZEqualsOneHalfDetector(identifier=1)]
     sources = [GaussianSphericalSource(
-        100,
-        position=([0.0, 0.0, 0.0], [0.0002, 0.0002, 0.0000]),
-        velocity=([0.0, 0.0, vz], [0.001, 0.001, 0.00002]),
-        radius=(0.1, 0.2)
+        10,
+        position=([0.0, 0.0, 0.1], [0.0002, 0.0002, 0.0000]),
+        velocity=([0.1, 0.0, vz], [0.0002, 0.0002, 0.00000]),
+        radius=(0.3, 0.2),
+        seed=100
     )]
     experiment = Experiment(
         devices=devices,
         detectors=detectors,
         sources=sources,
-        t_end=0.1
+        t_end=0.1,
+        dt=0.00001,
+        track_trajectories=True
     )
-    return experiment.run()
+    result = experiment.run(do_profiling=do_profiling)
+    return result
 
 
-if __name__ == '__main__':
+def plot_trajectories(experiment_result):
     from matplotlib import pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 
-    result_list = run_gravity_experiment(0.0)
     xs0, ys0, zs0 = [[p.initial_position[i] for p in result_list] for i in range(3)]
     xs, ys, zs = [[p.position[i] for p in result_list] for i in range(3)]
-    r = [p.mass * 5 for p in result_list]
+    r = [50 * p.radius for p in result_list]
+    color = [
+        'red' if p.lost else 'green'
+        for p in result_list
+    ]
 
-    if True:
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        plt.scatter(xs0, ys0, zs=zs0, s=r)
-        plt.scatter(xs, ys, zs=zs, s=r)
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.set_zlabel('z')
-        plt.show()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    plt.scatter(xs0, ys0, zs=zs0, s=r)
+    plt.scatter(xs, ys, zs=zs, s=r, c=color)
+
+    for p in result_list:
+        if not p.trajectory:
+            continue
+
+        traj = np.array(p.trajectory)
+        ts = traj[:, 0]
+        ps = traj[:, 1:4]
+        xs = ps[:, 0]
+        ys = ps[:, 1]
+        zs = ps[:, 2]
+
+        vs = traj[:, 4:]
+        plt.plot(xs, ys, zs=zs, color='grey')
+
+        for detector_id, hits in p.detector_hits.items():
+            hits = np.array(hits)
+            plt.scatter(hits[:, 0], hits[:, 1], zs=hits[:, 2], s=10, color='blue')
+
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+    plt.show()
+
+
+if __name__ == '__main__':
+    import sys
+    do_profiling = (len(sys.argv) > 1 and sys.argv[1] == 'profile')
+    result_list = run_example_experiment(vz=13.0, do_profiling=do_profiling)
+    plot_trajectories(result_list)

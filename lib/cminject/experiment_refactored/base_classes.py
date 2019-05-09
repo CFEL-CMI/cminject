@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, List, Any, Optional
+from typing import Tuple, List, Any, Optional, Dict, Set
 
 import numpy as np
 
@@ -9,10 +9,20 @@ class Particle(ABC):
                  position: np.array, velocity: np.array,
                  mass: float):
         self.identifier = identifier
+        self.lost = False
+        self.detector_hits: Dict[int, List[np.array]] = {}
         self.position = position
         self.initial_position = np.copy(position)
         self.velocity = velocity
         self.mass = mass
+        self.trajectory = []
+
+    def store_hit(self, identifier: int, position: np.array):
+        if identifier in self.detector_hits:
+            self.detector_hits[identifier].append(position)
+        else:
+            self.detector_hits[identifier] = [position]
+        pass
 
 
 class Source(ABC):
@@ -31,8 +41,8 @@ class ZBoundedMixin:
 
 
 class Detector(ZBoundedMixin, ABC):
-    def __init__(self, interpolate_hit_position=False):
-        self.interpolate_hit_position = interpolate_hit_position
+    def __init__(self, identifier: int):
+        self.identifier = identifier
 
     @abstractmethod
     def has_reached_detector(self, particle: Particle) -> bool:
@@ -43,20 +53,18 @@ class Detector(ZBoundedMixin, ABC):
         pass
 
 
-class Boundary(ABC, ZBoundedMixin):
+class Boundary(ZBoundedMixin, ABC):
     @abstractmethod
-    def is_particle_inside(self, particle: Particle):
+    def is_particle_inside(self, particle: Particle) -> bool:
         pass
 
 
 class Field(ZBoundedMixin, ABC):
-    def __init__(self, needs_full_particle_data=False):
-        self.needs_full_particle_data = needs_full_particle_data
-
     @abstractmethod
     def calculate_acceleration(self,
                                position_and_velocity: np.array,
-                               particle: Particle) -> np.array:
+                               particle: Particle,
+                               time: float) -> np.array:
         pass
 
 
