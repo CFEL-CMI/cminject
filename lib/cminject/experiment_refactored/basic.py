@@ -42,6 +42,22 @@ class SimpleZBoundary(Boundary):
         return self.z_min <= particle.position[2] <= self.z_max
 
 
+class CuboidBoundary(Boundary):
+    def __init__(self, x_minmax: Tuple[float, float], y_minmax: Tuple[float, float], z_minmax: Tuple[float, float]):
+        self.x_min, self.x_max = x_minmax
+        self.y_min, self.y_max = y_minmax
+        self.z_min, self.z_max = z_minmax
+        super().__init__()
+
+    def get_z_boundary(self) -> Tuple[float, float]:
+        return self.z_min, self.z_max
+
+    def is_particle_inside(self, particle: Particle) -> bool:
+        return self.x_min <= particle.position[0] <= self.x_max and\
+               self.y_min <= particle.position[1] <= self.y_max and\
+               self.z_min <= particle.position[2] <= self.z_max
+
+
 class InfiniteBoundary(Boundary):
     def get_z_boundary(self) -> Tuple[float, float]:
         return infinite_interval
@@ -57,9 +73,8 @@ class SimpleZDetector(Detector):
         self.epsilon = epsilon
 
     def has_reached_detector(self, particle: Particle) -> bool:
-        if abs(particle.position[2] - self.z_position) < self.epsilon\
-                and particle.position[2] >= self.z_position:
-            return True
+        return particle.position[2] >= self.z_position and\
+               abs(particle.position[2] - self.z_position) < self.epsilon
 
     def get_hit_position(self, particle: Particle) -> Optional[np.array]:
         return particle.position
@@ -129,13 +144,12 @@ class GaussianSphericalSource(Source):
         return self.particles
 
 
-def plot_trajectories(experiment_result):
+def plot_particles(experiment_result, plot_trajectories=False):
     from matplotlib import pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 
     xs0, ys0, zs0 = [[p.initial_position[i] for p in experiment_result] for i in range(3)]
     xs, ys, zs = [[p.position[i] for p in experiment_result] for i in range(3)]
-    r = [50 * p.radius for p in experiment_result]
     color = [
         'red' if p.lost else 'green'
         for p in experiment_result
@@ -143,27 +157,24 @@ def plot_trajectories(experiment_result):
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    plt.scatter(xs0, ys0, zs=zs0, s=r)
-    plt.scatter(xs, ys, zs=zs, s=r, c=color)
+    plt.scatter(xs, ys, zs=zs, s=3, c=color)
+    plt.scatter(xs0, ys0, zs=zs0, s=3, c='black')
 
     for p in experiment_result:
-        if not p.trajectory:
-            continue
-
-        traj = np.array(p.trajectory)
-        ts = traj[:, 0]
-        ps = traj[:, 1:4]
-        xs = ps[:, 0]
-        ys = ps[:, 1]
-        zs = ps[:, 2]
-
-        vs = traj[:, 4:]
-        plt.plot(xs, ys, zs=zs, color='grey')
-
         for detector_id, hits in p.detector_hits.items():
             hits = np.array(hits)
-            plt.scatter(hits[:, 0], hits[:, 1], zs=hits[:, 2], s=10, color=
-                        ['yellow', 'orange', 'red'][(detector_id - 1) % 3])
+            plt.scatter(hits[:, 0], hits[:, 1], zs=hits[:, 2], s=10, color='yellow')
+
+        if plot_trajectories and p.trajectory:
+            trajectory = np.array(p.trajectory)
+            ts = trajectory[:, 0]
+            ps = trajectory[:, 1:4]
+            xs = ps[:, 0]
+            ys = ps[:, 1]
+            zs = ps[:, 2]
+
+            vs = trajectory[:, 4:]
+            plt.plot(xs, ys, zs=zs, color='grey')
 
     ax.set_xlabel('x')
     ax.set_ylabel('y')

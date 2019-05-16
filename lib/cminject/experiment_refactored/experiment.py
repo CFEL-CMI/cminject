@@ -17,7 +17,7 @@
 # <http://www.gnu.org/licenses/>.
 """
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from multiprocessing import Pool, Manager
 from functools import partial
 import pprofile
@@ -39,10 +39,10 @@ def calculate_v_and_a(time: float, position_and_velocity: np.array,
 
 
 def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], devices: List[Device]):
-    if z_boundary[0] <= particle.position[2] <= z_boundary[1]:
-        return False
+    if particle.position[2] < z_boundary[0] or particle.position[2] > z_boundary[1]:
+        return True
     else:
-        return not any(device.boundary.is_particle_inside(particle) for device in devices)
+        return not any(device.is_particle_inside(particle) for device in devices)
 
 
 def simulate_particle(particle: Particle, devices: List[Device], detectors: List[Detector],
@@ -53,6 +53,7 @@ def simulate_particle(particle: Particle, devices: List[Device], detectors: List
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(np.concatenate([particle.position, particle.velocity]), t_start)
     integral.set_f_params(particle, devices)
+    print(f"\tSimulating particle {particle.identifier}...")
 
     while integral.successful() and integral.t < t_end and not particle.lost:
         # Check conditions for having lost particle.
@@ -80,6 +81,7 @@ def simulate_particle(particle: Particle, devices: List[Device], detectors: List
             # If particle is lost, store this and (implicitly) break the loop
             particle.lost = True
 
+    print(f"\tDone simulating particle {particle.identifier}.")
     return particle
 
 
@@ -99,7 +101,8 @@ def profiling_wrapper(particle: Particle, devices: List[Device], detectors: List
 
 class Experiment:
     def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
-                 dt: float = 1.0e-5, t_start=0.0, t_end=1.8, track_trajectories=False):
+                 dt: float = 1.0e-5, t_start: float = 0.0, t_end: float = 1.8, track_trajectories: bool = False,
+                 z_boundary: Optional[Tuple[float, float]] = None):
         # Store references
         self.devices = devices
         self.sources = sources
@@ -118,16 +121,44 @@ class Experiment:
             self.particles += source_particles
 
         # Initialise the min/max Z boundary of the whole experiment
-        min_z = float('inf')
-        max_z = float('-inf')
-        for device in self.devices:
-            device_min_z, device_max_z = device.get_z_boundary()
-            min_z = min(min_z, device_min_z)
-            max_z = max(max_z, device_max_z)
+        if z_boundary:
+            # If a z_boundary was passed, use it
+            self.z_boundary = z_boundary
+        else:
+            # Otherwise, gather the min/max z values amongst all devices
+            min_z = float('inf')
+            max_z = float('-inf')
+            for device in self.devices:
+                device_min_z, device_max_z = device.get_z_boundary()
+                min_z = min(min_z, device_min_z)
+                max_z = max(max_z, device_max_z)
+            for detector in self.detectors:
+                detector_min_z, detector_max_z = detector.get_z_boundary()
+                min_z = min(min_z, detector_min_z)
+                max_z = max(max_z, detector_max_z)
+
             self.z_boundary = (min_z, max_z)
 
-    def run(self, do_profiling=False):
-        print("Running experiment...")
+        print(self.z_boundary)
+
+    def run_single_threaded(self, do_profiling=False):
+        simulate = partial(
+            (simulate_particle if not do_profiling else profiling_wrapper),
+            devices=self.devices,
+            t_start=self.t_start,
+            t_end=self.t_end,
+            dt=self.dt,
+            track_trajectories=self.track_trajectories,
+            detectors=self.detectors,
+            z_boundary=self.z_boundary
+        )
+        result = map(simulate, self.particles)
+        return list(result)
+
+    def run(self, do_profiling=False, single_threaded=False):
+        if single_threaded:
+            return self.run_single_threaded(do_profiling=do_profiling)
+
         pool = Pool()
         try:
             parallel_simulate = partial(
@@ -140,7 +171,7 @@ class Experiment:
                 detectors=self.detectors,
                 z_boundary=self.z_boundary
             )
-            result = map(parallel_simulate, self.particles)
+            result = pool.imap_unordered(parallel_simulate, self.particles)
         except Exception as e:
             raise e
         finally:

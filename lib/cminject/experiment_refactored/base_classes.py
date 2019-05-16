@@ -217,11 +217,14 @@ class Device(ZBoundedMixin, ABC):
 
     def get_z_boundary(self) -> Tuple[float, float]:
         """
-        Returns the Z boundary of this device. Defaults to returning the Z boundary of the Boundary,
-        but should be overridden if a different Z boundary is required.
+        Returns the Z boundary of this device. Defaults to returning a Z boundary encompassing both
+        the device's Z boundary and the field's Z boundary, but should be overridden if a different
+        Z boundary is required.
         :return: A (z_min, z_max) tuple as defined in ZBoundedMixin.
         """
-        return self.boundary.get_z_boundary()
+        field_boundary = self.field.get_z_boundary()
+        boundary = self.boundary.get_z_boundary()
+        return min(field_boundary[0], boundary[0]), max(field_boundary[1], boundary[1])
 
     def is_particle_inside(self, particle: Particle) -> bool:
         """

@@ -17,15 +17,17 @@
 # <http://www.gnu.org/licenses/>.
 """
 
+import argparse
 from typing import List, Tuple, Optional
 
 import numpy as np
 
 from cminject.experiment_refactored.experiment import Experiment
-from cminject.experiment_refactored.base_classes import\
-    Particle, Field, Device
+from cminject.experiment_refactored.base_classes import \
+    Particle, Field, Device, ZBoundedMixin
 from cminject.experiment_refactored.basic import \
-    infinite_interval, SimpleZBoundary, plot_trajectories, SimpleZDetector, GaussianSphericalSource, InfiniteBoundary
+    infinite_interval, SimpleZBoundary, plot_particles, SimpleZDetector, GaussianSphericalSource, InfiniteBoundary, \
+    CuboidBoundary
 from cminject.experiment_refactored.fluid_flow_field import FluidFlowField
 
 
@@ -58,22 +60,31 @@ class FluidFlowFieldDevice(Device):
                 filename=filename,
                 density=density, dynamic_viscosity=dynamic_viscosity, scale_slip=scale_slip
             ),
-            boundary=InfiniteBoundary()
+            boundary=CuboidBoundary(
+                (float('-inf'), float('inf')),
+                (float('-inf'), float('inf')),
+                (-0.06, 0.02)
+            )
         )
 
+    def is_particle_inside(self, particle: Particle) -> bool:
+        return self.boundary.is_particle_inside(particle) or self.field.is_particle_inside(particle)
 
-def run_example_experiment(vz, do_profiling=False):
+
+def run_example_experiment(vz, nof_particles, flow_field_filename, track_trajectories=False, do_profiling=False):
     print("Setting up experiment...")
     devices = [
         # ExampleDevice(),
-        FluidFlowFieldDevice(filename="../../../5mmCone_50sccm.txt",
-                             density=0.0009,
-                             dynamic_viscosity=1.02e-6,
-                             scale_slip=4.1)
+        FluidFlowFieldDevice(
+            filename=flow_field_filename,
+            density=0.0009,
+            dynamic_viscosity=1.02e-6,
+            scale_slip=4.1
+        )
     ]
     detectors = [SimpleZDetector(identifier=0, z_position=-0.052)]
     sources = [GaussianSphericalSource(
-        10,
+        nof_particles,
         position=([0.0, 0.0, 0.0048], [0.0002, 0.0002, 0.00001]),
         velocity=([0.0, 0.7, vz], [0.10, 0.30, 2.00]),
         radius=(2.45e-7, 7.5e-9),
@@ -84,23 +95,41 @@ def run_example_experiment(vz, do_profiling=False):
         devices=devices,
         detectors=detectors,
         sources=sources,
-        t_end=0.1,
-        dt=0.00001,
-        track_trajectories=True
+        t_start=0.0,
+        t_end=1.0,
+        dt=1.0e-6,
+        track_trajectories=track_trajectories
     )
 
     print("Running experiment...")
-    result = experiment.run(do_profiling=do_profiling)
+    result = experiment.run(do_profiling=do_profiling, single_threaded=False)
     print("Done running experiment.")
     return result
 
 
+def natural_number(x):
+    x = int(x)
+    if x < 1:
+        raise argparse.ArgumentTypeError("Minimum is 1")
+    return x
+
+
 def main():
-    import sys
-    do_profiling = (len(sys.argv) > 1 and sys.argv[1] == 'profile')
-    result_list = run_example_experiment(vz=13.0, do_profiling=do_profiling)
-    print(f"Plotting trajectories for {len(result_list)} particles...")
-    plot_trajectories(result_list)
+    parser = argparse.ArgumentParser(prog='cminject',
+                                     formatter_class=argparse.MetavarTypeHelpFormatter)
+    parser.add_argument('-n', help='Number of particles', type=natural_number, required=True)
+    parser.add_argument('-v', help='Initial average velocity (in Z direction)', type=float, required=True)
+    parser.add_argument('-t', help='Store trajectories?', action='store_true')
+    parser.add_argument('-p', help='Do profiling? (CAUTION: generates lots of profiling dump files)',
+                        action='store_true')
+    parser.add_argument('-f', help='Flow field filename (txt format)', type=str, required=True)
+    args = parser.parse_args()
+
+    result_list = run_example_experiment(vz=-10.0, nof_particles=args.n,
+                                         track_trajectories=args.t, do_profiling=args.p,
+                                         flow_field_filename=args.f)
+    print(f"Plotting {len(result_list)} particles...")
+    plot_particles(result_list, plot_trajectories=args.t)
 
 
 if __name__ == '__main__':
