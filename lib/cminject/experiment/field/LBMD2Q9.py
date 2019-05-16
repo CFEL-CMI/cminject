@@ -25,7 +25,7 @@ class LBM(object):
     self.PrepareGeometry()
     # Loop over time iterations 
     for itr in range(self.n):
-      print "Iteration number", itr
+      print("Iteration number", itr)
       
       self.ComputeRhoU()
 
@@ -67,7 +67,7 @@ class LBM(object):
     for i in self.als:
       OutR = int(i[1])
       cord = int(i[0])
-#      print i[0], i[1], self.nx, self.ny
+#      print(i[0], i[1], self.nx, self.ny)
       obst[cord:cord+1, 0:int((self.ny/2)-OutR)]=1
       obst[cord:cord+1, int((self.ny/2)+OutR):-1]=1
     self.bbRegion = np.asarray(obst, dtype = np.bool)
@@ -75,7 +75,7 @@ class LBM(object):
   def ComputeRhoU(self):
     """Calculates U and Rho given the population"""
     self.rho = np.sum(self.fin, axis=0) # the density for each cell is the summation of population in the cell
-    print "Total Density = ", np.sum(self.fin)/(self.nx*self.ny)
+    print("Total Density = ", np.sum(self.fin)/(self.nx*self.ny))
     cx_3d   = np.asarray(self.cx)[:, np.newaxis, np.newaxis] # put cx in 3d format to multiply it with fin
     cy_3d   = np.asarray(self.cy)[:, np.newaxis, np.newaxis] # put cy in 3d format to multiply it with fin
     self.ux = np.sum(cx_3d * self.fin, axis = 0) / self.rho # the velocity is the lattice velocities multiplied by \
