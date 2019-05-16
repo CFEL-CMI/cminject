@@ -24,8 +24,9 @@ import numpy as np
 from cminject.experiment_refactored.experiment import Experiment
 from cminject.experiment_refactored.base_classes import\
     Particle, Field, Device
-from cminject.experiment_refactored.basic import\
-    infinite_interval, SimpleZBoundary, plot_trajectories, SimpleZDetector, GaussianSphericalSource
+from cminject.experiment_refactored.basic import \
+    infinite_interval, SimpleZBoundary, plot_trajectories, SimpleZDetector, GaussianSphericalSource, InfiniteBoundary
+from cminject.experiment_refactored.fluid_flow_field import FluidFlowField
 
 
 class GravityForceField(Field):
@@ -50,16 +51,34 @@ class ExampleDevice(Device):
         super().__init__(field=GravityForceField(), boundary=SimpleZBoundary(0.0, 1.0))
 
 
+class FluidFlowFieldDevice(Device):
+    def __init__(self, filename: str, density: float, dynamic_viscosity: float, scale_slip: float):
+        super().__init__(
+            field=FluidFlowField(
+                filename=filename,
+                density=density, dynamic_viscosity=dynamic_viscosity, scale_slip=scale_slip
+            ),
+            boundary=InfiniteBoundary()
+        )
+
+
 def run_example_experiment(vz, do_profiling=False):
-    devices = [ExampleDevice()]
-    detectors = [SimpleZDetector(identifier=1, z_position=0.5)]
+    print("Setting up experiment...")
+    devices = [
+        # ExampleDevice(),
+        FluidFlowFieldDevice(filename="../../../5mmCone_50sccm.txt",
+                             density=0.0009,
+                             dynamic_viscosity=1.02e-6,
+                             scale_slip=4.1)
+    ]
+    detectors = [SimpleZDetector(identifier=0, z_position=-0.052)]
     sources = [GaussianSphericalSource(
         10,
-        position=([0.0, 0.0, 0.1], [0.0002, 0.0002, 0.0000]),
-        velocity=([0.1, 0.0, vz], [0.0002, 0.0002, 0.00000]),
-        radius=(0.3, 0.2),
-        seed=100,
-        rho=1.0
+        position=([0.0, 0.0, 0.0048], [0.0002, 0.0002, 0.00001]),
+        velocity=([0.0, 0.7, vz], [0.10, 0.30, 2.00]),
+        radius=(2.45e-7, 7.5e-9),
+        seed=1000,
+        rho=1050.0
     )]
     experiment = Experiment(
         devices=devices,
@@ -69,7 +88,10 @@ def run_example_experiment(vz, do_profiling=False):
         dt=0.00001,
         track_trajectories=True
     )
+
+    print("Running experiment...")
     result = experiment.run(do_profiling=do_profiling)
+    print("Done running experiment.")
     return result
 
 
@@ -77,6 +99,7 @@ def main():
     import sys
     do_profiling = (len(sys.argv) > 1 and sys.argv[1] == 'profile')
     result_list = run_example_experiment(vz=13.0, do_profiling=do_profiling)
+    print(f"Plotting trajectories for {len(result_list)} particles...")
     plot_trajectories(result_list)
 
 

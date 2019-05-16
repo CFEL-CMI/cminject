@@ -42,6 +42,14 @@ class SimpleZBoundary(Boundary):
         return self.z_min <= particle.position[2] <= self.z_max
 
 
+class InfiniteBoundary(Boundary):
+    def get_z_boundary(self) -> Tuple[float, float]:
+        return infinite_interval
+
+    def is_particle_inside(self, particle: Particle) -> bool:
+        return True
+
+
 class SimpleZDetector(Detector):
     def __init__(self, identifier: int, z_position: float, epsilon: float = 1e-3):
         super().__init__(identifier=identifier)

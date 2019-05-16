@@ -140,7 +140,7 @@ class Experiment:
                 detectors=self.detectors,
                 z_boundary=self.z_boundary
             )
-            result = pool.imap_unordered(parallel_simulate, self.particles)
+            result = map(parallel_simulate, self.particles)
         except Exception as e:
             raise e
         finally:
