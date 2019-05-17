@@ -139,8 +139,6 @@ class Experiment:
 
             self.z_boundary = (min_z, max_z)
 
-        print(self.z_boundary)
-
     def run_single_threaded(self, do_profiling=False):
         simulate = partial(
             (simulate_particle if not do_profiling else profiling_wrapper),

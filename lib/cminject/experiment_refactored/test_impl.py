@@ -83,6 +83,7 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
         )
     ]
     detectors = [SimpleZDetector(identifier=0, z_position=-0.052)]
+    print(f"The initial velocity of the particles is around {vz} m/s in Z direction.")
     sources = [GaussianSphericalSource(
         nof_particles,
         position=([0.0, 0.0, 0.0048], [0.0002, 0.0002, 0.00001]),
@@ -101,6 +102,7 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
         track_trajectories=track_trajectories
     )
 
+    print(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
     print("Running experiment...")
     result = experiment.run(do_profiling=do_profiling, single_threaded=False)
     print("Done running experiment.")
@@ -125,7 +127,7 @@ def main():
     parser.add_argument('-f', help='Flow field filename (txt format)', type=str, required=True)
     args = parser.parse_args()
 
-    result_list = run_example_experiment(vz=-10.0, nof_particles=args.n,
+    result_list = run_example_experiment(vz=args.v, nof_particles=args.n,
                                          track_trajectories=args.t, do_profiling=args.p,
                                          flow_field_filename=args.f)
     print(f"Plotting {len(result_list)} particles...")
