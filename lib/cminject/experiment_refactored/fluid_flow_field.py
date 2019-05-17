@@ -47,7 +47,7 @@ class FluidFlowField(Field):
                 self.outside_particles.add(particle.identifier)
                 return np.zeros(3)
 
-            relative_velocity = f_drag_result[:3] - particle.position
+            relative_velocity = f_drag_result[:3] - particle.velocity
             force_vector = 6 * np.pi * self.dynamic_viscosity * particle.radius * relative_velocity
             return force_vector / self.calculate_slip_correction(pressure=pressure, particle=particle)
         except ValueError:  # Can't calculate drag force, particle is outside the field boundaries
@@ -58,7 +58,7 @@ class FluidFlowField(Field):
         """
         Calculates the slip correction factor with temperature corrections.
         The Sutherland constant for helium is 79.4 at reference temperature of 273.0 K.
-         I took a reference pressure of 1 Pascal, in which the mean free path of helium is 0.01254.
+        I took a reference pressure of 1 Pascal, in which the mean free path of helium is 0.01754.
 
         see J. Aerosol Sci. 1976 Vol. 7. pp 381-387 by Klaus Willeke
         """
@@ -68,9 +68,9 @@ class FluidFlowField(Field):
         factor = self.temperature / ref_temperature \
             * (1 + c_sutherland / ref_temperature) \
             / (1 + c_sutherland / self.temperature)
-        k_n = 0.01754 * 1 / (pressure * particle.radius) * factor  # TODO typo in 0.01754?? copied from original code
+        knudsen = 0.01754 * 1 / (pressure * particle.radius) * factor
 
-        s = 1 + k_n * (1.246 + (0.42 * np.exp(-0.87 / k_n)))
+        s = 1 + knudsen * (1.246 + (0.42 * np.exp(-0.87 / knudsen)))
         return s * self.scale_slip
 
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:

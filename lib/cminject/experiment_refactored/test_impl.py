@@ -61,9 +61,9 @@ class FluidFlowFieldDevice(Device):
                 density=density, dynamic_viscosity=dynamic_viscosity, scale_slip=scale_slip
             ),
             boundary=CuboidBoundary(
-                (float('-inf'), float('inf')),
-                (float('-inf'), float('inf')),
-                (-0.06, 0.02)
+                (-0.01, 0.01),
+                (-0.01, 0.01),
+                (-0.06, 0.02),
             )
         )
 
