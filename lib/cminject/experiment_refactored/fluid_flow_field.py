@@ -2,7 +2,7 @@ from typing import Tuple
 
 import numpy as np
 
-from cminject.experiment_refactored.base_classes import Field, Particle, ZBoundedMixin
+from cminject.experiment_refactored.base_classes import Field
 from cminject.experiment_refactored.basic import infinite_interval, SphericalParticle
 from scipy.interpolate import RegularGridInterpolator
 
@@ -10,10 +10,11 @@ from scipy.interpolate import RegularGridInterpolator
 class FluidFlowField(Field):
     def __init__(self, filename: str,
                  density: float, dynamic_viscosity: float,
-                 temperature: float = 4.0,  # , pressure: float = 100.0, thermal_creep: float = 1.0,
+                 temperature: float = 4.0, pressure: float = 100.0, thermal_creep: float = 1.0,
                  # inflow_speed: float = 20.0, outflow_pressure: float = 0.0, k_n: float = 912.0,
                  # kinetic_d: float = 260.0e-12, conv: float = 0.00001,
-                 # molar_mass: float = 0.004002602, molar_heat_capacity: float = 12.5,
+                 molar_mass: float = 0.004002602,
+                 # molar_heat_capacity: float = 12.5,
                  # specific_gas_constant: float = 2077.0, specific_heat_capacity: float = 3116.0,
                  # m_gas: float = 6.6e-27, m_gas_mol: float = 0.004002602,
                  # speed_of_sound: float = 117.7,
@@ -23,6 +24,11 @@ class FluidFlowField(Field):
         self.temperature = temperature
         self.scale_slip = scale_slip
 
+        self.pressure = pressure
+        # TODO are these really properties of the flow field?
+        self.thermal_creep = thermal_creep
+        self.molar_mass = molar_mass
+
         self.min_z, self.max_z = infinite_interval
         self.f_drag = None
 
@@ -31,7 +37,7 @@ class FluidFlowField(Field):
         self.read_from_file(filename)
 
     def get_z_boundary(self) -> Tuple[float, float]:
-        return self.min_z - 0.001, self.max_z + 0.001
+        return self.min_z, self.max_z
 
     def is_particle_inside(self, particle: SphericalParticle) -> bool:
         return particle.identifier not in self.outside_particles

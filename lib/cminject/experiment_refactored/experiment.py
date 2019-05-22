@@ -16,16 +16,17 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 """
-
+import multiprocessing
 from typing import List, Tuple, Optional
 from multiprocessing import Pool, Manager
 from functools import partial
 import pprofile
 
 import numpy as np
+from cminject.experiment_refactored.basic import infinite_interval
 from scipy.integrate import ode
 
-from .base_classes import Particle, Source, Device, Detector
+from .base_classes import Particle, Source, Device, Detector, ZBoundedMixin
 
 
 def calculate_v_and_a(time: float, position_and_velocity: np.array,
@@ -40,9 +41,22 @@ def calculate_v_and_a(time: float, position_and_velocity: np.array,
 
 def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], devices: List[Device]):
     if particle.position[2] < z_boundary[0] or particle.position[2] > z_boundary[1]:
+        # Particles that aren't within the experiment's total Z boundary are considered lost
         return True
     else:
-        return not any(device.is_particle_inside(particle) for device in devices)
+        for device in devices:
+            device_z_boundary = device.get_z_boundary()
+            is_inside = device.is_particle_inside(particle)
+            if is_inside:
+                # Particles inside devices are not considered lost
+                return False
+            if not is_inside and device_z_boundary[0] <= particle.position[2] <= device_z_boundary[1]:
+                print("\t\tYOOOOO", device_z_boundary[0], particle.position[2], device_z_boundary[1])
+                # Particles that are outside devices *but* within their Z boundary are considered lost
+                return True
+        # Particles that are not inside any device but also not within any device's Z boundary are not considered
+        # lost (as long as they are within the experiment's total Z boundary, see beginning of function)
+        return False
 
 
 def simulate_particle(particle: Particle, devices: List[Device], detectors: List[Detector],
@@ -80,6 +94,7 @@ def simulate_particle(particle: Particle, devices: List[Device], detectors: List
         else:
             # If particle is lost, store this and (implicitly) break the loop
             particle.lost = True
+            print(f"\t\tParticle lost at {particle.position} with {particle.velocity}. Tracked {len(particle.trajectory)} positions.")
 
     print(f"\tDone simulating particle {particle.identifier}.")
     return particle
@@ -102,7 +117,7 @@ def profiling_wrapper(particle: Particle, devices: List[Device], detectors: List
 class Experiment:
     def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
                  dt: float = 1.0e-5, t_start: float = 0.0, t_end: float = 1.8, track_trajectories: bool = False,
-                 z_boundary: Optional[Tuple[float, float]] = None):
+                 z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0):
         # Store references
         self.devices = devices
         self.sources = sources
@@ -120,24 +135,32 @@ class Experiment:
             source_particles = source.generate_particles()
             self.particles += source_particles
 
+        # Initialise the min/max Z values amongst all detectors, and amongst all devices
+        self.detectors_z_boundary = self._gather_z_boundary(self.detectors)
+        self.devices_z_boundary = self._gather_z_boundary(self.devices)
+
         # Initialise the min/max Z boundary of the whole experiment
-        if z_boundary:
+        if z_boundary is not None:
             # If a z_boundary was passed, use it
             self.z_boundary = z_boundary
         else:
-            # Otherwise, gather the min/max z values amongst all devices
-            min_z = float('inf')
-            max_z = float('-inf')
-            for device in self.devices:
-                device_min_z, device_max_z = device.get_z_boundary()
-                min_z = min(min_z, device_min_z)
-                max_z = max(max_z, device_max_z)
-            for detector in self.detectors:
-                detector_min_z, detector_max_z = detector.get_z_boundary()
-                min_z = min(min_z, detector_min_z)
-                max_z = max(max_z, detector_max_z)
+            # Otherwise, use the global min/max from all devices and detectors
+            self.z_boundary = min(self.detectors_z_boundary[0], self.devices_z_boundary[0]) - delta_z_end,\
+                              max(self.detectors_z_boundary[1], self.devices_z_boundary[1]) + delta_z_end
 
-            self.z_boundary = (min_z, max_z)
+        if self.z_boundary[0] > self.z_boundary[1]:
+            exit(f"ERROR: The Z boundary of the experiment {self.z_boundary} is not sensible! The 'left' boundary "
+                 f"has to be smaller than the 'right' boundary.")
+
+    @staticmethod
+    def _gather_z_boundary(z_bounded_objects: List[ZBoundedMixin]):
+        max_z, min_z = infinite_interval
+        for obj in z_bounded_objects:
+            device_min_z, device_max_z = obj.get_z_boundary()
+            min_z = min(min_z, device_min_z)
+            max_z = max(max_z, device_max_z)
+
+        return min_z, max_z
 
     def run_single_threaded(self, do_profiling=False):
         simulate = partial(

@@ -55,20 +55,15 @@ class ExampleDevice(Device):
 
 class FluidFlowFieldDevice(Device):
     def __init__(self, filename: str, density: float, dynamic_viscosity: float, scale_slip: float):
-        super().__init__(
-            field=FluidFlowField(
-                filename=filename,
-                density=density, dynamic_viscosity=dynamic_viscosity, scale_slip=scale_slip
-            ),
-            boundary=CuboidBoundary(
-                (-0.01, 0.01),
-                (-0.01, 0.01),
-                (-0.06, 0.02),
-            )
+        field = FluidFlowField(
+            filename=filename,
+            density=density, dynamic_viscosity=dynamic_viscosity, scale_slip=scale_slip
         )
+        boundary = SimpleZBoundary(field.min_z, field.max_z)
+        super().__init__(field=field, boundary=boundary)
 
     def is_particle_inside(self, particle: Particle) -> bool:
-        return self.boundary.is_particle_inside(particle) or self.field.is_particle_inside(particle)
+        return self.field.is_particle_inside(particle)
 
 
 def run_example_experiment(vz, nof_particles, flow_field_filename, track_trajectories=False, do_profiling=False):
@@ -83,6 +78,7 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
         )
     ]
     detectors = [SimpleZDetector(identifier=0, z_position=-0.052)]
+
     print(f"The initial velocity of the particles is around {vz} m/s in Z direction.")
     sources = [GaussianSphericalSource(
         nof_particles,
@@ -92,6 +88,7 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
         seed=1000,
         rho=1050.0
     )]
+
     experiment = Experiment(
         devices=devices,
         detectors=detectors,
@@ -99,7 +96,8 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
         t_start=0.0,
         t_end=1.0,
         dt=1.0e-6,
-        track_trajectories=track_trajectories
+        track_trajectories=track_trajectories,
+        delta_z_end=0.01
     )
 
     print(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
