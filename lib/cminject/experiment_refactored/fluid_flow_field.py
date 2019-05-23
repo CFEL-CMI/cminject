@@ -96,12 +96,10 @@ class FluidFlowField(Field):
         """
         # Some basic memoizing so we can call this method often but have it calculated only once per time step
         # and particle.
-        if False and particle.identifier in self.interpolation_results:
+        if particle.identifier in self.interpolation_results:
             stored_time, result = self.interpolation_results.get(particle.identifier)
             if particle.time == stored_time:
                 return result
-            else:
-                pass
 
         try:
             data = self.f_drag(tuple(particle.position))

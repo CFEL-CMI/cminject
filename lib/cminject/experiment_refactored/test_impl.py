@@ -24,10 +24,10 @@ import numpy as np
 
 from cminject.experiment_refactored.experiment import Experiment
 from cminject.experiment_refactored.base_classes import \
-    Particle, Field, Device, ZBoundedMixin
+    Particle, Field, Device
 from cminject.experiment_refactored.basic import \
-    infinite_interval, SimpleZBoundary, plot_particles, SimpleZDetector, GaussianSphericalSource, InfiniteBoundary, \
-    CuboidBoundary, ThermallyConductiveSphericalParticle
+    infinite_interval, SimpleZBoundary, plot_particles, SimpleZDetector, GaussianSphericalSource,\
+    ThermallyConductiveSphericalParticle
 from cminject.experiment_refactored.fluid_flow_field import FluidFlowField
 
 
@@ -165,8 +165,8 @@ def main():
             particle.velocity,
             particle.temperature,
             particle.collision_temperature,
-            particle.time_to_liquid_he,
-            particle.collision_time_to_liquid_he,
+            particle.time_to_liquid_n,
+            particle.collision_time_to_liquid_n,
             particle.time,
             particle.identifier
         ])) + "\n")

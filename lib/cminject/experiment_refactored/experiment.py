@@ -30,8 +30,6 @@ from cminject.experiment_refactored.base_classes import Particle, Source, Device
 
 def calculate_v_and_a(time: float, position_and_velocity: np.array,
                       particle: Particle, devices: List[Device]):
-    if time == particle.time:
-        print("WTF?????????????????????????????????")
     total_acceleration = np.zeros(3, dtype=float)
     for device in devices:
         if device.is_particle_inside(particle):
