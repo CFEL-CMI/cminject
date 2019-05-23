@@ -17,7 +17,7 @@
 # <http://www.gnu.org/licenses/>.
 """
 
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Type
 
 import numpy as np
 
@@ -84,23 +84,45 @@ class SimpleZDetector(Detector):
 
 
 class SphericalParticle(Particle):
-    def __init__(self, identifier, position, velocity, radius, rho):
+    """
+    A simple spherical particle that has a radius and a density (rho).
+    """
+    def __init__(self, identifier, position, velocity, radius, rho, *args, **kwargs):
         self.radius = radius
         self.rho = rho
+        # self.mass is stored by the super() call.
         super().__init__(identifier, position, velocity)
 
     def calculate_mass(self) -> float:
         return self.rho * 4 / 3 * np.pi * (self.radius ** 3)
 
 
+class ThermallyConductiveSphericalParticle(SphericalParticle):
+    """
+    Lacking a better name (so far), this class extends on the SphericalParticle with a thermal conductivity
+     that is required by e.g. the photophoretic force.
+    """
+    def __init__(self, *args, thermal_conductivity: float = 6.3, **kwargs):
+        self.thermal_conductivity = thermal_conductivity
+        super().__init__(*args, **kwargs)
+
+
 class GaussianSphericalSource(Source):
+    """
+    A Source generating a Gaussian distribution of SphericalParticles wrt position, velocity and radius.
+
+    By passing `subclass` and any additional arguments to __init__, this class can also generate instances of
+    any subclass of SphericalParticle. The additional args will not be Gaussian distributed, but fixed values.
+    """
     def __init__(self,
                  number_of_particles: int,
                  position: Tuple[List[float], List[float]],
                  velocity: Tuple[List[float], List[float]],
                  radius: Tuple[float, float],
                  rho: float,
-                 seed=None):
+                 seed=None,
+                 subclass: Type[SphericalParticle] = SphericalParticle,
+                 **subclass_kwargs):
         self.particles = []
         if number_of_particles < 1:
             raise ValueError('The number of particles must be >= 1')
@@ -111,6 +133,8 @@ class GaussianSphericalSource(Source):
         self.radius = np.array(radius)
         self.rho = rho
         self.seed = seed
+        self.subclass = subclass
+        self.subclass_kwargs = subclass_kwargs
         super().__init__(position=position)
 
     def generate_particles(self):
@@ -132,12 +156,13 @@ class GaussianSphericalSource(Source):
         r = np.random.normal(self.radius[0], self.radius[1], self.number_of_particles)
 
         self.particles = [
-            SphericalParticle(
+            self.subclass(
                 i,
                 position=np.array([x[i], y[i], z[i]]),
                 velocity=np.array([vx[i], vy[i], vz[i]]),
                 radius=r[i],
-                rho=self.rho
+                rho=self.rho,
+                **self.subclass_kwargs
             )
             for i in range(self.number_of_particles)
         ]

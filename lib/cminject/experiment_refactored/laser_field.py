@@ -2,7 +2,7 @@ from functools import partial
 from typing import Tuple
 
 import numpy as np
-from cminject.experiment_refactored.basic import SphericalParticle
+from cminject.experiment_refactored.basic import SphericalParticle, ThermallyConductiveSphericalParticle
 from cminject.experiment_refactored.fluid_flow_field import FluidFlowField
 from scipy.integrate import dblquad
 from scipy.constants import R, pi
@@ -23,7 +23,7 @@ class PhotophoreticLaserField(Field):
         pass  # TODO
 
     def calculate_acceleration(self,
-                               particle: SphericalParticle,
+                               particle: ThermallyConductiveSphericalParticle,
                                time: float) -> np.array:
         transverse, axial = self.calculate_photophoretic_force(particle)
         y_over_x = particle.position[1] / particle.position[0]
@@ -50,7 +50,7 @@ class PhotophoreticLaserField(Field):
         return s, p
 
     @staticmethod
-    def calculate_absorption_coefficient(x, y, nt):
+    def calculate_absorption_coefficient(x, y, refraction_index=0.0):
         """
         Calculates the absorption coefficients for S and P polarisation components according to the Fresnel equations.
         nt is the index of refraction of the sphere.
@@ -64,14 +64,14 @@ class PhotophoreticLaserField(Field):
             s = 1 - abs(cmath.sin(delta_angle) / cmath.sin(total_angle))**2
             return s, p, np.cos(incident_angle)
         else:
-            p = 1 - abs((nt - 1) / (nt + 1))**2
+            p = 1 - abs((refraction_index - 1) / (refraction_index + 1))**2
             return p, p, 1.0
 
-    def calculate_power_absorption(self, particle: Particle, x, y, z, nt):
+    def calculate_power_absorption(self, particle: Particle, x, y, z):
         """
         The absorption is calculated for each component s and p.
         """
-        p_abs, s_abs, cos_theta = self.calculate_absorption_coefficient(x, y, nt)
+        p_abs, s_abs, cos_theta = self.calculate_absorption_coefficient(x, y)
 
         p, s = self.calculate_sp_split(x, y, z, phi=0)
         p_abs *= p
@@ -96,7 +96,7 @@ class PhotophoreticLaserField(Field):
         else:
             raise ValueError("comp needs to be 'x' or 'z'!")
 
-    def calculate_photophoretic_force(self, particle: SphericalParticle):
+    def calculate_photophoretic_force(self, particle: ThermallyConductiveSphericalParticle):
         fl = self.fluid
         d = pi/2 * np.sqrt(pi/3) * fl.thermal_creep * (fl.dynamic_viscosity / fl.density) \
             * np.sqrt(fl.temperature * 8 * R / (pi * fl.molar_mass)) / fl.temperature
@@ -112,5 +112,5 @@ class PhotophoreticLaserField(Field):
         diff_transverse = second_half_sphere - first_half_sphere
         diff_axial = second_half_sphere_ax - first_half_sphere_ax
 
-        factor = d * particle.radius**2 * fl.pressure / (2 * char_p)  # TODO particle.kp ????
+        factor = d * particle.radius**2 * fl.pressure / (2 * particle.thermal_conductivity * char_p)
         return diff_transverse * factor, diff_axial * factor

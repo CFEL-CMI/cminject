@@ -27,7 +27,7 @@ from cminject.experiment_refactored.base_classes import \
     Particle, Field, Device, ZBoundedMixin
 from cminject.experiment_refactored.basic import \
     infinite_interval, SimpleZBoundary, plot_particles, SimpleZDetector, GaussianSphericalSource, InfiniteBoundary, \
-    CuboidBoundary
+    CuboidBoundary, ThermallyConductiveSphericalParticle
 from cminject.experiment_refactored.fluid_flow_field import FluidFlowField
 
 
@@ -86,7 +86,10 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
         velocity=([0.0, 0.7, vz], [0.10, 0.30, 2.00]),
         radius=(2.45e-7, 7.5e-9),
         seed=1000,
-        rho=1050.0
+        rho=1050.0,
+
+        subclass=ThermallyConductiveSphericalParticle,
+        thermal_conductivity=6.3
     )]
 
     experiment = Experiment(
