@@ -122,7 +122,7 @@ def main():
     parser.add_argument('-t', help='Store trajectories?', action='store_true')
     parser.add_argument('-p', help='Do profiling? (CAUTION: generates lots of profiling dump files)',
                         action='store_true')
-    parser.add_argument('-f', help='Flow field filename (txt format)', type=str, required=True)
+    parser.add_argument('-f', help='Flow field filename (hdf5 format)', type=str, required=True)
     args = parser.parse_args()
 
     result_list = run_example_experiment(vz=args.v, nof_particles=args.n,

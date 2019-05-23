@@ -51,7 +51,6 @@ def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], device
                 # Particles inside devices are not considered lost
                 return False
             if not is_inside and device_z_boundary[0] <= particle.position[2] <= device_z_boundary[1]:
-                print("\t\tYOOOOO", device_z_boundary[0], particle.position[2], device_z_boundary[1])
                 # Particles that are outside devices *but* within their Z boundary are considered lost
                 return True
         # Particles that are not inside any device but also not within any device's Z boundary are not considered
@@ -94,7 +93,8 @@ def simulate_particle(particle: Particle, devices: List[Device], detectors: List
         else:
             # If particle is lost, store this and (implicitly) break the loop
             particle.lost = True
-            print(f"\t\tParticle lost at {particle.position} with {particle.velocity}. Tracked {len(particle.trajectory)} positions.")
+            print(f"\t\tParticle {particle.identifier} lost at {particle.position}. "
+                  f"Tracked {len(particle.trajectory)} positions.")
 
     print(f"\tDone simulating particle {particle.identifier}.")
     return particle
