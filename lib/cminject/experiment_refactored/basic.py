@@ -67,13 +67,14 @@ class InfiniteBoundary(Boundary):
 
 
 class SimpleZDetector(Detector):
-    def __init__(self, identifier: int, z_position: float, epsilon: float = 1e-3):
+    def __init__(self, identifier: int, z_position: float, epsilon: float = 1e-4):
         super().__init__(identifier=identifier)
         self.z_position = z_position
         self.epsilon = epsilon
 
     def has_reached_detector(self, particle: Particle) -> bool:
-        return particle.position[2] >= self.z_position and\
+        return abs(particle.position[2]) >= abs(self.z_position) and\
+               np.sign(particle.position[2]) == np.sign(self.z_position) and\
                abs(particle.position[2] - self.z_position) < self.epsilon
 
     def get_hit_position(self, particle: Particle) -> Optional[np.array]:
@@ -87,11 +88,11 @@ class SphericalParticle(Particle):
     """
     A simple spherical particle that has a radius and a density (rho).
     """
-    def __init__(self, identifier, position, velocity, radius, rho, *args, **kwargs):
+    def __init__(self, *args, radius: float, rho: float, **kwargs):
         self.radius = radius
         self.rho = rho
         # self.mass is stored by the super() call.
-        super().__init__(identifier, position, velocity)
+        super().__init__(*args, **kwargs)
 
     def calculate_mass(self) -> float:
         return self.rho * 4 / 3 * np.pi * (self.radius ** 3)
@@ -100,10 +101,18 @@ class SphericalParticle(Particle):
 class ThermallyConductiveSphericalParticle(SphericalParticle):
     """
     Lacking a better name (so far), this class extends on the SphericalParticle with a thermal conductivity
-     that is required by e.g. the photophoretic force.
+    that is required by e.g. the photophoretic force.
     """
-    def __init__(self, *args, thermal_conductivity: float = 6.3, **kwargs):
+    def __init__(self, *args,
+                 thermal_conductivity: float = 6.3,
+                 temperature: float = 298.0,
+                 **kwargs):
         self.thermal_conductivity = thermal_conductivity
+        self.temperature = temperature
+        self.collision_temperature = temperature
+
+        self.time_to_liquid_n = None
+        self.collision_time_to_liquid_n = None
         super().__init__(*args, **kwargs)
 
 
@@ -137,7 +146,7 @@ class GaussianSphericalSource(Source):
         self.subclass_kwargs = subclass_kwargs
         super().__init__(position=position)
 
-    def generate_particles(self):
+    def generate_particles(self, start_time: float = 0.0):
         """
         Given the parameters of the normal distribution this function generates
         the initial positions and momentum of the particles
@@ -157,9 +166,10 @@ class GaussianSphericalSource(Source):
 
         self.particles = [
             self.subclass(
-                i,
+                identifier=i,
                 position=np.array([x[i], y[i], z[i]]),
                 velocity=np.array([vx[i], vy[i], vz[i]]),
+                start_time=start_time,
                 radius=r[i],
                 rho=self.rho,
                 **self.subclass_kwargs

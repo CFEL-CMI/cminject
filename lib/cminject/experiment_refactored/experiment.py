@@ -16,26 +16,26 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 """
-import multiprocessing
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Callable
 from multiprocessing import Pool, Manager
 from functools import partial
 import pprofile
 
 import numpy as np
-from cminject.experiment_refactored.basic import infinite_interval
 from scipy.integrate import ode
 
-from .base_classes import Particle, Source, Device, Detector, ZBoundedMixin
+from cminject.experiment_refactored.basic import infinite_interval
+from cminject.experiment_refactored.base_classes import Particle, Source, Device, Detector, ZBoundedMixin
 
 
 def calculate_v_and_a(time: float, position_and_velocity: np.array,
                       particle: Particle, devices: List[Device]):
+    if time == particle.time:
+        print("WTF?????????????????????????????????")
     total_acceleration = np.zeros(3, dtype=float)
     for device in devices:
-        if not device.is_particle_inside(particle):
-            continue
-        total_acceleration += device.field.calculate_acceleration(particle, time)
+        if device.is_particle_inside(particle):
+            total_acceleration += device.field.calculate_acceleration(particle, time)
     return np.concatenate((position_and_velocity[3:], total_acceleration))
 
 
@@ -61,7 +61,8 @@ def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], device
 def simulate_particle(particle: Particle, devices: List[Device], detectors: List[Detector],
                       t_start: float, t_end: float, dt: float,
                       z_boundary: Tuple[float, float],
-                      track_trajectories: bool):
+                      track_trajectories: bool,
+                      calc_additional: Callable[[Particle, List[Device], float], None]):
     integral = ode(calculate_v_and_a)
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(np.concatenate([particle.position, particle.velocity]), t_start)
@@ -69,6 +70,7 @@ def simulate_particle(particle: Particle, devices: List[Device], detectors: List
     print(f"\tSimulating particle {particle.identifier}...")
 
     while integral.successful() and integral.t < t_end and not particle.lost:
+        particle.time = integral.t
         # Check conditions for having lost particle.
         if not is_particle_lost(particle, z_boundary, devices):
             # If particle is not lost:
@@ -76,6 +78,10 @@ def simulate_particle(particle: Particle, devices: List[Device], detectors: List
             # - Store the position and velocity calculated by the integrator on the particle
             particle.position = integral_result[:3]
             particle.velocity = integral_result[3:]
+
+            # - If present, have the calc_additional function calculate and store what it wants
+            if calc_additional is not None:
+                calc_additional(particle, devices, dt)
 
             # - Have each detector store a hit position if there was a hit
             for detector in detectors:
@@ -117,11 +123,13 @@ def profiling_wrapper(particle: Particle, devices: List[Device], detectors: List
 class Experiment:
     def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
                  dt: float = 1.0e-5, t_start: float = 0.0, t_end: float = 1.8, track_trajectories: bool = False,
-                 z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0):
+                 z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0,
+                 calc_additional: Callable[[Particle, List[Device], float], None] = None):
         # Store references
         self.devices = devices
         self.sources = sources
         self.detectors = detectors
+        self.calc_additional = calc_additional
 
         # Store numerical data
         self.dt = dt
@@ -132,7 +140,7 @@ class Experiment:
         # Initialise list of particles from all sources
         self.particles = []
         for source in self.sources:
-            source_particles = source.generate_particles()
+            source_particles = source.generate_particles(self.t_start)
             self.particles += source_particles
 
         # Initialise the min/max Z values amongst all detectors, and amongst all devices
@@ -171,7 +179,8 @@ class Experiment:
             dt=self.dt,
             track_trajectories=self.track_trajectories,
             detectors=self.detectors,
-            z_boundary=self.z_boundary
+            z_boundary=self.z_boundary,
+            calc_additional=self.calc_additional
         )
         result = map(simulate, self.particles)
         return list(result)
@@ -190,7 +199,8 @@ class Experiment:
                 dt=self.dt,
                 track_trajectories=self.track_trajectories,
                 detectors=self.detectors,
-                z_boundary=self.z_boundary
+                z_boundary=self.z_boundary,
+                calc_additional=self.calc_additional
             )
             result = pool.imap_unordered(parallel_simulate, self.particles)
         except Exception as e:

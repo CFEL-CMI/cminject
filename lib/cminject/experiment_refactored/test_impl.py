@@ -55,15 +55,35 @@ class ExampleDevice(Device):
 
 class FluidFlowFieldDevice(Device):
     def __init__(self, filename: str, density: float, dynamic_viscosity: float, scale_slip: float):
-        field = FluidFlowField(
+        self.field: FluidFlowField = FluidFlowField(
             filename=filename,
             density=density, dynamic_viscosity=dynamic_viscosity, scale_slip=scale_slip
         )
-        boundary = SimpleZBoundary(field.min_z, field.max_z)
-        super().__init__(field=field, boundary=boundary)
+        self.boundary: SimpleZBoundary = SimpleZBoundary(self.field.min_z, self.field.max_z)
+        super().__init__(field=self.field, boundary=self.boundary)
 
     def is_particle_inside(self, particle: Particle) -> bool:
         return self.field.is_particle_inside(particle)
+
+
+def calculate_temperatures(particle: ThermallyConductiveSphericalParticle,
+                           devices: List[Device],
+                           dt: float):
+    # TODO make this O(1) instead of O(n) by declaring data dependencies explicitly? e.g. a device index?
+    for device in devices:
+        if isinstance(device, FluidFlowFieldDevice) and device.is_particle_inside(particle):
+            t = device.field.calc_particle_temperature(particle, dt)
+            n_c, t_c = device.field.calc_particle_collisions(particle, dt)
+            particle.collision_temperature = t_c
+            particle.temperature = t
+
+            if t <= 77.0 and particle.time_to_liquid_n is None:
+                particle.time_to_liquid_n = particle.time
+            if t_c <= 77.0 and particle.collision_time_to_liquid_n is None:
+                particle.collision_time_to_liquid_n = particle.time
+
+            # Here, we only care about the first found fluid flow device that a particle is in, so break.
+            break
 
 
 def run_example_experiment(vz, nof_particles, flow_field_filename, track_trajectories=False, do_profiling=False):
@@ -100,7 +120,8 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
         t_end=1.0,
         dt=1.0e-6,
         track_trajectories=track_trajectories,
-        delta_z_end=0.01
+        delta_z_end=0.01,
+        calc_additional=calculate_temperatures
     )
 
     print(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
@@ -131,6 +152,25 @@ def main():
     result_list = run_example_experiment(vz=args.v, nof_particles=args.n,
                                          track_trajectories=args.t, do_profiling=args.p,
                                          flow_field_filename=args.f)
+
+    for particle in result_list:
+        detected_position = None
+        if particle.detector_hits:
+            detected_position = next(iter(particle.detector_hits.values()))
+
+        print("\t" + "\n\t".join(map(str, [
+            particle.initial_position,
+            particle.initial_velocity,
+            detected_position[0][0:2] if detected_position else None,
+            particle.velocity,
+            particle.temperature,
+            particle.collision_temperature,
+            particle.time_to_liquid_he,
+            particle.collision_time_to_liquid_he,
+            particle.time,
+            particle.identifier
+        ])) + "\n")
+
     print(f"Plotting {len(result_list)} particles...")
     plot_particles(result_list, plot_trajectories=args.t)
 

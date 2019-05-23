@@ -42,22 +42,25 @@ class Particle(ABC):
       - mass (the particle's mass)
       - trajectory (a list describing points in the particle's path)
     """
-    def __init__(self, identifier: Any,
+    def __init__(self, identifier: Any, start_time: float,
                  position: np.array, velocity: np.array):
         """
         The constructor for Particle.
         :param identifier: The unique identifier the particle should have.
+        :param start_time: The time the particle starts at.
         :param position: The position the particle starts at.
         :param velocity: The velocity the particle starts with.
         """
         self.identifier: int = identifier
         self.lost: bool = False
         self.detector_hits: Dict[int, List[np.array]] = {}
-        self.position: np.array = position
+        self.position: np.array = np.copy(position)
         self.initial_position: np.array = np.copy(position)
-        self.velocity: np.array = velocity
+        self.velocity: np.array = np.copy(velocity)
+        self.initial_velocity: np.array = np.copy(velocity)
         self.trajectory: List[np.array] = []
         self.mass: float = self.calculate_mass()
+        self.time: float = start_time
 
     @abstractmethod
     def calculate_mass(self) -> float:
@@ -83,6 +86,13 @@ class Particle(ABC):
         else:
             self.detector_hits[identifier] = [position]
 
+    @property
+    def reached(self):
+        return self.detector_hits
+
+    def __str__(self):
+        return f"<{self.__class__.__name__} #{self.identifier}>"
+
 
 class Source(ABC):
     """
@@ -97,7 +107,7 @@ class Source(ABC):
         self.position = position
 
     @abstractmethod
-    def generate_particles(self) -> List[Particle]:
+    def generate_particles(self, start_time: float = 0.0) -> List[Particle]:
         """
         Generates a list of particles. How this is done is entirely up to the subclass.
         The only important thing is adhering to the specification here and having this method always return
