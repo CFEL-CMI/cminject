@@ -181,6 +181,7 @@ class GaussianSphericalSource(Source):
 
 def plot_particles(experiment_result, plot_trajectories=False):
     from matplotlib import pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
 
     xs0, ys0, zs0 = [[p.initial_position[i] for p in experiment_result] for i in range(3)]
     xs, ys, zs = [[p.position[i] for p in experiment_result] for i in range(3)]
