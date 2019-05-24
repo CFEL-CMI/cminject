@@ -21,7 +21,7 @@ from typing import Tuple, Optional, List, Type
 
 import numpy as np
 
-from .base_classes import Particle, Boundary, Detector, Source
+from cminject.experiment_refactored.definitions.base_classes import Particle, Boundary, Detector, Source
 
 
 infinite_interval = (float('-inf'), float('inf'))
@@ -181,7 +181,6 @@ class GaussianSphericalSource(Source):
 
 def plot_particles(experiment_result, plot_trajectories=False):
     from matplotlib import pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 
     xs0, ys0, zs0 = [[p.initial_position[i] for p in experiment_result] for i in range(3)]
     xs, ys, zs = [[p.position[i] for p in experiment_result] for i in range(3)]

@@ -18,17 +18,17 @@
 """
 
 import argparse
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 import numpy as np
 
-from cminject.experiment_refactored.experiment import Experiment
-from cminject.experiment_refactored.base_classes import \
+from cminject.experiment_refactored.definitions.experiment import Experiment
+from cminject.experiment_refactored.definitions.base_classes import \
     Particle, Field, Device
-from cminject.experiment_refactored.basic import \
+from cminject.experiment_refactored.definitions.basic import \
     infinite_interval, SimpleZBoundary, plot_particles, SimpleZDetector, GaussianSphericalSource,\
     ThermallyConductiveSphericalParticle
-from cminject.experiment_refactored.fluid_flow_field import FluidFlowField
+from cminject.experiment_refactored.fields.fluid_flow_field import FluidFlowField
 
 
 class GravityForceField(Field):

@@ -17,15 +17,15 @@
 # <http://www.gnu.org/licenses/>.
 """
 from typing import List, Tuple, Optional, Callable
-from multiprocessing import Pool, Manager
+from multiprocessing import Pool
 from functools import partial
 import pprofile
 
 import numpy as np
 from scipy.integrate import ode
 
-from cminject.experiment_refactored.basic import infinite_interval
-from cminject.experiment_refactored.base_classes import Particle, Source, Device, Detector, ZBoundedMixin
+from cminject.experiment_refactored.definitions.basic import infinite_interval
+from cminject.experiment_refactored.definitions.base_classes import Particle, Source, Device, Detector, ZBoundedMixin
 
 
 def calculate_v_and_a(time: float, position_and_velocity: np.array,
@@ -200,7 +200,7 @@ class Experiment:
                 z_boundary=self.z_boundary,
                 calc_additional=self.calc_additional
             )
-            result = pool.imap_unordered(parallel_simulate, self.particles)
+            result = pool.imap_unordered(parallel_simulate, self.particles, chunksize=10)
         except Exception as e:
             raise e
         finally:
