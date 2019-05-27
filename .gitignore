@@ -9,3 +9,5 @@ build/
 dist/
 doc/.build
 /.idea
+*.h5
+*.hdf5
