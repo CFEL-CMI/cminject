@@ -67,15 +67,19 @@ class InfiniteBoundary(Boundary):
 
 
 class SimpleZDetector(Detector):
-    def __init__(self, identifier: int, z_position: float, epsilon: float = 1e-4):
+    def __init__(self, identifier: int, z_position: float,):
         super().__init__(identifier=identifier)
         self.z_position = z_position
-        self.epsilon = epsilon
+        self.particle_distances = {}
 
     def has_reached_detector(self, particle: Particle) -> bool:
-        return abs(particle.position[2]) >= abs(self.z_position) and\
-               np.sign(particle.position[2]) == np.sign(self.z_position) and\
-               abs(particle.position[2] - self.z_position) < self.epsilon
+        reached = False
+        prev_distance = self.particle_distances.get(particle.identifier, None)
+        curr_distance = particle.position[2] - self.z_position
+        if prev_distance and np.sign(curr_distance) != np.sign(prev_distance):
+            reached = True
+        self.particle_distances[particle.identifier] = curr_distance
+        return reached
 
     def get_hit_position(self, particle: Particle) -> Optional[np.array]:
         return particle.position
