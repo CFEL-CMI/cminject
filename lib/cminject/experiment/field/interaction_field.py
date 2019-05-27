@@ -6,6 +6,7 @@ from scipy.integrate import quad, dblquad
 import numpy as np
 from math import exp, sqrt, pi
 from cminject.experiment.field.reader import *
+from cminject.experiment_refactored.tools.comsol_hdf5_tools import hdf5_to_data_grid
 
 class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""
@@ -108,19 +109,7 @@ class Fluid:
      h = Nu * self.ThermalConductivity() / D
      return h
  
-   def ReadFromFile(self, filename, vtk=False):
-     if vtk:
-       x, y, z, Vx, Vy, Vz, P = ReadVTK(filename)
-     else:
-       x, y, z, Vx, Vy, Vz, P = ReadText(filename)
-
-     self.maxZ=max(np.abs(z))
-     self.minZ=min(np.abs(z))
-     data_grid = np.zeros((Vx.shape[0],Vx.shape[1],Vx.shape[2],4),)
-     
-     data_grid[:,:,:,0] = Vx[:,:,:]
-     data_grid[:,:,:,1] = Vy[:,:,:]
-     data_grid[:,:,:,2] = Vz[:,:,:]
-     data_grid[:,:,:,3] = P[:,:,:]
-     self.fdrag = RegularGridInterpolator((x, y, z), data_grid) 
+   def ReadFromFile(self, filename):
+     x,y,z,data_grid = hdf5_to_data_grid(filename)
+     self.fdrag = RegularGridInterpolator((x, y, z), data_grid)
      self.FlowField = True

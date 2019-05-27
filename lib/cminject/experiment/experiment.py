@@ -100,14 +100,9 @@ class Experiment:
     f = h5py.File(self.directory+self.filename+".hdf5", "w")
     data = np.array(allParticles)
     f.create_dataset("particles", data=data)
-    f.close()
     if traj:
-      c=1
-      f = h5py.File(self.directory+self.filename+"_traj.hdf5", "w")
-      for i in l:
-        data = np.array(i.trajectory)
-        f.create_dataset("particles"+str(c), data=data)    
-        c+=1
+      for p in l:
+        f[f"trajectories/{p.ID}"] = np.array(p.trajectory)
       f.close()
 
   def LongestTrajectory(self):

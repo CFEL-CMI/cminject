@@ -84,7 +84,8 @@ class SphericalParticle(Particle):
 
     if Z > zdetector:  # it the particle reached the detector then safe the phase space end exit
       detectorx, detectory = self.CalculatePositionOnDetector(np.concatenate((self.position,self.velocity)), zdetector)
-      self.FinalPhaseSpace = [  self.iposition[0], self.iposition[1], self.iposition[2],
+      self.FinalPhaseSpace = [  self.radius, self.M,
+                                self.iposition[0], self.iposition[1], self.iposition[2],
                                 self.ivelocity[0], self.ivelocity[1], self.ivelocity[2],
                                 detectorx, detectory, p_and_v[3], p_and_v[4], p_and_v[5], self.T, self.Tt,
                                 self.TimeLN[0], self.TimeLN[1], self.TOF, self.ID ]
