@@ -75,8 +75,9 @@ class FluidFlowField(Field):
         return x, y, z, data_grid
 
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
-        relative_velocity, _, pressure = self._interpolate(particle)
-        return self.calculate_drag_force(relative_velocity, pressure, particle) / particle.mass
+        relative_velocity, _, pressure = self._interpolate(particle, time)
+        f = self.calculate_drag_force(relative_velocity, pressure, particle)
+        return f / particle.mass
 
     def get_z_boundary(self) -> Tuple[float, float]:
         return self.min_z, self.max_z
@@ -86,7 +87,7 @@ class FluidFlowField(Field):
         return self.min_z <= particle.position[2] <= self.max_z \
                and particle.identifier not in self.outside_particles
 
-    def _interpolate(self, particle: Particle) -> Tuple[np.array, float, float]:
+    def _interpolate(self, particle: Particle, time: float) -> Tuple[np.array, float, float]:
         """
         Calculates an (interpolated) relative velocity vector and pressure for a particle.
         Does memoization based on the particle identifier and current time.
@@ -98,7 +99,7 @@ class FluidFlowField(Field):
         # and particle.
         if particle.identifier in self.interpolation_results:
             stored_time, result = self.interpolation_results.get(particle.identifier)
-            if particle.time == stored_time:
+            if time == stored_time:
                 return result
 
         try:
@@ -111,7 +112,8 @@ class FluidFlowField(Field):
             result = np.zeros(3), 0.0, 0.0
 
         # Store result for memoization and return it
-        self.interpolation_results[particle.identifier] = (particle.time, result)
+        if particle.time_of_flight == time:
+            self.interpolation_results[particle.identifier] = (particle.time_of_flight, result)
         return result
 
     def calculate_drag_force(self,
@@ -121,9 +123,9 @@ class FluidFlowField(Field):
         """
         Calculates the drag force using Stokes' law for spherical particles in continuum
         :param relative_velocity: The velocity of the field relative to the particle
-        :param pressure:
-        :param particle:
-        :return:
+        :param pressure: The pressure exerted on the particle at the point
+        :param particle: A Particle
+        :return: The drag force as a (3,) np.array.
         """
         # Negative pressure or zero pressure is akin to the particle not being in the flow field, force is zero
         # and we can stop considering the particle to be inside this field
@@ -143,13 +145,10 @@ class FluidFlowField(Field):
         see J. Aerosol Sci. 1976 Vol. 7. pp 381-387 by Klaus Willeke
         """
         c_sutherland = 79.4
-        ref_temperature = 273.0  # K
-
-        factor = self.temperature / ref_temperature \
-                 * (1 + c_sutherland / ref_temperature) \
-                 / (1 + c_sutherland / self.temperature)
-        knudsen = 0.01754 * 1 / (pressure * particle.radius) * factor
-
+        ref_temp = 273.0
+        knudsen = 0.01754 * 1 / (pressure * particle.radius)\
+                  * self.temperature / ref_temp * (1 + c_sutherland / ref_temp)\
+                  / (1 + c_sutherland / self.temperature)
         s = 1 + knudsen * (1.246 + (0.42 * np.exp(-0.87 / knudsen)))
         return s * self.scale_slip
 
@@ -157,36 +156,39 @@ class FluidFlowField(Field):
         k = 1.38065e-23
         return self.dynamic_viscosity / self.pressure * np.sqrt(pi * k * self.temperature / (2 * self.m_gas))
 
-    def calc_thermal_conductivity(self, particle: Particle) -> float:
+    def calc_thermal_conductivity(self, particle: Particle, time: float) -> float:
         """
         Calculates the thermal conductivity based on the ideal gas law
         http://hyperphysics.phy-astr.gsu.edu/hbase/thermo/thercond.html
         :param particle: A Particle
+        :param time: The current time
         :return: The thermal conductivity
         """
-        v: float = self._interpolate(particle)[1]
+        v: float = self._interpolate(particle, time)[1]
         mean_free_path = self.calc_mean_free_path()
         k = self.pressure * v * mean_free_path * self.molar_heat_capacity / \
             (3 * self.molar_mass * self.specific_gas_constant * self.temperature)
         return k
 
-    def calc_prandtl(self, particle: Particle):
+    def calc_prandtl(self, particle: Particle, time: float):
         """
         Calculates the Prandtl number.
         :param particle: A Particle
+        :param time: The current time
         :return: The Prandtl number.
         """
-        return self.specific_heat_capacity * self.dynamic_viscosity / self.calc_thermal_conductivity(particle)
+        return self.specific_heat_capacity * self.dynamic_viscosity / self.calc_thermal_conductivity(particle, time)
 
-    def calc_reynolds(self, particle: Particle, d: float) -> float:
+    def calc_reynolds(self, particle: Particle, d: float, time: float) -> float:
         """
         Calculates the Reynolds number.
         :param d: A characteristic length (in meters)
         :param particle: A Particle
+        :param time: The current time.
         :return: The Reynolds number.
         """
         rho = self.pressure * self.specific_gas_constant * self.temperature
-        v: float = self._interpolate(particle)[1]
+        v: float = self._interpolate(particle, time)[1]
         return rho * v * d / self.dynamic_viscosity
 
     def calc_nusselt(self, reynolds: float, prandtl: float, d: float, mu_s: float) -> float:
@@ -202,17 +204,18 @@ class FluidFlowField(Field):
         nu = 2 + (0.4 * re**0.5 + 0.06 * re**0.67) * pr**0.4 * (self.dynamic_viscosity / mu_s)**0.25
         return nu
 
-    def calc_mach(self, particle: Particle):
+    def calc_mach(self, particle: Particle, time: float):
         """
         Calculates the Mach number of the fluid at a Particle's position
         :param particle: A Particle
+        :param time: The current time
         :return: The Mach number
         """
-        v: float = self._interpolate(particle)[1]
+        v: float = self._interpolate(particle, time)[1]
         return v / self.speed_of_sound
 
-    def calc_convective_heat_transfer_coefficient(self, particle: Particle, nu: float, d: float):
-        return nu / d * self.calc_thermal_conductivity(particle)
+    def calc_convective_heat_transfer_coefficient(self, particle: Particle, nu: float, d: float, time: float):
+        return nu / d * self.calc_thermal_conductivity(particle, time)
 
     def calc_particle_temperature(self, particle: ThermallyConductiveSphericalParticle, time: float):
         """
@@ -223,29 +226,31 @@ class FluidFlowField(Field):
         """
         d = 2 * particle.radius
         mu_s = 1.96e-5
-        re = self.calc_reynolds(particle, d)
-        pr = self.calc_prandtl(particle)
-        m = self.calc_mach(particle)
+        re = self.calc_reynolds(particle, d, time=time)
+        pr = self.calc_prandtl(particle, time=time)
+        m = self.calc_mach(particle, time=time)
 
         nu_0 = self.calc_nusselt(re, pr, d, mu_s)
         nu = nu_0 / (1 + 3.42 * (m * nu_0 / (re * pr)))
 
-        h = self.calc_convective_heat_transfer_coefficient(particle, nu, d)
+        h = self.calc_convective_heat_transfer_coefficient(particle, nu, d, time)
         c = particle.thermal_conductivity * particle.mass
         r = h * (4 * pi * particle.radius**2) / c  # TODO move surface area to particle class? method or field?
         return self.temperature + (particle.temperature - self.temperature) * np.exp(-r * time)
 
     def calc_particle_collisions(self,
                                  particle: ThermallyConductiveSphericalParticle,
-                                 dt: float) -> Tuple[float, float]:
+                                 dt: float,
+                                 time: float) -> Tuple[float, float]:
         """
         Estimates the number of collisions of a particle within a time frame based on Kinetic Gas Theory
         :param particle: A Particle
         :param dt: A time delta
+        :param time: The current time
         :return: A tuple of (the number of collisions, the new temperature based on them)
         """
         v = np.sqrt(8 * self.temperature * Boltzmann / (self.m_gas * pi))
-        v += self._interpolate(particle)[1]
+        v += self._interpolate(particle, time)[1]
         n = self.pressure * Avogadro / (R * self.temperature)
         c = 0.5 * n * v * dt * (4 * pi * particle.radius**2)
         k = (particle.mass + self.m_gas)**2 / (2 * particle.mass * self.m_gas)

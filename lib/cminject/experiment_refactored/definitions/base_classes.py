@@ -60,7 +60,7 @@ class Particle(ABC):
         self.initial_velocity: np.array = np.copy(velocity)
         self.trajectory: List[np.array] = []
         self.mass: float = self.calculate_mass()
-        self.time: float = start_time
+        self.time_of_flight: float = start_time
 
     @abstractmethod
     def calculate_mass(self) -> float:

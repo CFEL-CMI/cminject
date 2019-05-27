@@ -30,6 +30,8 @@ from cminject.experiment_refactored.definitions.base_classes import Particle, So
 
 def calculate_v_and_a(time: float, position_and_velocity: np.array,
                       particle: Particle, devices: List[Device]):
+    particle.position = position_and_velocity[:3]
+    particle.velocity = position_and_velocity[3:]
     total_acceleration = np.zeros(3, dtype=float)
     for device in devices:
         if device.is_particle_inside(particle):
@@ -60,38 +62,45 @@ def simulate_particle(particle: Particle, devices: List[Device], detectors: List
                       t_start: float, t_end: float, dt: float,
                       z_boundary: Tuple[float, float],
                       track_trajectories: bool,
-                      calc_additional: Callable[[Particle, List[Device], float], None]):
+                      calc_additional: Callable[[Particle, List[Device], float, float], None]):
     integral = ode(calculate_v_and_a)
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(np.concatenate([particle.position, particle.velocity]), t_start)
     integral.set_f_params(particle, devices)
     print(f"\tSimulating particle {particle.identifier}...")
 
-    while integral.successful() and integral.t < t_end and not particle.lost:
-        particle.time = integral.t
+    # Add the initial time, position and velocity to the trajectory if we're tracking it
+    if track_trajectories:
+        particle.trajectory.append(
+            np.concatenate([[t_start], particle.position, particle.velocity])
+        )
+
+    while integral.successful() and integral.t < t_end and not (particle.lost or particle.reached):
         # Check conditions for having lost particle.
         if not is_particle_lost(particle, z_boundary, devices):
             # If particle is not lost:
-            integral_result = integral.y
             # - Store the position and velocity calculated by the integrator on the particle
+            integral_result = integral.y
             particle.position = integral_result[:3]
             particle.velocity = integral_result[3:]
-
-            # - If present, have the calc_additional function calculate and store what it wants
-            if calc_additional is not None:
-                calc_additional(particle, devices, dt)
-
-            # - Have each detector store a hit position if there was a hit
-            for detector in detectors:
-                if detector.has_reached_detector(particle):
-                    hit_position = detector.get_hit_position(particle)
-                    particle.store_hit(detector.identifier, hit_position)
+            particle.time_of_flight = integral.t
 
             # - If we want to track trajectories, store them
             if track_trajectories:
                 particle.trajectory.append(
-                    np.concatenate([[integral.t], integral_result[0:6]])
+                    np.concatenate([[particle.time_of_flight], particle.position, particle.velocity])
                 )
+
+            # - If present, have the calc_additional function calculate and store what it wants
+            if calc_additional is not None:
+                calc_additional(particle, devices, dt, integral.t)
+
+            # - Have each detector store a hit position if there was a hit
+            for detector in detectors:
+                if detector.has_reached_detector(particle):
+                    print(f"\t\tParticle {particle.identifier} reached at {particle.position}.")
+                    hit_position = detector.get_hit_position(particle)
+                    particle.store_hit(detector.identifier, hit_position)
 
             integral.integrate(integral.t + dt)
         else:
@@ -155,7 +164,7 @@ class Experiment:
                               max(self.detectors_z_boundary[1], self.devices_z_boundary[1]) + delta_z_end
 
         if self.z_boundary[0] > self.z_boundary[1]:
-            exit(f"ERROR: The Z boundary of the experiment {self.z_boundary} is not sensible! The 'left' boundary "
+            exit(f"ERROR: The Z boundary {self.z_boundary} of the experiment is not sensible! The 'left' boundary "
                  f"has to be smaller than the 'right' boundary.")
 
     @staticmethod
@@ -200,7 +209,8 @@ class Experiment:
                 z_boundary=self.z_boundary,
                 calc_additional=self.calc_additional
             )
-            result = pool.imap_unordered(parallel_simulate, self.particles, chunksize=10)
+            chunksize = 10 if len(self.particles) > 50 else 1
+            result = pool.map(parallel_simulate, self.particles)
         except Exception as e:
             raise e
         finally:

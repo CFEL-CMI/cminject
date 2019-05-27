@@ -82,7 +82,13 @@ class SimpleZDetector(Detector):
         return reached
 
     def get_hit_position(self, particle: Particle) -> Optional[np.array]:
-        return particle.position
+        x, y, z = particle.position
+        u, v, w = particle.velocity
+        d = abs(z) - abs(self.z_position)
+        t = d / abs(w)
+        x = x - u * t
+        y = y - v * t
+        return np.array([x, y, self.z_position])
 
     def get_z_boundary(self) -> Tuple[float, float]:
         return self.z_position, self.z_position
@@ -115,8 +121,8 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
         self.temperature = temperature
         self.collision_temperature = temperature
 
-        self.time_to_liquid_n = None
-        self.collision_time_to_liquid_n = None
+        self.time_to_liquid_n = float('inf')
+        self.collision_time_to_liquid_n = float('inf')
         super().__init__(*args, **kwargs)
 
 
