@@ -91,7 +91,6 @@ def calculate_temperatures(particle: ThermallyConductiveSphericalParticle,
 def run_example_experiment(vz, nof_particles, flow_field_filename, track_trajectories=False, do_profiling=False):
     print("Setting up experiment...")
     devices = [
-        # ExampleDevice(),
         FluidFlowFieldDevice(
             filename=flow_field_filename,
             density=0.0009,
@@ -104,16 +103,18 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
     ]
 
     print(f"The initial velocity of the particles is around {vz} m/s in Z direction.")
-    sources = [GaussianSphericalSource(
-        nof_particles,
-        position=([0.0, 0.0, 0.0048], [0.0002, 0.0002, 0.00001]),
-        velocity=([0.0, 0.7, vz], [0.10, 0.30, 2.00]),
-        radius=(2.45e-7, 7.5e-9),
-        seed=1000,
-        rho=1050.0,
+    sources = [
+        GaussianSphericalSource(
+            nof_particles,
+            position=([0.0, 0.0, 0.0048], [0.0002, 0.0002, 0.00001]),
+            velocity=([0.0, 0.7, vz], [0.10, 0.30, 2.00]),
+            radius=(2.45e-7, 7.5e-9),
+            seed=1000,
+            rho=1050.0,
 
-        subclass=ThermallyConductiveSphericalParticle,
-    )]
+            subclass=ThermallyConductiveSphericalParticle,
+        )
+    ]
 
     experiment = Experiment(
         devices=devices,
