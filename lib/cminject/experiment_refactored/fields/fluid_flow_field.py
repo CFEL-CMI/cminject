@@ -256,7 +256,7 @@ class FluidFlowField(Field):
         c = 0.5 * n * v * dt * (4 * pi * particle.radius**2)
         k = (particle.mass + self.m_gas)**2 / (2 * particle.mass * self.m_gas)
         # TODO in the original code, dT was calculated but unused?
-        collision_temperature = self.temperature + (particle.temperature - self.temperature) * np.exp(-c / k)
+        collision_temperature = self.temperature + (particle.collision_temperature - self.temperature) * np.exp(-c / k)
         return c, collision_temperature
 
 """
