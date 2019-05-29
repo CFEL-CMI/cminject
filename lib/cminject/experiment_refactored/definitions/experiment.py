@@ -25,7 +25,8 @@ import numpy as np
 from scipy.integrate import ode
 
 from cminject.experiment_refactored.definitions.basic import infinite_interval
-from cminject.experiment_refactored.definitions.base_classes import Particle, Source, Device, Detector, ZBoundedMixin
+from cminject.experiment_refactored.definitions.base_classes import Particle, Source, Device, Detector, ZBoundedMixin, \
+    Calculator
 
 
 def calculate_v_and_a(time: float, position_and_velocity: np.array,
@@ -62,7 +63,7 @@ def simulate_particle(particle: Particle, devices: List[Device], detectors: List
                       t_start: float, t_end: float, dt: float,
                       z_boundary: Tuple[float, float],
                       track_trajectories: bool,
-                      calc_additional: Callable[[Particle, List[Device], float, float], None]):
+                      calculators: List[Calculator]):
     integral = ode(calculate_v_and_a)
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(np.concatenate([particle.position, particle.velocity]), t_start)
@@ -92,8 +93,8 @@ def simulate_particle(particle: Particle, devices: List[Device], detectors: List
                 )
 
             # - If present, have the calc_additional function calculate and store what it wants
-            if calc_additional is not None:
-                calc_additional(particle, devices, dt, integral.t)
+            for calculator in calculators:
+                calculator.calculate(particle, integral.t)
 
             # - Have each detector store a hit position if there was a hit
             for detector in detectors:
@@ -129,14 +130,14 @@ def profiling_wrapper(particle: Particle, devices: List[Device], detectors: List
 
 class Experiment:
     def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
-                 dt: float = 1.0e-5, t_start: float = 0.0, t_end: float = 1.8, track_trajectories: bool = False,
-                 z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0,
-                 calc_additional: Callable[[Particle, List[Device], float], None] = None):
+                 calculators: List[Calculator] = None, dt: float = 1.0e-5, t_start: float = 0.0, t_end: float = 1.8,
+                 track_trajectories: bool = False,
+                 z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0):
         # Store references
         self.devices = devices
         self.sources = sources
         self.detectors = detectors
-        self.calc_additional = calc_additional
+        self.calculators = calculators
 
         # Store numerical data
         self.dt = dt
@@ -187,7 +188,7 @@ class Experiment:
             track_trajectories=self.track_trajectories,
             detectors=self.detectors,
             z_boundary=self.z_boundary,
-            calc_additional=self.calc_additional
+            calculators=self.calculators
         )
         result = map(simulate, self.particles)
         return list(result)
@@ -207,10 +208,10 @@ class Experiment:
                 track_trajectories=self.track_trajectories,
                 detectors=self.detectors,
                 z_boundary=self.z_boundary,
-                calc_additional=self.calc_additional
+                calculators=self.calculators
             )
             chunksize = 10 if len(self.particles) > 50 else 1
-            result = pool.map(parallel_simulate, self.particles)
+            result = pool.imap_unordered(parallel_simulate, self.particles, chunksize=chunksize)
         except Exception as e:
             raise e
         finally:

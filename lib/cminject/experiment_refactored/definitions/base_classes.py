@@ -247,6 +247,27 @@ class Device(ZBoundedMixin, ABC):
         return self.boundary.is_particle_inside(particle)
 
 
+class Calculator(ABC):
+    """
+    An object to do and store arbitrary calculations based on a Particle's properties and the current time.
+
+    Should be used for all calculations of additional quantities beyond calculating an acceleration, so
+    beyond what a Field does.
+
+    If you need access to properties of fields, detectors, etc., override the __init__ method and store a reference
+    to each relevant object at construction of the Calculator instance.
+    """
+    @abstractmethod
+    def calculate(self, particle: Particle, time: float) -> None:
+        """
+        Does a calculation. Should store its result on the particle.
+        :param particle: The Particle in its current state.
+        :param time: The current time.
+        :return: Nothing.
+        """
+        pass
+
+
 """
 ### Local Variables:
 ### fill-column: 100

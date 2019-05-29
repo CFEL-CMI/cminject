@@ -25,17 +25,18 @@ import h5py
 
 from cminject.experiment_refactored.definitions.experiment import Experiment
 from cminject.experiment_refactored.definitions.base_classes import \
-    Particle, Field, Device
+    Particle, Field, Device, Calculator
 from cminject.experiment_refactored.definitions.basic import \
-    infinite_interval, SimpleZBoundary, plot_particles, SimpleZDetector, GaussianSphericalSource,\
-    ThermallyConductiveSphericalParticle
+    infinite_interval, SimpleZBoundary, plot_particles, SimpleZDetector, GaussianSphericalSource, \
+    ThermallyConductiveSphericalParticle, InfiniteBoundary, CuboidBoundary
 from cminject.experiment_refactored.fields.fluid_flow_field import FluidFlowField
 
 
 class GravityForceField(Field):
     def __init__(self):
         super().__init__()
-        self.g = -9.81 * 20  # m/s^2
+        self.g = -9.81  # m/s^2
+        self.a = np.array([0, 0, self.g])
 
     def get_z_boundary(self) -> Tuple[float, float]:
         return infinite_interval
@@ -44,14 +45,19 @@ class GravityForceField(Field):
                                position_and_velocity: np.array,
                                time: float,
                                particle: Particle = None) -> np.array:
-        return np.array([
-            0, 0, self.g
-        ])
+        return self.a
 
 
 class ExampleDevice(Device):
     def __init__(self):
-        super().__init__(field=GravityForceField(), boundary=SimpleZBoundary(0.0, 1.0))
+        super().__init__(
+            field=GravityForceField(),
+            boundary=CuboidBoundary(
+                (-0.1, 0.1),
+                (-0.1, 0.1),
+                (-0.1, 0.1)
+            )
+        )
 
 
 class FluidFlowFieldDevice(Device):
@@ -67,30 +73,30 @@ class FluidFlowFieldDevice(Device):
         return self.field.is_particle_inside(particle)
 
 
-def calculate_temperatures(particle: ThermallyConductiveSphericalParticle,
-                           devices: List[Device],
-                           dt: float,
-                           time: float):
-    # TODO make this O(1) instead of O(n) by declaring data dependencies explicitly? e.g. a device index?
-    for device in devices:
-        if isinstance(device, FluidFlowFieldDevice) and device.is_particle_inside(particle):
-            t = device.field.calc_particle_temperature(particle, time)
-            n_c, t_c = device.field.calc_particle_collisions(particle, dt, time)
+class ParticleTemperatureCalculator(Calculator):
+    def __init__(self, field: FluidFlowField, dt: float):
+        self.field = field
+        self.dt = dt
+
+    def calculate(self, particle: ThermallyConductiveSphericalParticle, time: float) -> None:
+        if self.field.is_particle_inside(particle):
+            t = self.field.calc_particle_temperature(particle, time)
+            n_c, t_c = self.field.calc_particle_collisions(particle, self.dt, time)
             particle.collision_temperature = t_c
             particle.temperature = t
 
-            if t <= 77.0 and particle.time_to_liquid_n is None:
+            if t <= 77.0 and not np.isfinite(particle.time_to_liquid_n):
                 particle.time_to_liquid_n = time
-            if t_c <= 77.0 and particle.collision_time_to_liquid_n is None:
+            if t_c <= 77.0 and not np.isfinite(particle.collision_time_to_liquid_n):
                 particle.collision_time_to_liquid_n = time
-
-            # Here, we only care about the first found fluid flow device that a particle is in, so break.
-            break
 
 
 def run_example_experiment(vz, nof_particles, flow_field_filename, track_trajectories=False, do_profiling=False):
     print("Setting up experiment...")
     print(f"The initial velocity of the particles is around {vz} m/s in Z direction.")
+
+    t_start, dt, t_end = 0.0, 1.0e-6, 1.0
+    print(f"Simulating from t0={t_start} to {t_end} with dt={dt}.")
 
     devices = [
         FluidFlowFieldDevice(
@@ -115,17 +121,23 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
             subclass=ThermallyConductiveSphericalParticle,
         )
     ]
+    calculators = [
+        ParticleTemperatureCalculator(
+            field=devices[0].field,
+            dt=dt
+        )
+    ]
 
     experiment = Experiment(
         devices=devices,
         detectors=detectors,
         sources=sources,
-        t_start=0.0,
-        t_end=1.0,
-        dt=1.0e-6,
+        calculators=calculators,
+        t_start=t_start,
+        t_end=t_end,
+        dt=dt,
         track_trajectories=track_trajectories,
-        delta_z_end=0.001,
-        calc_additional=calculate_temperatures
+        delta_z_end=0.001
     )
 
     print(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
@@ -196,7 +208,6 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
 
 """

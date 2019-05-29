@@ -75,7 +75,7 @@ class FluidFlowField(Field):
         return x, y, z, data_grid
 
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
-        relative_velocity, _, pressure = self._interpolate(particle, time)
+        relative_velocity, _, pressure = self.interpolate(particle, time)
         f = self.calculate_drag_force(relative_velocity, pressure, particle)
         return f / particle.mass
 
@@ -85,15 +85,18 @@ class FluidFlowField(Field):
     def is_particle_inside(self, particle: Particle) -> bool:
         # NOTE/TODO: Particles are not able to leave the flow field and enter it again later!
         return self.min_z <= particle.position[2] <= self.max_z \
-               and particle.identifier not in self.outside_particles
+               and self.interpolate(particle, particle.time_of_flight)[2] > 0.0
 
-    def _interpolate(self, particle: Particle, time: float) -> Tuple[np.array, float, float]:
+    def interpolate(self, particle: Particle, time: float) -> Tuple[np.array, float, float]:
         """
         Calculates an (interpolated) relative velocity vector and pressure for a particle.
         Does memoization based on the particle identifier and current time.
-        :param particle: The particle
-        :return: The velocity vector of the field relative to the particle,
-                 the norm of this vector, and the pressure exerted on the particle
+        :param particle: The particle.
+        :param time: The current time.
+        :return: A 3-tuple of:
+          - The velocity vector of the field relative to the particle,
+          - The norm of this velocity vector,
+          - The pressure exerted on the particle.
         """
         # Some basic memoizing so we can call this method often but have it calculated only once per time step
         # and particle.
@@ -130,7 +133,6 @@ class FluidFlowField(Field):
         # Negative pressure or zero pressure is akin to the particle not being in the flow field, force is zero
         # and we can stop considering the particle to be inside this field
         if pressure <= 0:
-            self.outside_particles.add(particle.identifier)
             return np.zeros(3)
 
         force_vector = 6 * np.pi * self.dynamic_viscosity * particle.radius * relative_velocity
@@ -164,7 +166,7 @@ class FluidFlowField(Field):
         :param time: The current time
         :return: The thermal conductivity
         """
-        v: float = self._interpolate(particle, time)[1]
+        v: float = self.interpolate(particle, time)[1]
         mean_free_path = self.calc_mean_free_path()
         k = self.pressure * v * mean_free_path * self.molar_heat_capacity / \
             (3 * self.molar_mass * self.specific_gas_constant * self.temperature)
@@ -188,10 +190,10 @@ class FluidFlowField(Field):
         :return: The Reynolds number.
         """
         rho = self.pressure * self.specific_gas_constant * self.temperature
-        v: float = self._interpolate(particle, time)[1]
+        v: float = self.interpolate(particle, time)[1]
         return rho * v * d / self.dynamic_viscosity
 
-    def calc_nusselt(self, reynolds: float, prandtl: float, d: float, mu_s: float) -> float:
+    def calc_nusselt(self, reynolds: float, prandtl: float, mu_s: float) -> float:
         """
         Calculates the Nusselt number based on the Reynolds and Prandtl number.
         :param d: A characteristic length (in meters)
@@ -211,7 +213,7 @@ class FluidFlowField(Field):
         :param time: The current time
         :return: The Mach number
         """
-        v: float = self._interpolate(particle, time)[1]
+        v: float = self.interpolate(particle, time)[1]
         return v / self.speed_of_sound
 
     def calc_convective_heat_transfer_coefficient(self, particle: Particle, nu: float, d: float, time: float):
@@ -230,7 +232,7 @@ class FluidFlowField(Field):
         pr = self.calc_prandtl(particle, time=time)
         m = self.calc_mach(particle, time=time)
 
-        nu_0 = self.calc_nusselt(re, pr, d, mu_s)
+        nu_0 = self.calc_nusselt(re, pr, mu_s)
         nu = nu_0 / (1 + 3.42 * (m * nu_0 / (re * pr)))
 
         h = self.calc_convective_heat_transfer_coefficient(particle, nu, d, time)
@@ -250,7 +252,7 @@ class FluidFlowField(Field):
         :return: A tuple of (the number of collisions, the new temperature based on them)
         """
         v = np.sqrt(8 * self.temperature * Boltzmann / (self.m_gas * pi))
-        v += self._interpolate(particle, time)[1]
+        v += self.interpolate(particle, time)[1]
         n = self.pressure * Avogadro / (R * self.temperature)
         c = 0.5 * n * v * dt * (4 * pi * particle.radius**2)
         k = (particle.mass + self.m_gas)**2 / (2 * particle.mass * self.m_gas)
