@@ -90,6 +90,8 @@ def calculate_temperatures(particle: ThermallyConductiveSphericalParticle,
 
 def run_example_experiment(vz, nof_particles, flow_field_filename, track_trajectories=False, do_profiling=False):
     print("Setting up experiment...")
+    print(f"The initial velocity of the particles is around {vz} m/s in Z direction.")
+
     devices = [
         FluidFlowFieldDevice(
             filename=flow_field_filename,
@@ -101,8 +103,6 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
     detectors = [
         SimpleZDetector(identifier=0, z_position=-0.052)
     ]
-
-    print(f"The initial velocity of the particles is around {vz} m/s in Z direction.")
     sources = [
         GaussianSphericalSource(
             nof_particles,
@@ -150,7 +150,7 @@ def main():
     parser.add_argument('-t', help='Store trajectories?', action='store_true')
     parser.add_argument('-p', help='Do profiling? (CAUTION: generates lots of profiling dump files)',
                         action='store_true')
-    parser.add_argument('-o', help='Output filename for phase space (hdf5 format)', required=True)
+    parser.add_argument('-o', help='Output filename for phase space (hdf5 format)', type=str, required=True)
     parser.add_argument('-f', help='Flow field filename (hdf5 format)', type=str, required=True)
     args = parser.parse_args()
 
