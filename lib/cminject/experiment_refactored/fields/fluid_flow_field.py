@@ -56,8 +56,7 @@ class FluidFlowField(Field):
         self.m_gas = m_gas
         self.speed_of_sound = speed_of_sound
 
-        # Storage to quickly remember and look up particles that are considered to be outside this field
-        self.outside_particles = set()
+        # Memoization storage for interpolation results, as these are expensive
         self.interpolation_results = {}
 
         # Construct the interpolator for the drag force from the HDF5 file passed by file name
