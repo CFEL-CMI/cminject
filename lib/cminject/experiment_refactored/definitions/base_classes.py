@@ -23,6 +23,16 @@ from typing import Tuple, List, Any, Optional, Dict, Set
 import numpy as np
 
 
+class DetectorHit(object):
+    def __init__(self, detector_identifier: int, hit_position: np.array, particle: "Particle"):
+        self.particle = particle
+        self.particle_phase = np.concatenate([particle.get_phase(), hit_position])
+        self.particle_phase_description = particle.get_phase_description() + ['x_d', 'y_d', 'z_d']
+
+        self.detector_identifier = detector_identifier  # TODO store ref to detector instead?
+        self.hit_position = hit_position
+
+
 class Particle(ABC):
     """
     Describes a particle whose trajectory we want to simulate.
@@ -53,7 +63,7 @@ class Particle(ABC):
         """
         self.identifier: int = identifier
         self.lost: bool = False
-        self.detector_hits: Dict[int, List[np.array]] = {}
+        self.detector_hits: Dict[int, List[DetectorHit]] = {}
         self.position: np.array = np.copy(position)
         self.initial_position: np.array = np.copy(position)
         self.velocity: np.array = np.copy(velocity)
@@ -71,20 +81,50 @@ class Particle(ABC):
         """
         pass
 
-    def store_hit(self, identifier: int, position: np.array) -> None:
+    @abstractmethod
+    def get_phase(self) -> np.array:
+        """
+        An abstract method that subclasses must implement to return the current phase of this particle, i.e. a
+        numpy array of particle properties that describe the particle's current state in a way that is useful
+        to the problem domain.
+
+        This phase will be calculated and stored on each detector hit automatically (unless store_hit is overridden).
+
+        The size of the returned array must match the length of the list returned by `get_phase_description`.
+        :return: A numpy array describing the particle's current phase.
+        """
+        pass
+
+    @abstractmethod
+    def get_phase_description(self) -> List[str]:
+        """
+        Returns a list of strings matching what get_phase() returns, describing each value in the phase array
+        in some manner (most likely using standard one-letter abbreviations like x,y,z,T,...).
+
+        The size of the returned list must match the size of the array returned by `get_phase`.
+        :return: See above.
+        """
+        pass
+
+    def store_hit(self, detector_identifier: int, position: np.array) -> None:
         """
         Stores a hit on a detector within detector_hits.
-        :param identifier: The identifier of the detector. Should be unique, otherwise there'll be data clashes.
+        :param detector_identifier: The identifier of the detector. Should be unique, otherwise there'll be data clashes
         :param position: The position where the particle hit the detector.
         The particle is passed the position instead of calculating it because it's up to the detector to decide
         when and where a particle has hit it:
         Some detectors might do interpolation of the last position, and they might do it in different ways.
-        :return: Nothing.
+        :return: None
         """
-        if identifier in self.detector_hits:
-            self.detector_hits[identifier].append(position)
+        hit = DetectorHit(
+            particle=self,
+            detector_identifier=detector_identifier,
+            hit_position=position
+        )
+        if detector_identifier in self.detector_hits:
+            self.detector_hits[detector_identifier].append(hit)
         else:
-            self.detector_hits[identifier] = [position]
+            self.detector_hits[detector_identifier] = [hit]
 
     @property
     def reached(self):
@@ -251,8 +291,15 @@ class Calculator(ABC):
     """
     An object to do and store arbitrary calculations based on a Particle's properties and the current time.
 
-    Should be used for all calculations of additional quantities beyond calculating an acceleration, so
-    beyond what a Field does.
+    Should be used for all calculations of additional quantities beyond calculating an acceleration, so,
+    beyond what a Field returns. For example, TrajectoryCalculator is a simple calculator that just takes the position
+    and appends it to the `trajectory` property on the particle.
+
+    The `calculate` method is guaranteed by `Experiment` to be called exactly once per time step, as long as the
+    particle is still being simulated.
+
+    Taking care to avoid data clashes (different calculators writing on the same property on a particle, overwriting
+    each others' results) is up to the user / implementer.
 
     If you need access to properties of fields, detectors, etc., override the __init__ method and store a reference
     to each relevant object at construction of the Calculator instance.

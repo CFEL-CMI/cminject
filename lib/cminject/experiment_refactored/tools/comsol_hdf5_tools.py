@@ -21,6 +21,7 @@ from typing import Tuple
 import h5py
 import h5sparse
 
+from scipy.sparse import csr_matrix
 import numpy as np
 import pandas as pd
 
@@ -92,10 +93,11 @@ def txt_to_hdf5(infile_name: str, outfile_name: str) -> None:
         # order like typical products (e.g. itertools.product) would generate. hdf5_to_dataframe will construct the
         # index in x,y,z product order, where X iterates the slowest, so we reshape the data according to this.
         val_arr = val_arr.reshape((nz, ny, nx)).swapaxes(0, 2).reshape((nz*ny*nx,))
-        values[headers[i][0]] = val_arr
+        val_mat = csr_matrix(np.nan_to_num(val_arr))
+        values[headers[i][0]] = val_mat
 
     # Use h5sparse to save (lots of) space when storing (lots of) NaN or 0.0 values
-    with h5py.File(outfile_name) as h5f:
+    with h5sparse.File(outfile_name) as h5f:
         # Store the metadata from the .txt file as attributes on the root of the hdf5 file
         h5f.attrs.metadata = "\n".join(metadata)
         # Create a dataset for each column, store the np.array and the original index of the column
@@ -120,7 +122,7 @@ def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
     :param filename: The HDF5 file to read in. Must be written by or adhere to the format that txt_to_hdf5 defines.
     :return: A pandas DataFrame matching the data stored in the HDF5 file.
     """
-    with h5py.File(filename, 'r') as h5f:
+    with h5sparse.File(filename, 'r') as h5f:
         x, y, z = [h5f[f'index/{i}'] for i in ['x', 'y', 'z']]
         column_indices = []
         column_headers = []
@@ -131,14 +133,14 @@ def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
             col = h5f['data'][column_name]
             column_headers.append(column_name)
             column_indices.append(col.attrs['column_index'])
-            column_values.append(col[:])
+            column_values.append(col[:].toarray())
 
         # Reorder the column data and headers according to the (inverse) permutation gathered from the metadata
         column_indices = np.argsort(column_indices)  # argsort constructs the inverse permutation
         column_headers = np.array(column_headers, dtype=str)[column_indices]
         # Values needs to be (n_d x n_c), not (n_c x n_d) for the DataFrame constructor
         # where n_d is the number of data rows and n_c is the number of columns. So swap the axes.
-        column_values = np.array(column_values, dtype=float)[column_indices].swapaxes(0, 1)
+        column_values = np.vstack(column_values)[column_indices].swapaxes(0, 1)
 
         # Generate a MultiIndex from the product of x/y/z (X iterates the 'slowest' here)
         idx = pd.MultiIndex.from_product([x, y, z], names=('x', 'y', 'z'))

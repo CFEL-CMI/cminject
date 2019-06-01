@@ -21,10 +21,20 @@ from typing import Tuple, Optional, List, Type
 
 import numpy as np
 
-from cminject.experiment_refactored.definitions.base_classes import Particle, Boundary, Detector, Source
+from cminject.experiment_refactored.definitions.base_classes import Particle, Boundary, Detector, Source, Calculator
 
 
 infinite_interval = (float('-inf'), float('inf'))
+
+# Can be used to describe the boundary of an object along an axis that has no extent along this axis.
+empty_interval = (float('inf'), float('-inf'))
+
+
+class TrajectoryCalculator(Calculator):
+    def calculate(self, particle: Particle, time: float) -> None:
+        particle.trajectory.append(
+            np.concatenate([[time], particle.position, particle.velocity])
+        )
 
 
 class SimpleZBoundary(Boundary):
@@ -98,6 +108,7 @@ class SphericalParticle(Particle):
     """
     A simple spherical particle that has a radius and a density (rho).
     """
+
     def __init__(self, *args, radius: float, rho: float, **kwargs):
         self.radius = radius
         self.rho = rho
@@ -106,6 +117,29 @@ class SphericalParticle(Particle):
 
     def calculate_mass(self) -> float:
         return self.rho * 4 / 3 * np.pi * (self.radius ** 3)
+
+    def get_phase(self) -> np.array:
+        return np.concatenate([
+            [
+                self.identifier,
+                self.time_of_flight,
+                self.radius,
+                self.mass
+            ],
+            self.initial_position,
+            self.initial_velocity,
+            self.position,
+            self.velocity,
+        ])
+
+    def get_phase_description(self) -> List[str]:
+        return [
+            'ID', 't', 'r', 'm',
+            'x_i', 'y_i', 'z_i',
+            'u_i', 'v_i', 'w_i',
+            'x', 'y', 'z',
+            'u', 'v', 'w'
+        ]
 
 
 class ThermallyConductiveSphericalParticle(SphericalParticle):
@@ -124,6 +158,24 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
         self.time_to_liquid_n = float('inf')
         self.collision_time_to_liquid_n = float('inf')
         super().__init__(*args, **kwargs)
+
+    def get_phase(self) -> np.array:
+        basic_phase = super().get_phase()
+        return np.concatenate([
+            basic_phase,
+            [
+                self.temperature,
+                self.collision_temperature,
+                self.time_to_liquid_n,
+                self.collision_time_to_liquid_n,
+            ]
+        ])
+
+    def get_phase_description(self) -> List[str]:
+        basic_phase_description = super().get_phase_description()
+        return basic_phase_description + [
+            'T', 'T_c', 't_Ln', 't_Ln_c'
+        ]
 
 
 class GaussianSphericalSource(Source):
@@ -187,44 +239,6 @@ class GaussianSphericalSource(Source):
             for i in range(self.number_of_particles)
         ]
         return self.particles
-
-
-def plot_particles(experiment_result, plot_trajectories=False):
-    from matplotlib import pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-
-    xs0, ys0, zs0 = [[p.initial_position[i] for p in experiment_result] for i in range(3)]
-    xs, ys, zs = [[p.position[i] for p in experiment_result] for i in range(3)]
-    color = [
-        'red' if p.lost and not p.reached else 'green'
-        for p in experiment_result
-    ]
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    plt.scatter(xs, ys, zs=zs, s=3, c=color)
-    plt.scatter(xs0, ys0, zs=zs0, s=3, c='black')
-
-    for p in experiment_result:
-        for detector_id, hits in p.detector_hits.items():
-            hits = np.array(hits)
-            plt.scatter(hits[:, 0], hits[:, 1], zs=hits[:, 2], s=10, color='yellow')
-
-        if plot_trajectories and p.trajectory:
-            trajectory = np.array(p.trajectory)
-            ts = trajectory[:, 0]
-            ps = trajectory[:, 1:4]
-            xs = ps[:, 0]
-            ys = ps[:, 1]
-            zs = ps[:, 2]
-
-            vs = trajectory[:, 4:]
-            plt.plot(xs, ys, zs=zs, color='grey')
-
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlabel('z')
-    plt.show()
 
 
 """

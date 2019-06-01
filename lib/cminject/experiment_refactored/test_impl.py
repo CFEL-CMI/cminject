@@ -27,19 +27,20 @@ from cminject.experiment_refactored.definitions.experiment import Experiment
 from cminject.experiment_refactored.definitions.base_classes import \
     Particle, Field, Device, Calculator
 from cminject.experiment_refactored.definitions.basic import \
-    infinite_interval, SimpleZBoundary, plot_particles, SimpleZDetector, GaussianSphericalSource, \
-    ThermallyConductiveSphericalParticle, InfiniteBoundary, CuboidBoundary
+    SimpleZBoundary, SimpleZDetector, GaussianSphericalSource, \
+    ThermallyConductiveSphericalParticle, CuboidBoundary, empty_interval, TrajectoryCalculator
 from cminject.experiment_refactored.fields.fluid_flow_field import FluidFlowField
+from cminject.experiment_refactored.visualization.plot import plot_particles
 
 
 class GravityForceField(Field):
     def __init__(self):
         super().__init__()
-        self.g = -9.81  # m/s^2
-        self.a = np.array([0, 0, self.g])
+        self.g = 9.81  # m/s^2
+        self.a = np.array([0, 0, -self.g])  # this force points downwards on the Z axis
 
     def get_z_boundary(self) -> Tuple[float, float]:
-        return infinite_interval
+        return empty_interval
 
     def calculate_acceleration(self,
                                position_and_velocity: np.array,
@@ -75,13 +76,14 @@ class FluidFlowFieldDevice(Device):
 
 class ParticleTemperatureCalculator(Calculator):
     def __init__(self, field: FluidFlowField, dt: float):
-        self.field = field
-        self.dt = dt
+        self.field: FluidFlowField = field
+        self.dt: float = dt
 
     def calculate(self, particle: ThermallyConductiveSphericalParticle, time: float) -> None:
         if self.field.is_particle_inside(particle):
             t = self.field.calc_particle_temperature(particle, time)
             n_c, t_c = self.field.calc_particle_collisions(particle, self.dt, time)
+
             particle.collision_temperature = t_c
             particle.temperature = t
 
@@ -91,7 +93,8 @@ class ParticleTemperatureCalculator(Calculator):
                 particle.collision_time_to_liquid_n = time
 
 
-def run_example_experiment(vz, nof_particles, flow_field_filename, track_trajectories=False, do_profiling=False):
+def run_example_experiment(vz, nof_particles, flow_field_filename,
+                           track_trajectories=False, do_profiling=False, single_threaded=False):
     print("Setting up experiment...")
     print(f"The initial velocity of the particles is around {vz} m/s in Z direction.")
 
@@ -121,7 +124,9 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
             subclass=ThermallyConductiveSphericalParticle,
         )
     ]
-    calculators = [
+
+    calculators = [TrajectoryCalculator()] if track_trajectories else []
+    calculators += [
         ParticleTemperatureCalculator(
             field=devices[0].field,
             dt=dt
@@ -136,13 +141,12 @@ def run_example_experiment(vz, nof_particles, flow_field_filename, track_traject
         t_start=t_start,
         t_end=t_end,
         dt=dt,
-        track_trajectories=track_trajectories,
         delta_z_end=0.001
     )
 
     print(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
     print("Running experiment...")
-    result = experiment.run(do_profiling=do_profiling, single_threaded=False)
+    result = experiment.run(do_profiling=do_profiling, single_threaded=single_threaded)
     print("Done running experiment.")
     return result
 
@@ -162,45 +166,43 @@ def main():
     parser.add_argument('-t', help='Store trajectories?', action='store_true')
     parser.add_argument('-p', help='Do profiling? (CAUTION: generates lots of profiling dump files)',
                         action='store_true')
+    parser.add_argument('-s', help='Run single threaded? CAUTION: Very slow, only for debugging purposes',
+                        action='store_true')
     parser.add_argument('-o', help='Output filename for phase space (hdf5 format)', type=str, required=True)
     parser.add_argument('-f', help='Flow field filename (hdf5 format)', type=str, required=True)
     args = parser.parse_args()
 
     result_list = run_example_experiment(vz=args.v, nof_particles=args.n,
                                          track_trajectories=args.t, do_profiling=args.p,
-                                         flow_field_filename=args.f)
+                                         single_threaded=args.s, flow_field_filename=args.f)
 
-    # Construct phase space
-    phase_space = []
-    trajectories = {}
+    # Construct final phase space
+    phase_space = [particle.get_phase() for particle in result_list]
+    # Construct (detector id -> list[particle phase]) map from all detector hits
+    detector_hits = {}
     for particle in result_list:
-        detected_position = None
         if particle.detector_hits:
-            detected_position = next(iter(particle.detector_hits.values()))
+            for detector_id, hits in particle.detector_hits.items():
+                if detector_id not in detector_hits:
+                    detector_hits[detector_id] = []
+                detector_hits[detector_id] += hits
 
-        if detected_position is not None:
-            trajectories[particle.identifier] = np.array(particle.trajectory)
-            phase = np.concatenate([
-                [particle.radius, particle.mass],
-                particle.initial_position,
-                particle.initial_velocity,
-                detected_position[0][0:2],
-                particle.velocity,
-                [
-                    particle.temperature,
-                    particle.collision_temperature,
-                    particle.time_to_liquid_n,
-                    particle.collision_time_to_liquid_n,
-                    particle.time_of_flight,
-                    particle.identifier
-                ]
-            ])
-            phase_space.append(phase)
-
+    # Write final phase space, trajectories, and hits with phases at each detector
     with h5py.File(args.o, 'w') as f:
         f['particles'] = np.array(phase_space)
-        for id, traj in trajectories.items():
-            f[f'trajectories/{id}'] = np.array(traj)
+        # TODO this assumes all particles are the same
+        f['particles'].attrs['description'] = result_list[0].get_phase_description()
+
+        for particle in result_list:
+            if particle.trajectory:
+                f[f'trajectories/{particle.identifier}'] = np.array(particle.trajectory)
+                f[f'trajectories/{particle.identifier}'].attrs['description'] = [
+                    't', 'x', 'y', 'z', 'u', 'v', 'w'
+                ]
+
+        for detector_id, hits in detector_hits.items():
+            f[f'detector_hits/{detector_id}'] = np.array([hit.particle_phase for hit in hits])
+            f[f'detector_hits/{detector_id}'].attrs['description'] = hits[0].particle_phase_description
 
     print(f"Plotting {len(result_list)} particles...")
     plot_particles(result_list, plot_trajectories=args.t)

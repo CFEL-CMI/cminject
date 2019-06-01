@@ -59,24 +59,21 @@ def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], device
         return False
 
 
-def simulate_particle(particle: Particle, devices: List[Device], detectors: List[Detector],
+def simulate_particle(particle: Particle, devices: List[Device],
+                      detectors: List[Detector], calculators: List[Calculator],
                       t_start: float, t_end: float, dt: float,
-                      z_boundary: Tuple[float, float],
-                      track_trajectories: bool,
-                      calculators: List[Calculator]):
+                      z_boundary: Tuple[float, float]):
     integral = ode(calculate_v_and_a)
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(np.concatenate([particle.position, particle.velocity]), t_start)
     integral.set_f_params(particle, devices)
     print(f"\tSimulating particle {particle.identifier}...")
 
-    # Add the initial time, position and velocity to the trajectory if we're tracking it
-    if track_trajectories:
-        particle.trajectory.append(
-            np.concatenate([[t_start], particle.position, particle.velocity])
-        )
+    # Run all calculators once with the start time
+    for calculator in calculators:
+        calculator.calculate(particle, t_start)
 
-    while integral.successful() and integral.t < t_end and not (particle.lost or particle.reached):
+    while integral.successful() and integral.t < t_end and not particle.lost:
         # Check conditions for having lost particle.
         if not is_particle_lost(particle, z_boundary, devices):
             # If particle is not lost:
@@ -86,13 +83,7 @@ def simulate_particle(particle: Particle, devices: List[Device], detectors: List
             particle.velocity = integral_result[3:]
             particle.time_of_flight = integral.t
 
-            # - If we want to track trajectories, store them
-            if track_trajectories:
-                particle.trajectory.append(
-                    np.concatenate([[particle.time_of_flight], particle.position, particle.velocity])
-                )
-
-            # - If present, have the calc_additional function calculate and store what it wants
+            # - Run all calculators
             for calculator in calculators:
                 calculator.calculate(particle, integral.t)
 
@@ -114,16 +105,11 @@ def simulate_particle(particle: Particle, devices: List[Device], detectors: List
     return particle
 
 
-def profiling_wrapper(particle: Particle, devices: List[Device], detectors: List[Detector],
-                      t_start: float, t_end: float, dt: float,
-                      z_boundary: Tuple[float, float],
-                      track_trajectories: bool):
+def profiling_wrapper(particle: Particle, *args, **kwargs):
     result = None
     prof = pprofile.Profile()
     with prof():
-        result = simulate_particle(particle, devices, detectors,
-                                   t_start, t_end, dt,
-                                   z_boundary, track_trajectories)
+        result = simulate_particle(particle, *args, **kwargs)
     prof.dump_stats("cachegrind.out.%d" % particle.identifier)
     return result
 
@@ -131,7 +117,6 @@ def profiling_wrapper(particle: Particle, devices: List[Device], detectors: List
 class Experiment:
     def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
                  calculators: List[Calculator] = None, dt: float = 1.0e-5, t_start: float = 0.0, t_end: float = 1.8,
-                 track_trajectories: bool = False,
                  z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0):
         # Store references
         self.devices = devices
@@ -143,7 +128,6 @@ class Experiment:
         self.dt = dt
         self.t_start = t_start
         self.t_end = t_end
-        self.track_trajectories = track_trajectories
 
         # Initialise list of particles from all sources
         self.particles = []
@@ -185,7 +169,6 @@ class Experiment:
             t_start=self.t_start,
             t_end=self.t_end,
             dt=self.dt,
-            track_trajectories=self.track_trajectories,
             detectors=self.detectors,
             z_boundary=self.z_boundary,
             calculators=self.calculators
@@ -205,7 +188,6 @@ class Experiment:
                 t_start=self.t_start,
                 t_end=self.t_end,
                 dt=self.dt,
-                track_trajectories=self.track_trajectories,
                 detectors=self.detectors,
                 z_boundary=self.z_boundary,
                 calculators=self.calculators
