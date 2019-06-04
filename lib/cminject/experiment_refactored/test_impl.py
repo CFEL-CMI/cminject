@@ -159,8 +159,7 @@ def natural_number(x):
 
 
 def main(vz, nof_particles, track_trajectories, do_profiling, single_threaded, output_file, flow_field):
-    additional_results = {}
-    result_list = run_example_experiment(vz=vz, nof_particles=nof_particles, additional_results=additional_results,
+    result_list = run_example_experiment(vz=vz, nof_particles=nof_particles,
                                          track_trajectories=track_trajectories, do_profiling=do_profiling,
                                          single_threaded=single_threaded, flow_field_filename=flow_field)
 

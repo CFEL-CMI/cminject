@@ -12,7 +12,7 @@ def SingeParticleTrajectory(particle, devices, field, beam, detector, tStart, tE
       if the particle outside the boundary of the devices or the integration was not successful"""
   integral = ode( particle.get_v_and_a )
   integral.set_integrator('lsoda') #, method='BDF',with_jacobian=False,atol=1e-8,rtol=1e-4,first_step=1e-5,nsteps=10000)
-  integral.set_initial_value( np.concatenate((particle.position, 
+  integral.set_initial_value( np.concatenate((particle.position,
                               particle.velocity)), tStart ).set_f_params(field, beam)
 
   if traj:    # If trajectory is true then store the initial position
@@ -64,29 +64,35 @@ class Experiment:
     self.filename = filename
     self.CalculateTrajectory(tStart=0, tEnd=end, dt=dt)
    
-  def CalculateTrajectory(self, tStart, tEnd, dt ):
+  def CalculateTrajectory(self, tStart, tEnd, dt, single_threaded=False):
     """ Calculate the trajectories for all particles by integrating the equation of motion"""
 
     print("Calculating particles trajecories........")
-    print("Running on "+str(cpu_count())+" cores")
-    try:
-      p = Pool()
-      l = Manager().list()  # shared list to save the particles across the processes
-      parallel_traj = partial(SingeParticleTrajectory, devices=self.devices, field=self.field, 
-                              beam=self.beam, detector=self.detector, tStart=tStart, 
-                              tEnd=tEnd, dt=dt, zlim=self.Zlimit, l=l, traj=self.traj)
+    if single_threaded:
+      print("Running single-threaded, non parallelized")
+      l = []
+      single_traj = partial(SingeParticleTrajectory, devices=self.devices, field=self.field,
+              beam=self.beam, detector=self.detector, tStart=tStart,
+              tEnd=tEnd, dt=dt, zlim=self.Zlimit, l=l, traj=self.traj)
+      results = list(map(single_traj, self.source.particles))
+      return l
+    else:
+      print("Running on "+str(cpu_count())+" cores")
+      try:
+        p = Pool()
+        l = Manager().list()  # shared list to save the particles across the processes
+        parallel_traj = partial(SingeParticleTrajectory, devices=self.devices, field=self.field,
+                                beam=self.beam, detector=self.detector, tStart=tStart,
+                                tEnd=tEnd, dt=dt, zlim=self.Zlimit, l=l, traj=self.traj)
 
-      p.map(parallel_traj, self.source.particles)
-
-    except Exception as e:
-      print('Exception', e)
-
-    finally:
-      p.close()
-      p.join()    
-     
-    self.SaveParticles(l, traj=self.traj)
-    return True
+        p.map(parallel_traj, self.source.particles)
+      except Exception as e:
+        print('Exception', e)
+      finally:
+        p.close()
+        p.join()
+      self.SaveParticles(l, traj=self.traj)
+      return True
 
   def SaveParticles(self, l, traj=False):
     """This function saves the initial and final particles' phase space 
