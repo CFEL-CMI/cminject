@@ -158,23 +158,11 @@ def natural_number(x):
     return x
 
 
-def main():
-    parser = argparse.ArgumentParser(prog='cminject',
-                                     formatter_class=argparse.MetavarTypeHelpFormatter)
-    parser.add_argument('-n', help='Number of particles', type=natural_number, required=True)
-    parser.add_argument('-v', help='Initial average velocity (in Z direction)', type=float, required=True)
-    parser.add_argument('-t', help='Store trajectories?', action='store_true')
-    parser.add_argument('-p', help='Do profiling? (CAUTION: generates lots of profiling dump files)',
-                        action='store_true')
-    parser.add_argument('-s', help='Run single threaded? CAUTION: Very slow, only for debugging purposes',
-                        action='store_true')
-    parser.add_argument('-o', help='Output filename for phase space (hdf5 format)', type=str, required=True)
-    parser.add_argument('-f', help='Flow field filename (hdf5 format)', type=str, required=True)
-    args = parser.parse_args()
-
-    result_list = run_example_experiment(vz=args.v, nof_particles=args.n,
-                                         track_trajectories=args.t, do_profiling=args.p,
-                                         single_threaded=args.s, flow_field_filename=args.f)
+def main(vz, nof_particles, track_trajectories, do_profiling, single_threaded, output_file, flow_field):
+    additional_results = {}
+    result_list = run_example_experiment(vz=vz, nof_particles=nof_particles, additional_results=additional_results,
+                                         track_trajectories=track_trajectories, do_profiling=do_profiling,
+                                         single_threaded=single_threaded, flow_field_filename=flow_field)
 
     # Construct final phase space
     phase_space = [particle.get_phase() for particle in result_list]
@@ -188,7 +176,7 @@ def main():
                 detector_hits[detector_id] += hits
 
     # Write final phase space, trajectories, and hits with phases at each detector
-    with h5py.File(args.o, 'w') as f:
+    with h5py.File(output_file, 'w') as f:
         f['particles'] = np.array(phase_space)
         # TODO this assumes all particles are the same
         f['particles'].attrs['description'] = result_list[0].get_phase_description()
@@ -204,12 +192,26 @@ def main():
             f[f'detector_hits/{detector_id}'] = np.array([hit.particle_phase for hit in hits])
             f[f'detector_hits/{detector_id}'].attrs['description'] = hits[0].particle_phase_description
 
-    print(f"Plotting {len(result_list)} particles...")
-    plot_particles(result_list, plot_trajectories=args.t)
+    #print(f"Plotting {len(result_list)} particles...")
+    #plot_particles(result_list, plot_trajectories=track_trajectories)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(prog='cminject',
+                                     formatter_class=argparse.MetavarTypeHelpFormatter)
+    parser.add_argument('-n', help='Number of particles', type=natural_number, required=True)
+    parser.add_argument('-v', help='Initial average velocity (in Z direction)', type=float, required=True)
+    parser.add_argument('-t', help='Store trajectories?', action='store_true')
+    parser.add_argument('-p', help='Do profiling? (CAUTION: generates lots of profiling dump files)',
+                        action='store_true')
+    parser.add_argument('-s', help='Run single threaded? CAUTION: Very slow, only for debugging purposes',
+                        action='store_true')
+    parser.add_argument('-o', help='Output filename for phase space (hdf5 format)', type=str, required=True)
+    parser.add_argument('-f', help='Flow field filename (hdf5 format)', type=str, required=True)
+    args = parser.parse_args()
+
+    main(vz=args.v, nof_particles=args.n, track_trajectories=args.t, do_profiling=args.p, single_threaded=args.s,
+         flow_field=args.f, output_file=args.o)
 
 
 """

@@ -17,12 +17,11 @@
 # <http://www.gnu.org/licenses/>.
 """
 
-from typing import Tuple, Optional, List, Type
+from typing import Tuple, Optional, List, Type, Dict, Any
 
 import numpy as np
 
 from cminject.experiment_refactored.definitions.base_classes import Particle, Boundary, Detector, Source, Calculator
-
 
 infinite_interval = (float('-inf'), float('inf'))
 
@@ -35,6 +34,40 @@ class TrajectoryCalculator(Calculator):
         particle.trajectory.append(
             np.concatenate([[time], particle.position, particle.velocity])
         )
+
+
+class DensityMapCalculator(Calculator):
+    def __init__(self,
+                 results: Dict[str, Any],
+                 extent: np.array,
+                 delta: float):
+        bins = np.ceil(extent / delta).astype('int64')
+        shape = bins[:, 1] - bins[:, 0]
+        results['density_map'] = np.zeros(shape, dtype='int64')
+
+        self.results = results
+        self.extent = extent
+        self.shape = shape
+        self.delta = delta
+
+        from scipy.interpolate import interp1d
+        interpolators = []
+        for i, axis in enumerate(extent):
+            x = axis
+            y = np.array([0, shape[i]-1])
+            interp = interp1d(x, y, kind='linear')
+            interpolators.append(interp)
+        self.interpolators = interpolators
+
+    def calculate(self, particle: Particle, time: float) -> None:
+        bin_ = np.round([
+            self.interpolators[i](particle.position[i])
+            for i in range(len(particle.position))
+        ]).astype(int)
+        try:
+            self.results['density_map'][bin_[0], bin_[1], bin_[2]] += 1
+        except IndexError:
+            pass
 
 
 class SimpleZBoundary(Boundary):
