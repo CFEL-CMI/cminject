@@ -166,8 +166,11 @@ class ZBoundedMixin(ABC):
     setup in the Z direction, and then allows an Experiment to make a fast preliminary calculation about whether it
     can consider a particle lost based on this.
     """
+    def __init__(self):
+        self.z_boundary = self._calculate_z_boundary()
+
     @abstractmethod
-    def get_z_boundary(self) -> Tuple[float, float]:
+    def _calculate_z_boundary(self) -> Tuple[float, float]:
         """
         Returns the Z boundary of this Z-bounded object.
         :return: A tuple of floats, the first entry being z_min, the second being z_max.
@@ -191,6 +194,7 @@ class Detector(ZBoundedMixin, ABC):
         :param identifier: A unique identifier for this detector. Used to find which hit occurred on which detector.
         """
         self.identifier = identifier
+        super().__init__()
 
     @abstractmethod
     def has_reached_detector(self, particle: Particle) -> bool:
@@ -264,16 +268,17 @@ class Device(ZBoundedMixin, ABC):
         """
         self.field = field
         self.boundary = boundary
+        super().__init__()
 
-    def get_z_boundary(self) -> Tuple[float, float]:
+    def _calculate_z_boundary(self) -> Tuple[float, float]:
         """
         Returns the Z boundary of this device. Defaults to returning a Z boundary encompassing both
         the device's Z boundary and the field's Z boundary, but should be overridden if a different
         Z boundary is required.
         :return: A (z_min, z_max) tuple as defined in ZBoundedMixin.
         """
-        field_boundary = self.field.get_z_boundary()
-        boundary = self.boundary.get_z_boundary()
+        field_boundary = self.field.z_boundary
+        boundary = self.boundary.z_boundary
         return min(field_boundary[0], boundary[0]), max(field_boundary[1], boundary[1])
 
     def is_particle_inside(self, particle: Particle) -> bool:

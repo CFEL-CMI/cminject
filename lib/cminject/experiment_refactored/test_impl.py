@@ -39,7 +39,7 @@ class GravityForceField(Field):
         self.g = 9.81  # m/s^2
         self.a = np.array([0, 0, -self.g])  # this force points downwards on the Z axis
 
-    def get_z_boundary(self) -> Tuple[float, float]:
+    def _calculate_z_boundary(self) -> Tuple[float, float]:
         return empty_interval
 
     def calculate_acceleration(self,
@@ -94,7 +94,7 @@ class ParticleTemperatureCalculator(Calculator):
 
 
 def run_example_experiment(vz, nof_particles, flow_field_filename,
-                           track_trajectories=False, do_profiling=False, single_threaded=False):
+                           track_trajectories=False, single_threaded=False):
     print("Setting up experiment...")
     print(f"The initial velocity of the particles is around {vz} m/s in Z direction.")
 
@@ -146,22 +146,15 @@ def run_example_experiment(vz, nof_particles, flow_field_filename,
 
     print(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
     print("Running experiment...")
-    result = experiment.run(do_profiling=do_profiling, single_threaded=single_threaded)
+    result = experiment.run(single_threaded=single_threaded)
     print("Done running experiment.")
     return result
 
 
-def natural_number(x):
-    x = int(x)
-    if x < 1:
-        raise argparse.ArgumentTypeError("Minimum is 1")
-    return x
-
-
-def main(vz, nof_particles, track_trajectories, do_profiling, single_threaded, output_file, flow_field):
-    result_list = run_example_experiment(vz=vz, nof_particles=nof_particles,
-                                         track_trajectories=track_trajectories, do_profiling=do_profiling,
-                                         single_threaded=single_threaded, flow_field_filename=flow_field)
+def main(vz, nof_particles, track_trajectories, single_threaded, output_file, flow_field):
+    result_list = run_example_experiment(vz=vz, nof_particles=nof_particles, flow_field_filename=flow_field,
+                                         track_trajectories=track_trajectories,
+                                         single_threaded=single_threaded)
 
     # Construct final phase space
     phase_space = [particle.get_phase() for particle in result_list]
@@ -196,20 +189,24 @@ def main(vz, nof_particles, track_trajectories, do_profiling, single_threaded, o
 
 
 if __name__ == '__main__':
+    def natural_number(x):
+        x = int(x)
+        if x < 1:
+            raise argparse.ArgumentTypeError("Minimum is 1")
+        return x
+
     parser = argparse.ArgumentParser(prog='cminject',
                                      formatter_class=argparse.MetavarTypeHelpFormatter)
     parser.add_argument('-n', help='Number of particles', type=natural_number, required=True)
     parser.add_argument('-v', help='Initial average velocity (in Z direction)', type=float, required=True)
     parser.add_argument('-t', help='Store trajectories?', action='store_true')
-    parser.add_argument('-p', help='Do profiling? (CAUTION: generates lots of profiling dump files)',
-                        action='store_true')
     parser.add_argument('-s', help='Run single threaded? CAUTION: Very slow, only for debugging purposes',
                         action='store_true')
     parser.add_argument('-o', help='Output filename for phase space (hdf5 format)', type=str, required=True)
     parser.add_argument('-f', help='Flow field filename (hdf5 format)', type=str, required=True)
     args = parser.parse_args()
 
-    main(vz=args.v, nof_particles=args.n, track_trajectories=args.t, do_profiling=args.p, single_threaded=args.s,
+    main(vz=args.v, nof_particles=args.n, track_trajectories=args.t, single_threaded=args.s,
          flow_field=args.f, output_file=args.o)
 
 

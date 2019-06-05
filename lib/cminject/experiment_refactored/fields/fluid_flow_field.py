@@ -64,6 +64,7 @@ class FluidFlowField(Field):
         x, y, z, data_grid = self._read_from_hdf5(self.filename)
         self.min_z, self.max_z = np.min(z), np.max(z)
         self.f_drag = RegularGridInterpolator((x, y, z), data_grid)
+        super().__init__()
 
     @staticmethod
     def _read_from_hdf5(filename: str) -> Tuple[np.array, np.array, np.array, np.array]:
@@ -78,13 +79,13 @@ class FluidFlowField(Field):
         f = self.calculate_drag_force(relative_velocity, pressure, particle)
         return f / particle.mass
 
-    def get_z_boundary(self) -> Tuple[float, float]:
-        return self.min_z, self.max_z
-
     def is_particle_inside(self, particle: Particle) -> bool:
         # NOTE/TODO: Particles are not able to leave the flow field and enter it again later!
         return self.min_z <= particle.position[2] <= self.max_z \
                and self.interpolate(particle, particle.time_of_flight)[2] > 0.0
+
+    def _calculate_z_boundary(self) -> Tuple[float, float]:
+        return self.min_z, self.max_z
 
     def interpolate(self, particle: Particle, time: float) -> Tuple[np.array, float, float]:
         """

@@ -1,15 +1,18 @@
+from typing import List
+
 import numpy as np
+from cminject.experiment_refactored.definitions.base_classes import Particle
 
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def plot_particles(experiment_result, plot_trajectories=False):
-    xs0, ys0, zs0 = [[p.initial_position[i] for p in experiment_result] for i in range(3)]
-    xs, ys, zs = [[p.position[i] for p in experiment_result] for i in range(3)]
+def plot_particles(particles: List[Particle], plot_trajectories=False):
+    xs0, ys0, zs0 = [[p.initial_position[i] for p in particles] for i in range(3)]
+    xs, ys, zs = [[p.position[i] for p in particles] for i in range(3)]
     color = [
         'red' if p.lost and not p.reached else 'green'
-        for p in experiment_result
+        for p in particles
     ]
 
     fig = plt.figure()
@@ -17,7 +20,7 @@ def plot_particles(experiment_result, plot_trajectories=False):
     plt.scatter(xs, ys, zs=zs, s=3, c=color)
     plt.scatter(xs0, ys0, zs=zs0, s=3, c='black')
 
-    for p in experiment_result:
+    for p in particles:
         for detector_id, hits in p.detector_hits.items():
             hits = np.array([hit.hit_position for hit in hits])
             plt.scatter(hits[:, 0], hits[:, 1], zs=hits[:, 2], s=10, color='yellow')

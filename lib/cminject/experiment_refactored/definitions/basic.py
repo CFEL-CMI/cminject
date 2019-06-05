@@ -78,7 +78,7 @@ class SimpleZBoundary(Boundary):
         self.z_max = z_max
         super().__init__()
 
-    def get_z_boundary(self) -> Tuple[float, float]:
+    def _calculate_z_boundary(self) -> Tuple[float, float]:
         return self.z_min, self.z_max
 
     def is_particle_inside(self, particle: Particle):
@@ -92,7 +92,7 @@ class CuboidBoundary(Boundary):
         self.z_min, self.z_max = z_minmax
         super().__init__()
 
-    def get_z_boundary(self) -> Tuple[float, float]:
+    def _calculate_z_boundary(self) -> Tuple[float, float]:
         return self.z_min, self.z_max
 
     def is_particle_inside(self, particle: Particle) -> bool:
@@ -102,7 +102,7 @@ class CuboidBoundary(Boundary):
 
 
 class InfiniteBoundary(Boundary):
-    def get_z_boundary(self) -> Tuple[float, float]:
+    def _calculate_z_boundary(self) -> Tuple[float, float]:
         return infinite_interval
 
     def is_particle_inside(self, particle: Particle) -> bool:
@@ -111,9 +111,9 @@ class InfiniteBoundary(Boundary):
 
 class SimpleZDetector(Detector):
     def __init__(self, identifier: int, z_position: float,):
-        super().__init__(identifier=identifier)
         self.z_position = z_position
         self.particle_distances = {}
+        super().__init__(identifier=identifier)
 
     def has_reached_detector(self, particle: Particle) -> bool:
         reached = False
@@ -133,7 +133,7 @@ class SimpleZDetector(Detector):
         y = y - v * t
         return np.array([x, y, self.z_position])
 
-    def get_z_boundary(self) -> Tuple[float, float]:
+    def _calculate_z_boundary(self) -> Tuple[float, float]:
         return self.z_position, self.z_position
 
 

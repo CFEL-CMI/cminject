@@ -46,7 +46,7 @@ def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], device
         return True
     else:
         for device in devices:
-            device_z_boundary = device.get_z_boundary()
+            device_z_boundary = device.z_boundary
             is_inside = device.is_particle_inside(particle)
             if is_inside:
                 # Particles inside devices are not considered lost
@@ -105,15 +105,6 @@ def simulate_particle(particle: Particle, devices: List[Device],
     return particle
 
 
-def profiling_wrapper(particle: Particle, *args, **kwargs):
-    result = None
-    prof = pprofile.Profile()
-    with prof():
-        result = simulate_particle(particle, *args, **kwargs)
-    prof.dump_stats("cachegrind.out.%d" % particle.identifier)
-    return result
-
-
 class Experiment:
     def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
                  calculators: List[Calculator] = None, dt: float = 1.0e-5, t_start: float = 0.0, t_end: float = 1.8,
@@ -156,15 +147,15 @@ class Experiment:
     def _gather_z_boundary(z_bounded_objects: List[ZBoundedMixin]):
         max_z, min_z = infinite_interval
         for obj in z_bounded_objects:
-            device_min_z, device_max_z = obj.get_z_boundary()
+            device_min_z, device_max_z = obj.z_boundary
             min_z = min(min_z, device_min_z)
             max_z = max(max_z, device_max_z)
 
         return min_z, max_z
 
-    def run_single_threaded(self, do_profiling=False):
-        simulate = partial(
-            (simulate_particle if not do_profiling else profiling_wrapper),
+    def _get_run_function(self):
+        return partial(
+            simulate_particle,
             devices=self.devices,
             t_start=self.t_start,
             t_end=self.t_end,
@@ -173,39 +164,25 @@ class Experiment:
             z_boundary=self.z_boundary,
             calculators=self.calculators
         )
+
+    def run_single_threaded(self):
+        simulate = self._get_run_function()
         result = map(simulate, self.particles)
         return list(result)
 
-    def run(self, do_profiling=False, single_threaded=False):
+    def run(self, single_threaded=False):
         if single_threaded:
-            return self.run_single_threaded(do_profiling=do_profiling)
+            return self.run_single_threaded()
 
         pool = Pool()
         try:
-            parallel_simulate = partial(
-                (simulate_particle if not do_profiling else profiling_wrapper),
-                devices=self.devices,
-                t_start=self.t_start,
-                t_end=self.t_end,
-                dt=self.dt,
-                detectors=self.detectors,
-                z_boundary=self.z_boundary,
-                calculators=self.calculators
-            )
-            chunksize = 10 if len(self.particles) > 50 else 1
-            result = pool.imap_unordered(parallel_simulate, self.particles, chunksize=chunksize)
+            parallel_simulate = self._get_run_function()
+            result = pool.map(parallel_simulate, self.particles)
         except Exception as e:
             raise e
         finally:
-            if do_profiling:
-                prof = pprofile.Profile()
-                with prof():
-                    pool.close()
-                    pool.join()
-                prof.dump_stats("cachegrind.out.main")
-            else:
-                pool.close()
-                pool.join()
+            pool.close()
+            pool.join()
 
         return list(result)
 
