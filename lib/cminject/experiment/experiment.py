@@ -75,7 +75,8 @@ class Experiment:
               beam=self.beam, detector=self.detector, tStart=tStart,
               tEnd=tEnd, dt=dt, zlim=self.Zlimit, l=l, traj=self.traj)
       results = list(map(single_traj, self.source.particles))
-      return l
+      self.SaveParticles(l, traj=self.traj)
+      return True
     else:
       print("Running on "+str(cpu_count())+" cores")
       try:
