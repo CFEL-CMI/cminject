@@ -28,8 +28,17 @@ from cminject.experiment_refactored.definitions.base_classes import Particle, So
     Calculator
 
 
-def calculate_v_and_a(time: float, position_and_velocity: np.array,
-                      particle: Particle, devices: List[Device]):
+def derivatives(time: float, position_and_velocity: np.array,
+                particle: Particle, devices: List[Device]) -> np.array:
+    """
+    Calculates the derivatives of position and velocity, which will then be integrated over.
+    "n" as used below is the number of the simulation's spatial dimensions.
+    :param time: The current simulation time in seconds
+    :param position_and_velocity: A (2n,) numpy array containing spatial position and velocity of the particle.
+    :param particle: The Particle instance.
+    :param devices: The list of devices that (might) affect this particle.
+    :return: A (2n,) numpy array containing velocity and acceleration of the particle.
+    """
     particle.position = position_and_velocity
     total_acceleration = np.zeros(3, dtype=float)
     for device in devices:
@@ -39,6 +48,13 @@ def calculate_v_and_a(time: float, position_and_velocity: np.array,
 
 
 def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], devices: List[Device]):
+    """
+    Decides whether a particle should be considered lost.
+    :param particle: The Particle instance.
+    :param z_boundary: The total Z boundary to consider
+    :param devices: The list of devices that the particle might potentially be in
+    :return:
+    """
     if particle.position[2] < z_boundary[0] or particle.position[2] > z_boundary[1]:
         # Particles that aren't within the experiment's total Z boundary are considered lost
         return True
@@ -59,9 +75,23 @@ def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], device
 
 def simulate_particle(particle: Particle, devices: List[Device],
                       detectors: List[Detector], calculators: List[Calculator],
-                      t_start: float, t_end: float, dt: float,
-                      z_boundary: Tuple[float, float]):
-    integral = ode(calculate_v_and_a)
+                      time_interval: Tuple[float, float, float],
+                      z_boundary: Tuple[float, float]) -> Particle:
+    """
+    Simulates the flight path of a single particle, with a list of devices that can affect the particle,
+    a list of detectors that can detect the particle, a list of calculators that can store additional results
+    on the particle, a time interval to simulate the particle for, and a Z boundary to simulate the particle within.
+    :param particle: The particle instance.
+    :param devices: The list of devices.
+    :param detectors: The list of detectors.
+    :param calculators: The list of calculators.
+    :param time_interval: The time interval of the simulation.
+    :param z_boundary: The Z boundary of the simulation.
+    :return: A modified version of the particle instance after the simulation has ended.
+    """
+    t_start, t_end, dt = time_interval
+
+    integral = ode(derivatives)
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(particle.position, t_start)
     integral.set_f_params(particle, devices)
@@ -128,14 +158,15 @@ class Experiment:
         self.calculators = calculators
 
         # Store the time interval
-        self.t_start, self.t_end, self.dt = time_interval
+        self.time_interval = time_interval
 
         # Initialise list of particles from all sources
         particle_types = set()
         self.particles = []
         for source in self.sources:
-            source_particles = source.generate_particles(self.t_start)
+            source_particles = source.generate_particles(self.time_interval[0])  # 0 is t_start
             if source_particles:
+                # FIXME assuming a source only generates one particle type
                 particle_types.add(type(source_particles[0]))
             self.particles += source_particles
         if len(particle_types) > 1:
@@ -199,9 +230,7 @@ class Experiment:
         return partial(
             simulate_particle,
             devices=self.devices,
-            t_start=self.t_start,
-            t_end=self.t_end,
-            dt=self.dt,
+            time_interval=self.time_interval,
             detectors=self.detectors,
             z_boundary=self.z_boundary,
             calculators=self.calculators
