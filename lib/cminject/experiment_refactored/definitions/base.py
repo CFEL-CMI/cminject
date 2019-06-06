@@ -22,6 +22,15 @@ from typing import Tuple, List, Any, Optional, Dict
 
 import numpy as np
 
+"""
+An interval with no (with impossible) extent. Should be used to describe the boundary of an object
+along an axis that has no extent along this axis.
+"""
+empty_interval = (float('inf'), float('-inf'))
+
+"An interval with infinite extent."
+infinite_interval = (float('-inf'), float('inf'))
+
 
 class ParticleDetectorHit(object):
     """
@@ -302,28 +311,32 @@ class Device(ZBounded, ABC):
         return self.boundary.is_particle_inside(particle)
 
 
-class Calculator(ABC):
+class PropertyUpdater(ABC):
     """
-    An object to do and store arbitrary calculations based on a Particle's properties and the current time.
+    An object to update a Particle's properties based on its current state. Can do arbitrary calculations to determine
+    the values the properties should be set to.
 
     Should be used for all calculations of additional quantities beyond calculating an acceleration, so,
-    beyond what a Field returns. For example, TrajectoryCalculator is a simple calculator that just takes the position
-    and appends it to the `trajectory` property on the particle.
+    beyond what a Field returns. For example, TrajectoryPropertyUpdater is a simple PropertyUpdater that just takes the
+    position and appends it to the `trajectory` property on the particle.
 
-    The `calculate` method is guaranteed by `Experiment` to be called exactly once per time step, as long as the
-    particle is still being simulated.
-
-    Taking care to avoid data clashes (different calculators writing on the same property on a particle, overwriting
-    each others' results) is up to the user / implementer.
+    The :method:`update` method is guaranteed by `Experiment` to be called exactly once per time step (as long as the
+    particle is still being simulated).
 
     If you need access to properties of fields, detectors, etc., override the __init__ method and store a reference
-    to each relevant object at construction of the Calculator instance.
+    to each relevant object at construction of the PropertyUpdater instance.
+
+    NOTE:
+        Taking care to avoid data clashes (different property updaters writing on the same property on a particle,
+        overwriting each others' results) is up to the user / implementer. This cannot be avoided in a general way.
+        If you know that another PropertyUpdater instance is writing to a specific particle property, don't write to it
+        too, unless you know the order of execution of the PropertyUpdaters and are doing this completely intentionally.
     """
     @abstractmethod
-    def calculate(self, particle: Particle, time: float) -> None:
+    def update(self, particle: Particle, time: float) -> None:
         """
-        Does a calculation. Should store its result on the particle.
-        :param particle: The Particle in its current state.
+        Updates a property of some Particle instance in some way.
+        :param particle: The Particle instance.
         :param time: The current time.
         :return: Nothing.
         """

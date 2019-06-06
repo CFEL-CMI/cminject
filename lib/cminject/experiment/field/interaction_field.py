@@ -6,7 +6,7 @@ from scipy.integrate import quad, dblquad
 import numpy as np
 from math import exp, sqrt, pi
 from cminject.experiment.field.reader import *
-from cminject.experiment_refactored.tools.comsol_hdf5_tools import hdf5_to_data_grid
+from cminject.experiment_refactored.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
 
 class Fluid:
    """If the interaction field is EM field then the set_method function here will be used"""

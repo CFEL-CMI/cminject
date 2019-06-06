@@ -2,14 +2,14 @@ from functools import partial
 from typing import Tuple
 
 import numpy as np
-from cminject.experiment_refactored.definitions.basic import ThermallyConductiveSphericalParticle
+from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.experiment_refactored.fields.fluid_flow_field import FluidFlowField
 from scipy.integrate import dblquad
 from scipy.constants import R, pi
 
 import cmath  # TODO can't we do this with np?
 
-from cminject.experiment_refactored.definitions.base_classes import Field, Particle
+from cminject.experiment_refactored.definitions.base import Field, Particle
 
 
 class PhotophoreticLaserField(Field):

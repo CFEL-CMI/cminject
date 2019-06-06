@@ -18,7 +18,7 @@
 """
 import argparse
 
-from cminject.experiment_refactored.tools.comsol_hdf5_tools import txt_to_hdf5
+from cminject.experiment_refactored.tools.structured_txt_hdf5_tools import txt_to_hdf5
 
 
 def main():

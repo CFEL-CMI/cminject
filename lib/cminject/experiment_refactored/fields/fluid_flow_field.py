@@ -22,9 +22,9 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from scipy.constants import pi, Avogadro, Boltzmann, R
 
-from cminject.experiment_refactored.definitions.base_classes import Field, Particle
-from cminject.experiment_refactored.definitions.basic import SphericalParticle, ThermallyConductiveSphericalParticle
-from cminject.experiment_refactored.tools.comsol_hdf5_tools import hdf5_to_data_grid
+from cminject.experiment_refactored.definitions.base import Field, Particle
+from cminject.experiment_refactored.definitions.particles import SphericalParticle, ThermallyConductiveSphericalParticle
+from cminject.experiment_refactored.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
 
 
 class FluidFlowField(Field):

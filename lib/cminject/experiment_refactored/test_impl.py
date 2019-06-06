@@ -23,12 +23,15 @@ from typing import Tuple
 import numpy as np
 import h5py
 
-from cminject.experiment_refactored.definitions.experiment import Experiment
-from cminject.experiment_refactored.definitions.base_classes import \
-    Particle, Field, Device, Calculator
-from cminject.experiment_refactored.definitions.basic import \
-    SimpleZBoundary, SimpleZDetector, GaussianSphericalSource, \
-    ThermallyConductiveSphericalParticle, TrajectoryCalculator
+from cminject.experiment_refactored.experiment import Experiment
+from cminject.experiment_refactored.definitions.base import \
+    Particle, Device
+from cminject.experiment_refactored.definitions.property_updaters import TrajectoryPropertyUpdater, \
+    ParticleTemperaturePropertyUpdater
+from cminject.experiment_refactored.definitions.sources import GaussianSphericalSource
+from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
+from cminject.experiment_refactored.definitions.detectors import SimpleZDetector
+from cminject.experiment_refactored.definitions.boundaries import SimpleZBoundary
 from cminject.experiment_refactored.fields.fluid_flow_field import FluidFlowField
 from cminject.experiment_refactored.visualization.plot import plot_particles
 
@@ -48,25 +51,6 @@ class FluidFlowFieldDevice(Device):
 
     def is_particle_inside(self, particle: Particle) -> bool:
         return self.field.is_particle_inside(particle)
-
-
-class ParticleTemperatureCalculator(Calculator):
-    def __init__(self, field: FluidFlowField, dt: float):
-        self.field: FluidFlowField = field
-        self.dt: float = dt
-
-    def calculate(self, particle: ThermallyConductiveSphericalParticle, time: float) -> None:
-        if self.field.is_particle_inside(particle):
-            t = self.field.calc_particle_temperature(particle, time)
-            n_c, t_c = self.field.calc_particle_collisions(particle, self.dt, time)
-
-            particle.collision_temperature = t_c
-            particle.temperature = t
-
-            if t <= 77.0 and not np.isfinite(particle.time_to_liquid_n):
-                particle.time_to_liquid_n = time
-            if t_c <= 77.0 and not np.isfinite(particle.collision_time_to_liquid_n):
-                particle.collision_time_to_liquid_n = time
 
 
 def run_example_experiment(vz, nof_particles, flow_field_filename,
@@ -101,9 +85,9 @@ def run_example_experiment(vz, nof_particles, flow_field_filename,
         )
     ]
 
-    calculators = [TrajectoryCalculator()] if track_trajectories else []
-    calculators += [
-        ParticleTemperatureCalculator(
+    property_updaters = [TrajectoryPropertyUpdater()] if track_trajectories else []
+    property_updaters += [
+        ParticleTemperaturePropertyUpdater(
             field=devices[0].field,
             dt=dt
         )
@@ -113,7 +97,7 @@ def run_example_experiment(vz, nof_particles, flow_field_filename,
         devices=devices,
         detectors=detectors,
         sources=sources,
-        calculators=calculators,
+        property_updaters=property_updaters,
         time_interval=(t_start, t_end, dt),
         delta_z_end=0.001
     )

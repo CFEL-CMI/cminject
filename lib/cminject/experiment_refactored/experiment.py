@@ -23,13 +23,12 @@ from functools import partial
 import numpy as np
 from scipy.integrate import ode
 
-from cminject.experiment_refactored.definitions.basic import infinite_interval
-from cminject.experiment_refactored.definitions.base_classes import Particle, Source, Device, Detector, ZBounded, \
-    Calculator
+from cminject.experiment_refactored.definitions.base import Particle, Source, Device, Detector, ZBounded, \
+    PropertyUpdater, infinite_interval
 
 
-def derivatives(time: float, position_and_velocity: np.array,
-                particle: Particle, devices: List[Device]) -> np.array:
+def spatial_derivatives(time: float, position_and_velocity: np.array,
+                        particle: Particle, devices: List[Device]) -> np.array:
     """
     Calculates the derivatives of position and velocity, which will then be integrated over.
     "n" as used below is the number of the simulation's spatial dimensions.
@@ -74,32 +73,32 @@ def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], device
 
 
 def simulate_particle(particle: Particle, devices: List[Device],
-                      detectors: List[Detector], calculators: List[Calculator],
+                      detectors: List[Detector], property_updaters: List[PropertyUpdater],
                       time_interval: Tuple[float, float, float],
                       z_boundary: Tuple[float, float]) -> Particle:
     """
     Simulates the flight path of a single particle, with a list of devices that can affect the particle,
-    a list of detectors that can detect the particle, a list of calculators that can store additional results
+    a list of detectors that can detect the particle, a list of property updaters that can store additional results
     on the particle, a time interval to simulate the particle for, and a Z boundary to simulate the particle within.
     :param particle: The particle instance.
     :param devices: The list of devices.
     :param detectors: The list of detectors.
-    :param calculators: The list of calculators.
+    :param property_updaters: The list of property_updaters.
     :param time_interval: The time interval of the simulation.
     :param z_boundary: The Z boundary of the simulation.
     :return: A modified version of the particle instance after the simulation has ended.
     """
     t_start, t_end, dt = time_interval
 
-    integral = ode(derivatives)
+    integral = ode(spatial_derivatives)
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(particle.position, t_start)
     integral.set_f_params(particle, devices)
     print(f"\tSimulating particle {particle.identifier}...")
 
-    # Run all calculators once with the start time
-    for calculator in calculators:
-        calculator.calculate(particle, t_start)
+    # Run all property updaters once with the start time
+    for property_updater in property_updaters:
+        property_updater.update(particle, t_start)
 
     while integral.successful() and integral.t < t_end and not particle.lost:
         # Check conditions for having lost particle.
@@ -110,9 +109,9 @@ def simulate_particle(particle: Particle, devices: List[Device],
             particle.position = integral_result
             particle.time_of_flight = integral.t
 
-            # - Run all calculators for the particle with the current integral time
-            for calculator in calculators:
-                calculator.calculate(particle, integral.t)
+            # - Run all property updaters for the particle with the current integral time
+            for property_updater in property_updaters:
+                property_updater.update(particle, integral.t)
 
             # - Have each detector try to detect the particle
             for detector in detectors:
@@ -132,7 +131,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
 
 class Experiment:
     def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
-                 calculators: List[Calculator] = None, time_interval: Tuple[float, float, float] = (0.0, 1.8, 1.0e-6),
+                 property_updaters: List[PropertyUpdater] = None, time_interval: Tuple[float, float, float] = (0.0, 1.8, 1.0e-6),
                  z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0):
         """
         Construct an Experiment to run.
@@ -140,7 +139,8 @@ class Experiment:
         :param sources: The list of Sources that generate particles. Note that for both simulation and storage reasons,
         having different sources generate different types of particles for one Experiment is not allowed.
         :param detectors: The list of Detectors in the experimental setup.
-        :param calculators: The list of Calculators used to update different properties on the particles in each step.
+        :param property_updaters: The list of PropertyUpdaters used to update different properties on the particles
+        in each step.
         :param time_interval: The time interval to run the experiment in, in the shape of (`t_start`, `t_end`, `dt`).
         The simulation will run in the time interval [`t_start`, `t_end`] with time step `dt`.
         :param z_boundary: (Optional) If passed, the Z boundary of the entire experimental setup. Particles will not
@@ -155,7 +155,7 @@ class Experiment:
         self.devices = devices
         self.sources = sources
         self.detectors = detectors
-        self.calculators = calculators
+        self.property_updaters = property_updaters
 
         # Store the time interval
         self.time_interval = time_interval
@@ -233,7 +233,7 @@ class Experiment:
             time_interval=self.time_interval,
             detectors=self.detectors,
             z_boundary=self.z_boundary,
-            calculators=self.calculators
+            property_updaters=self.property_updaters
         )
 
 

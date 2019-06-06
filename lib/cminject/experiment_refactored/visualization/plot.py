@@ -1,7 +1,7 @@
 from typing import List
 
 import numpy as np
-from cminject.experiment_refactored.definitions.base_classes import Particle
+from cminject.experiment_refactored.definitions.base import Particle
 
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
