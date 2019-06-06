@@ -18,19 +18,30 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Tuple, List, Any, Optional, Dict, Set
+from typing import Tuple, List, Any, Optional, Dict
 
 import numpy as np
 
 
-class DetectorHit(object):
-    def __init__(self, detector_identifier: int, hit_position: np.array, particle: "Particle"):
-        self.particle = particle
-        self.particle_phase = np.concatenate([particle.get_phase(), hit_position])
-        self.particle_phase_description = particle.get_phase_description() + ['x_d', 'y_d', 'z_d']
+class ParticleDetectorHit(object):
+    """
+    A small data container class, to store useful information about a hit of a particle on a detector.
 
-        self.detector_identifier = detector_identifier  # TODO store ref to detector instead?
-        self.hit_position = hit_position
+    Contains :attr:`full_properties`, which is a full description of the particle's state starting with the hit position
+    on the detector as a numpy array, and :attr:`full_properties_description`, which is a string list matching
+    :attr:`full_properties` in size and describing each scalar stored in the array.
+    """
+    def __init__(self, hit_position: np.array, particle: 'Particle'):
+        self.full_properties = np.concatenate([hit_position, particle.properties])
+        self.full_properties_description = ['x_d', 'y_d', 'z_d'] + particle.properties_description
+
+    @property
+    def hit_position(self) -> np.array:
+        """
+        The position where the detector detected the particle hit.
+        :return: The position of the hit.
+        """
+        return self.full_properties[:3]
 
 
 class Particle(ABC):
@@ -53,22 +64,20 @@ class Particle(ABC):
       - trajectory (a list describing points in the particle's path)
     """
     def __init__(self, identifier: Any, start_time: float,
-                 position: np.array, velocity: np.array):
+                 position: np.array):
         """
         The constructor for Particle.
         :param identifier: The unique identifier the particle should have.
-        :param start_time: The time the particle starts at.
-        :param position: The position the particle starts at.
-        :param velocity: The velocity the particle starts with.
+        :param start_time: The time the particle starts being simulated at.
+        :param position: The phase space position (n-D position and velocity) the particle starts at.
+               A (2*n,) dimensional vector, where n is the number of spatial dimensions.
         """
         self.identifier: int = identifier
         self.lost: bool = False
-        self.detector_hits: Dict[int, List[DetectorHit]] = {}
         self.position: np.array = np.copy(position)
         self.initial_position: np.array = np.copy(position)
-        self.velocity: np.array = np.copy(velocity)
-        self.initial_velocity: np.array = np.copy(velocity)
         self.trajectory: List[np.array] = []
+        self.detector_hits: Dict[int, List['ParticleDetectorHit']] = {}
         self.mass: float = self.calculate_mass()
         self.time_of_flight: float = start_time
 
@@ -81,54 +90,37 @@ class Particle(ABC):
         """
         pass
 
+    @property
     @abstractmethod
-    def get_phase(self) -> np.array:
+    def properties(self) -> np.array:
         """
-        An abstract method that subclasses must implement to return the current phase of this particle, i.e. a
-        numpy array of particle properties that describe the particle's current state in a way that is useful
-        to the problem domain.
+        An abstract property that subclasses must implement to return the current properties of this particle:
+        A (n,)-dimensional numpy array of all properties - beyond the usual phase space position (position+velocity) -
+        that describe the particle's current state in a way that is useful to the problem domain.
 
-        This phase will be calculated and stored on each detector hit automatically (unless store_hit is overridden).
+        The result of this will be calculated and stored on each detector hit automatically,
+        with the phase space position (particle.position) prepended to the front of the array.
 
-        The size of the returned array must match the length of the list returned by `get_phase_description`.
+        The size of the returned array MUST match the length of the list returned by `properties_description`.
         :return: A numpy array describing the particle's current phase.
         """
         pass
 
+    @property
     @abstractmethod
-    def get_phase_description(self) -> List[str]:
+    def properties_description(self) -> List[str]:
         """
-        Returns a list of strings matching what get_phase() returns, describing each value in the phase array
-        in some manner (most likely using standard one-letter abbreviations like x,y,z,T,...).
+        Returns a list of strings matching what .properties returns, describing each value in the array
+        in some manner (most likely using standard physical abbreviations like rho, phi, T, k, ...).
 
-        The size of the returned list must match the size of the array returned by `get_phase`.
+        The size of the returned list must match the size of the numpy array returned by `properties`.
         :return: See above.
         """
         pass
 
-    def store_hit(self, detector_identifier: int, position: np.array) -> None:
-        """
-        Stores a hit on a detector within detector_hits.
-        :param detector_identifier: The identifier of the detector. Should be unique, otherwise there'll be data clashes
-        :param position: The position where the particle hit the detector.
-        The particle is passed the position instead of calculating it because it's up to the detector to decide
-        when and where a particle has hit it:
-        Some detectors might do interpolation of the last position, and they might do it in different ways.
-        :return: None
-        """
-        hit = DetectorHit(
-            particle=self,
-            detector_identifier=detector_identifier,
-            hit_position=position
-        )
-        if detector_identifier in self.detector_hits:
-            self.detector_hits[detector_identifier].append(hit)
-        else:
-            self.detector_hits[detector_identifier] = [hit]
-
     @property
-    def reached(self):
-        return self.detector_hits
+    def reached_any_detector(self):
+        return not not self.detector_hits  # `not not` to convert to boolean, to not leak data here
 
     def __str__(self):
         return f"<{self.__class__.__name__} #{self.identifier}>"
@@ -136,8 +128,10 @@ class Particle(ABC):
 
 class Source(ABC):
     """
-    A source of particles. One can implement sources following different distributions
-    by subclassing this class and implementing generate_particles however they want.
+    A source of particles, to generate an initial phase space.
+
+    One can implement sources following different distributions and generating different particle types by subclassing
+    this class and implementing generate_particles however they want.
     """
     def __init__(self, position: np.array):
         """
@@ -157,7 +151,7 @@ class Source(ABC):
         pass
 
 
-class ZBoundedMixin(ABC):
+class ZBounded(ABC):
     """
     A mixin for objects in an experiment setup that are bounded in the Z direction.
     Classes deriving from this mixin will have to implement the get_z_boundary method.
@@ -166,11 +160,10 @@ class ZBoundedMixin(ABC):
     setup in the Z direction, and then allows an Experiment to make a fast preliminary calculation about whether it
     can consider a particle lost based on this.
     """
-    def __init__(self):
-        self.z_boundary = self._calculate_z_boundary()
 
+    @property
     @abstractmethod
-    def _calculate_z_boundary(self) -> Tuple[float, float]:
+    def z_boundary(self) -> Tuple[float, float]:
         """
         Returns the Z boundary of this Z-bounded object.
         :return: A tuple of floats, the first entry being z_min, the second being z_max.
@@ -178,7 +171,7 @@ class ZBoundedMixin(ABC):
         pass
 
 
-class Detector(ZBoundedMixin, ABC):
+class Detector(ZBounded, ABC):
     """
     Can tell whether a Particle has hit it, and _if_ it has hit it, can also tell where this occurred.
 
@@ -196,17 +189,34 @@ class Detector(ZBoundedMixin, ABC):
         self.identifier = identifier
         super().__init__()
 
-    @abstractmethod
-    def has_reached_detector(self, particle: Particle) -> bool:
+    def try_to_detect(self, particle: Particle) -> bool:
         """
-        Tells whether a Particle has reached this Detector. Must return True/False.
+        Tries to detect a particle.
+
+        If the particle is considered having hit the detector ("could be detected")
+        based on its current state, then a DetectorHit is stored on the particle's `detector_hits` property
+        and True is returned. Otherwise, this function has no effect and returns False.
         :param particle: A Particle instance.
         :return: True if the particle has reached this detector, False otherwise.
         """
+        if self._has_particle_reached_detector(particle):
+            hit_position = self._hit_position(particle)
+            hit = ParticleDetectorHit(hit_position=hit_position, particle=particle)
+            if self.identifier in particle.detector_hits:
+                particle.detector_hits[self.identifier].append(hit)
+            else:
+                particle.detector_hits[self.identifier] = [hit]
+            return True
+        else:
+            return False
+
+    @abstractmethod
+    def _has_particle_reached_detector(self, particle: Particle) -> bool:
+        """Tells whether a Particle has reached this Detector. Must return True/False."""
         pass
 
     @abstractmethod
-    def get_hit_position(self, particle: Particle) -> Optional[np.array]:
+    def _hit_position(self, particle: Particle) -> Optional[np.array]:
         """
         Can return a hit position on this detector for a Particle, but might
         also return None (if the Particle isn't considered having reached this detector).
@@ -217,7 +227,7 @@ class Detector(ZBoundedMixin, ABC):
         pass
 
 
-class Boundary(ZBoundedMixin, ABC):
+class Boundary(ZBounded, ABC):
     """
     Can tell whether a Particle is inside of it or not.
     Making the total set of Boundary objects in an experiment closed is - for now - the job of the person implementing
@@ -234,7 +244,7 @@ class Boundary(ZBoundedMixin, ABC):
         pass
 
 
-class Field(ZBoundedMixin, ABC):
+class Field(ZBounded, ABC):
     """
     A Field interacting with Particle objects.
     """
@@ -252,7 +262,7 @@ class Field(ZBoundedMixin, ABC):
         pass
 
 
-class Device(ZBoundedMixin, ABC):
+class Device(ZBounded, ABC):
     """
     A combination of one Field instance and one Boundary instance.
     Used to model real-world devices in an experiment setup.

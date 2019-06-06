@@ -19,9 +19,6 @@ class PhotophoreticLaserField(Field):
         self.lambda_ = lambda_
         self.radius = radius
 
-    def get_z_boundary(self) -> Tuple[float, float]:
-        pass  # TODO
-
     def calculate_acceleration(self,
                                particle: ThermallyConductiveSphericalParticle,
                                time: float) -> np.array:
@@ -57,7 +54,7 @@ class PhotophoreticLaserField(Field):
         """
         incident_angle = np.arcsin(np.sqrt(x**2 + y**2))
         if incident_angle != 0:
-            transmit_angle = cmath.asin(np.sin(incident_angle) / nt)
+            transmit_angle = cmath.asin(np.sin(incident_angle) / refraction_index)
             delta_angle = incident_angle - transmit_angle
             total_angle = incident_angle + transmit_angle
             p = 1 - abs(cmath.tan(delta_angle) / cmath.tan(total_angle))**2
@@ -114,3 +111,7 @@ class PhotophoreticLaserField(Field):
 
         factor = d * particle.radius**2 * fl.pressure / (2 * particle.thermal_conductivity * char_p)
         return diff_transverse * factor, diff_axial * factor
+
+    @property
+    def z_boundary(self) -> Tuple[float, float]:
+        pass  # TODO

@@ -32,7 +32,7 @@ empty_interval = (float('inf'), float('-inf'))
 class TrajectoryCalculator(Calculator):
     def calculate(self, particle: Particle, time: float) -> None:
         particle.trajectory.append(
-            np.concatenate([[time], particle.position, particle.velocity])
+            np.concatenate([[time], particle.position])
         )
 
 
@@ -71,29 +71,28 @@ class DensityMapCalculator(Calculator):
 
 
 class SimpleZBoundary(Boundary):
-    def __init__(self, z_min, z_max):
+    def __init__(self, z_minmax: Tuple[float, float]):
+        z_min, z_max = z_minmax
         if z_min > z_max:
             raise ValueError("z_min must be < z_max!")
         self.z_min = z_min
         self.z_max = z_max
+        self._z_boundary = (z_min, z_max)
         super().__init__()
 
-    def _calculate_z_boundary(self) -> Tuple[float, float]:
-        return self.z_min, self.z_max
+    @property
+    def z_boundary(self) -> Tuple[float, float]:
+        return self._z_boundary
 
     def is_particle_inside(self, particle: Particle):
         return self.z_min <= particle.position[2] <= self.z_max
 
 
-class CuboidBoundary(Boundary):
+class CuboidBoundary(SimpleZBoundary):
     def __init__(self, x_minmax: Tuple[float, float], y_minmax: Tuple[float, float], z_minmax: Tuple[float, float]):
         self.x_min, self.x_max = x_minmax
         self.y_min, self.y_max = y_minmax
-        self.z_min, self.z_max = z_minmax
-        super().__init__()
-
-    def _calculate_z_boundary(self) -> Tuple[float, float]:
-        return self.z_min, self.z_max
+        super().__init__(z_minmax)
 
     def is_particle_inside(self, particle: Particle) -> bool:
         return self.x_min <= particle.position[0] <= self.x_max and\
@@ -102,7 +101,8 @@ class CuboidBoundary(Boundary):
 
 
 class InfiniteBoundary(Boundary):
-    def _calculate_z_boundary(self) -> Tuple[float, float]:
+    @property
+    def z_boundary(self) -> Tuple[float, float]:
         return infinite_interval
 
     def is_particle_inside(self, particle: Particle) -> bool:
@@ -112,10 +112,11 @@ class InfiniteBoundary(Boundary):
 class SimpleZDetector(Detector):
     def __init__(self, identifier: int, z_position: float,):
         self.z_position = z_position
+        self._z_boundary = (z_position, z_position)
         self.particle_distances = {}
         super().__init__(identifier=identifier)
 
-    def has_reached_detector(self, particle: Particle) -> bool:
+    def _has_particle_reached_detector(self, particle: Particle) -> bool:
         reached = False
         prev_distance = self.particle_distances.get(particle.identifier, None)
         curr_distance = particle.position[2] - self.z_position
@@ -124,17 +125,17 @@ class SimpleZDetector(Detector):
         self.particle_distances[particle.identifier] = curr_distance
         return reached
 
-    def get_hit_position(self, particle: Particle) -> Optional[np.array]:
-        x, y, z = particle.position
-        u, v, w = particle.velocity
+    def _hit_position(self, particle: Particle) -> Optional[np.array]:
+        x, y, z, u, v, w = particle.position
         d = abs(z) - abs(self.z_position)
         t = d / abs(w)
         x = x - u * t
         y = y - v * t
         return np.array([x, y, self.z_position])
 
-    def _calculate_z_boundary(self) -> Tuple[float, float]:
-        return self.z_position, self.z_position
+    @property
+    def z_boundary(self) -> Tuple[float, float]:
+        return self._z_boundary
 
 
 class SphericalParticle(Particle):
@@ -151,7 +152,8 @@ class SphericalParticle(Particle):
     def calculate_mass(self) -> float:
         return self.rho * 4 / 3 * np.pi * (self.radius ** 3)
 
-    def get_phase(self) -> np.array:
+    @property
+    def properties(self) -> np.array:
         return np.concatenate([
             [
                 self.identifier,
@@ -160,25 +162,20 @@ class SphericalParticle(Particle):
                 self.mass
             ],
             self.initial_position,
-            self.initial_velocity,
-            self.position,
-            self.velocity,
         ])
 
-    def get_phase_description(self) -> List[str]:
+    @property
+    def properties_description(self) -> List[str]:
         return [
             'ID', 't', 'r', 'm',
-            'x_i', 'y_i', 'z_i',
-            'u_i', 'v_i', 'w_i',
-            'x', 'y', 'z',
-            'u', 'v', 'w'
+            'x_i', 'y_i', 'z_i', 'u_i', 'v_i', 'w_i',
         ]
 
 
 class ThermallyConductiveSphericalParticle(SphericalParticle):
     """
     Lacking a better name (so far), this class extends on the SphericalParticle with a thermal conductivity
-    that is required by e.g. the photophoretic force.
+    that is required by e.g. the photophoretic force and for thermal calculations.
     """
     def __init__(self, *args,
                  thermal_conductivity: float = 6.3,
@@ -192,8 +189,9 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
         self.collision_time_to_liquid_n = float('inf')
         super().__init__(*args, **kwargs)
 
-    def get_phase(self) -> np.array:
-        basic_phase = super().get_phase()
+    @property
+    def properties(self) -> np.array:
+        basic_phase = super().properties
         return np.concatenate([
             basic_phase,
             [
@@ -204,9 +202,9 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
             ]
         ])
 
-    def get_phase_description(self) -> List[str]:
-        basic_phase_description = super().get_phase_description()
-        return basic_phase_description + [
+    @property
+    def properties_description(self) -> List[str]:
+        return super().properties_description + [
             'T', 'T_c', 't_Ln', 't_Ln_c'
         ]
 
@@ -216,7 +214,7 @@ class GaussianSphericalSource(Source):
     A Source generating a Gaussian distribution of SphericalParticles wrt position, velocity and radius.
 
     By passing `subclass` and any additional arguments to __init__, this class can also generate instances of
-    any subclass of SphericalParticle. The additional args will not be Gaussian distributed, but fixed values.
+    any subclass of SphericalParticle. Note that the additional args will not be Gaussian distributed, but fixed values.
     """
     def __init__(self,
                  number_of_particles: int,
@@ -262,8 +260,7 @@ class GaussianSphericalSource(Source):
         self.particles = [
             self.subclass(
                 identifier=i,
-                position=np.array([x[i], y[i], z[i]]),
-                velocity=np.array([vx[i], vy[i], vz[i]]),
+                position=np.array([x[i], y[i], z[i], vx[i], vy[i], vz[i]]),
                 start_time=start_time,
                 radius=r[i],
                 rho=self.rho,

@@ -11,7 +11,7 @@ def plot_particles(particles: List[Particle], plot_trajectories=False):
     xs0, ys0, zs0 = [[p.initial_position[i] for p in particles] for i in range(3)]
     xs, ys, zs = [[p.position[i] for p in particles] for i in range(3)]
     color = [
-        'red' if p.lost and not p.reached else 'green'
+        'red' if p.lost and not p.reached_any_detector else 'green'
         for p in particles
     ]
 

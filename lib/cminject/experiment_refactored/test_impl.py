@@ -18,7 +18,7 @@
 """
 
 import argparse
-from typing import List, Tuple
+from typing import Tuple
 
 import numpy as np
 import h5py
@@ -28,46 +28,22 @@ from cminject.experiment_refactored.definitions.base_classes import \
     Particle, Field, Device, Calculator
 from cminject.experiment_refactored.definitions.basic import \
     SimpleZBoundary, SimpleZDetector, GaussianSphericalSource, \
-    ThermallyConductiveSphericalParticle, CuboidBoundary, empty_interval, TrajectoryCalculator
+    ThermallyConductiveSphericalParticle, TrajectoryCalculator
 from cminject.experiment_refactored.fields.fluid_flow_field import FluidFlowField
 from cminject.experiment_refactored.visualization.plot import plot_particles
 
 
-class GravityForceField(Field):
-    def __init__(self):
-        super().__init__()
-        self.g = 9.81  # m/s^2
-        self.a = np.array([0, 0, -self.g])  # this force points downwards on the Z axis
-
-    def _calculate_z_boundary(self) -> Tuple[float, float]:
-        return empty_interval
-
-    def calculate_acceleration(self,
-                               position_and_velocity: np.array,
-                               time: float,
-                               particle: Particle = None) -> np.array:
-        return self.a
-
-
-class ExampleDevice(Device):
-    def __init__(self):
-        super().__init__(
-            field=GravityForceField(),
-            boundary=CuboidBoundary(
-                (-0.1, 0.1),
-                (-0.1, 0.1),
-                (-0.1, 0.1)
-            )
-        )
-
-
 class FluidFlowFieldDevice(Device):
+    @property
+    def z_boundary(self) -> Tuple[float, float]:
+        return self.boundary.z_boundary
+
     def __init__(self, filename: str, density: float, dynamic_viscosity: float, scale_slip: float):
         self.field: FluidFlowField = FluidFlowField(
             filename=filename,
             density=density, dynamic_viscosity=dynamic_viscosity, scale_slip=scale_slip
         )
-        self.boundary: SimpleZBoundary = SimpleZBoundary(self.field.min_z, self.field.max_z)
+        self.boundary: SimpleZBoundary = SimpleZBoundary((self.field.min_z, self.field.max_z))
         super().__init__(field=self.field, boundary=self.boundary)
 
     def is_particle_inside(self, particle: Particle) -> bool:
@@ -138,54 +114,57 @@ def run_example_experiment(vz, nof_particles, flow_field_filename,
         detectors=detectors,
         sources=sources,
         calculators=calculators,
-        t_start=t_start,
-        t_end=t_end,
-        dt=dt,
+        time_interval=(t_start, t_end, dt),
         delta_z_end=0.001
     )
 
     print(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
     print("Running experiment...")
-    result = experiment.run(single_threaded=single_threaded)
+    experiment_result = experiment.run(single_threaded=single_threaded)
     print("Done running experiment.")
-    return result
+    return experiment_result
 
 
-def main(vz, nof_particles, track_trajectories, single_threaded, output_file, flow_field):
-    result_list = run_example_experiment(vz=vz, nof_particles=nof_particles, flow_field_filename=flow_field,
-                                         track_trajectories=track_trajectories,
-                                         single_threaded=single_threaded)
+def main(vz, nof_particles, output_file, flow_field, track_trajectories, single_threaded, visualize=False):
+    result_particles = run_example_experiment(vz=vz, nof_particles=nof_particles, flow_field_filename=flow_field,
+                                              track_trajectories=track_trajectories, single_threaded=single_threaded)
 
     # Construct final phase space
-    phase_space = [particle.get_phase() for particle in result_list]
-    # Construct (detector id -> list[particle phase]) map from all detector hits
-    detector_hits = {}
-    for particle in result_list:
-        if particle.detector_hits:
-            for detector_id, hits in particle.detector_hits.items():
-                if detector_id not in detector_hits:
-                    detector_hits[detector_id] = []
-                detector_hits[detector_id] += hits
+    phase_space = [np.concatenate([particle.position, particle.properties]) for particle in result_particles]
+    phase_space_description = [
+        np.concatenate([['x', 'y', 'z', 'u', 'v', 'w'], result_particles[0].properties])
+    ]
 
     # Write final phase space, trajectories, and hits with phases at each detector
     with h5py.File(output_file, 'w') as f:
         f['particles'] = np.array(phase_space)
-        # TODO this assumes all particles are the same
-        f['particles'].attrs['description'] = result_list[0].get_phase_description()
+        f['particles'].attrs['description'] = phase_space_description
 
-        for particle in result_list:
+        for particle in result_particles:
             if particle.trajectory:
                 f[f'trajectories/{particle.identifier}'] = np.array(particle.trajectory)
                 f[f'trajectories/{particle.identifier}'].attrs['description'] = [
                     't', 'x', 'y', 'z', 'u', 'v', 'w'
                 ]
 
+        # Construct inverse association
+        # (detector ID -> list of particle hits) from (particle ID -> list of detector hits), as this is what we
+        # would like to store in the file
+        detector_hits = {}
+        for particle in result_particles:
+            if particle.detector_hits:
+                for detector_id, hits in particle.detector_hits.items():
+                    if detector_id not in detector_hits:
+                        detector_hits[detector_id] = []
+                    detector_hits[detector_id] += hits
         for detector_id, hits in detector_hits.items():
-            f[f'detector_hits/{detector_id}'] = np.array([hit.particle_phase for hit in hits])
-            f[f'detector_hits/{detector_id}'].attrs['description'] = hits[0].particle_phase_description
+            if hits:
+                f[f'detector_hits/{detector_id}'] = np.array([hit.full_properties for hit in hits])
+                f[f'detector_hits/{detector_id}'].attrs['description'] = hits[0].full_properties_description
 
-    #print(f"Plotting {len(result_list)} particles...")
-    #plot_particles(result_list, plot_trajectories=track_trajectories)
+    if visualize:
+        print(f"Plotting {len(result_particles)} particles...")
+        plot_particles(result_particles, plot_trajectories=track_trajectories)
 
 
 if __name__ == '__main__':
@@ -199,15 +178,16 @@ if __name__ == '__main__':
                                      formatter_class=argparse.MetavarTypeHelpFormatter)
     parser.add_argument('-n', help='Number of particles', type=natural_number, required=True)
     parser.add_argument('-v', help='Initial average velocity (in Z direction)', type=float, required=True)
-    parser.add_argument('-t', help='Store trajectories?', action='store_true')
-    parser.add_argument('-s', help='Run single threaded? CAUTION: Very slow, only for debugging purposes',
-                        action='store_true')
     parser.add_argument('-o', help='Output filename for phase space (hdf5 format)', type=str, required=True)
     parser.add_argument('-f', help='Flow field filename (hdf5 format)', type=str, required=True)
+    parser.add_argument('-t', help='Store trajectories?', action='store_true')
+    parser.add_argument('-V', help='Visualize the particles after running?', action='store_true')
+    parser.add_argument('-s', help='Run single threaded? CAUTION: Very slow, only for debugging purposes',
+                        action='store_true')
     args = parser.parse_args()
 
-    main(vz=args.v, nof_particles=args.n, track_trajectories=args.t, single_threaded=args.s,
-         flow_field=args.f, output_file=args.o)
+    main(vz=args.v, nof_particles=args.n, flow_field=args.f, output_file=args.o,
+         track_trajectories=args.t, single_threaded=args.s, visualize=args.V)
 
 
 """

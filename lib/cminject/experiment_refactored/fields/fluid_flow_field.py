@@ -63,16 +63,10 @@ class FluidFlowField(Field):
         self.filename = filename
         x, y, z, data_grid = self._read_from_hdf5(self.filename)
         self.min_z, self.max_z = np.min(z), np.max(z)
+        self._z_boundary = (self.min_z, self.max_z)
+
         self.f_drag = RegularGridInterpolator((x, y, z), data_grid)
         super().__init__()
-
-    @staticmethod
-    def _read_from_hdf5(filename: str) -> Tuple[np.array, np.array, np.array, np.array]:
-        print(f"Reading in HDF5 file {filename}...")
-        x, y, z, data_grid = hdf5_to_data_grid(filename)
-        print(f"Done reading in HDF5 file {filename}.")
-        # Return x/y/z and the data grid. Both are needed to construct a RegularGridInterpolator.
-        return x, y, z, data_grid
 
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
         relative_velocity, _, pressure = self.interpolate(particle, time)
@@ -84,7 +78,8 @@ class FluidFlowField(Field):
         return self.min_z <= particle.position[2] <= self.max_z \
                and self.interpolate(particle, particle.time_of_flight)[2] > 0.0
 
-    def _calculate_z_boundary(self) -> Tuple[float, float]:
+    @property
+    def z_boundary(self) -> Tuple[float, float]:
         return self.min_z, self.max_z
 
     def interpolate(self, particle: Particle, time: float) -> Tuple[np.array, float, float]:
@@ -106,9 +101,9 @@ class FluidFlowField(Field):
                 return result
 
         try:
-            data = self.f_drag(tuple(particle.position))
+            data = self.f_drag(tuple(particle.position[:3]))
             pressure = data[3]
-            relative_velocity = data[:3] - particle.velocity
+            relative_velocity = data[:3] - particle.position[3:]
             result = (relative_velocity, np.linalg.norm(relative_velocity), pressure)
         except ValueError:
             # Return zero velocity and zero pressure, so the particle will be considered outside
@@ -259,6 +254,14 @@ class FluidFlowField(Field):
         # TODO in the original code, dT was calculated but unused?
         collision_temperature = self.temperature + (particle.collision_temperature - self.temperature) * np.exp(-c / k)
         return c, collision_temperature
+
+    @staticmethod
+    def _read_from_hdf5(filename: str) -> Tuple[np.array, np.array, np.array, np.array]:
+        print(f"Reading in HDF5 file {filename}...")
+        x, y, z, data_grid = hdf5_to_data_grid(filename)
+        print(f"Done reading in HDF5 file {filename}.")
+        # Return x/y/z and the data grid. Both are needed to construct a RegularGridInterpolator.
+        return x, y, z, data_grid
 
 """
 ### Local Variables:

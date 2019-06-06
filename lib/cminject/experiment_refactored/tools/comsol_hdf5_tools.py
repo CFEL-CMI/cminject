@@ -163,7 +163,7 @@ def data_frame_to_data_grid(df: pd.DataFrame) -> Tuple[np.array, np.array, np.ar
     # Gather number of indices along each axis from the DataFrame's MultiIndex
     nx, ny, nz = [len(df.index.levels[i]) for i in range(len(df.index.levels))]
     # Create the data grid
-    data_grid = np.nan_to_num(df.values.reshape((nx, ny, nz, -1)))
+    data_grid = np.nan_to_num(df.values.reshape((nx, ny, nz, -1)))  # TODO why is this considered undefined?
 
     # Return x/y/z and the data grid. Both are needed to construct a RegularGridInterpolator.
     return x, y, z, data_grid
