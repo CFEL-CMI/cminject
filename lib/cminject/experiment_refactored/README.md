@@ -1,4 +1,4 @@
-# CMInject: A framework for particle trajectory simulations
+# CMInject: A framework for particle injection trajectory simulations
 
 CMInject is a Python3 framework that can be used to define and run particle trajectory simulations
 for sample injection. It runs both 2D and 3D simulations, and is in principle agnostic to the number of spatial
