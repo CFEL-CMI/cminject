@@ -139,7 +139,7 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3) -> Non
         val_arr = np.array(values[headers[i][0]], dtype=np.float)
         # Transpose the whole array to match "normal" X/Y/Z/... iteration order. The order that the dimensions
         # increment in is inverted in the txt file format, so transpose it here.
-        val_arr = val_arr.reshape(tuple(reversed(index_n))).swapaxes(0, 2).reshape((np.prod(index_n),))
+        val_arr = val_arr.reshape(tuple(reversed(index_n))).transpose().reshape((np.prod(index_n),))
         val_mat = csr_matrix(np.nan_to_num(val_arr))
         values[headers[i][0]] = val_mat
 
