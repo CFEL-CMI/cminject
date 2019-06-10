@@ -26,9 +26,10 @@ def main():
                                      formatter_class=argparse.MetavarTypeHelpFormatter)
     parser.add_argument('-i', help='Input file (COMSOL .txt format)', type=str, required=True)
     parser.add_argument('-o', help='Output file (.hdf5)', type=str, required=True)
+    parser.add_argument('-d', help='Number of spatial dimensions', type=int, required=False, default=3)
     args = parser.parse_args()
 
-    txt_to_hdf5(args.i, args.o)
+    txt_to_hdf5(infile_name=args.i, outfile_name=args.o, dimensions=args.d)
     print("Done.")
 
 
