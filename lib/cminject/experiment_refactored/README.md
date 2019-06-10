@@ -30,6 +30,8 @@ for the tasks they're supposed to perform. There are also some concrete implemen
 included in the framework; a user can either extend from there, or write their own implementations
 from scratch.
 
+Given below each abstract definition is a short list of example implementations included with the framework.
+
 ### Particle
 A Particle is some physical entity that's able to move in space, and whose movement will be simulated
 and possibly tracked.
