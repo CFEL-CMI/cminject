@@ -10,14 +10,17 @@ class SphericalParticle(Particle):
     """
 
     def __init__(self, *args, radius: float, rho: float, **kwargs):
+        super().__init__(*args, **kwargs)
         self.radius = radius
         self.rho = rho
+        self.mass = self.rho * 4 / 3 * np.pi * (self.radius ** 3)
+        self.number_of_dimensions = None
 
-        # self.mass is stored by the super() call.
-        super().__init__(*args, **kwargs)
-
-    def calculate_mass(self) -> float:
-        return self.rho * 4 / 3 * np.pi * (self.radius ** 3)
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        if number_of_dimensions in [1, 2, 3]:
+            super().set_number_of_dimensions(number_of_dimensions)
+        else:
+            raise ValueError("SphericalParticles can only be simulated in 1-, 2-, and 3D space.")
 
     @property
     def properties(self) -> np.array:
@@ -33,10 +36,9 @@ class SphericalParticle(Particle):
 
     @property
     def properties_description(self) -> List[str]:
-        return [
-            'ID', 't', 'r', 'm',
-            'x_i', 'y_i', 'z_i', 'u_i', 'v_i', 'w_i',
-        ]
+        base = ['ID', 't', 'r', 'm']
+        ipos = [f'{desc}_i' for desc in self.position_description]
+        return base + ipos
 
 
 class ThermallyConductiveSphericalParticle(SphericalParticle):
@@ -48,13 +50,13 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
                  thermal_conductivity: float = 6.3,
                  temperature: float = 298.0,
                  **kwargs):
+        super().__init__(*args, **kwargs)
         self.thermal_conductivity = thermal_conductivity
         self.temperature = temperature
         self.collision_temperature = temperature
 
         self.time_to_liquid_n = float('inf')
         self.collision_time_to_liquid_n = float('inf')
-        super().__init__(*args, **kwargs)
 
     @property
     def properties(self) -> np.array:

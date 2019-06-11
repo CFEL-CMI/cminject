@@ -148,7 +148,7 @@ def main(vz, nof_particles, output_file, flow_field, track_trajectories, single_
 
     if visualize:
         print(f"Plotting {len(result_particles)} particles...")
-        plot_particles(result_particles, plot_trajectories=track_trajectories)
+        plot_particles(result_particles, plot_trajectories=track_trajectories, dimensions=3)
 
 
 if __name__ == '__main__':

@@ -76,8 +76,7 @@ class FluidFlowField(Field):
         return f / particle.mass
 
     def is_particle_inside(self, particle: Particle) -> bool:
-        # NOTE/TODO: Particles are not able to leave the flow field and enter it again later!
-        return self.min_z <= particle.position[2] <= self.max_z \
+        return self.min_z <= particle.position[self.number_of_dimensions - 1] <= self.max_z \
                and self.interpolate(particle, particle.time_of_flight)[2] > 0.0
 
     @property

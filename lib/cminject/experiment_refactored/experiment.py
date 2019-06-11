@@ -106,6 +106,11 @@ def simulate_particle(particle: Particle, devices: List[Device],
     for property_updater in property_updaters:
         property_updater.update(particle, t_start)
 
+    # TODO:
+    """
+    when loop was broken due to the integration not being successful, we need to somehow continue to simulate
+    the particle another way, e.g. with another integrator (how? which?)
+    """
     while integral.successful() and integral.t < t_end and not particle.lost:
         # Check conditions for having lost particle.
         if not is_particle_lost(particle, z_boundary, devices, number_of_dimensions):
@@ -122,8 +127,10 @@ def simulate_particle(particle: Particle, devices: List[Device],
             # - Have each detector try to detect the particle
             for detector in detectors:
                 if detector.try_to_detect(particle):
-                    print(f"\t\tParticle {particle.identifier} reached at ~{particle.position}.")
+                    print(f"\t\tParticle {particle.identifier} reached at ~{particle.position}. "
+                          f"Tracked {len(particle.trajectory)} positions until this hit.")
 
+            # Propagate by integrating until the next time step
             integral.integrate(integral.t + dt)
         else:
             # If particle is lost, store this and (implicitly) break the loop
@@ -182,6 +189,11 @@ class Experiment:
             if source_particles:
                 # FIXME assuming a source only generates one particle type
                 particle_types.add(type(source_particles[0]))
+
+            # Set the number of dimensions for each particle.
+            for source_particle in source_particles:
+                source_particle.set_number_of_dimensions(number_of_dimensions)
+
             self.particles += source_particles
         if len(particle_types) > 1:
             raise TypeError("Cannot simulate particles of multiple types at the same time!")

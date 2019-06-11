@@ -23,8 +23,14 @@ from typing import Tuple, List, Any, Optional, Dict
 import numpy as np
 
 """
-An interval with no (with impossible) extent. Should be used to describe the boundary of an object
+An interval with no extent. Should be used to describe the boundary of an object
 along an axis that has no extent along this axis.
+
+The implementation is [∞, -∞], which is actually an impossible interval.
+There is a technical reason to this: We gather the total Z boundary of the simulation by getting the minimum and maximum
+extent of all objects in Z direction, min() is called on all left values and max() is called on all right values.
+Since ∞ is the neutral element of min() and -∞ is the neutral element of max(), this works out just as intended:
+The object without extent has no effect on the calculation of the total Z boundary. 
 """
 empty_interval = (float('inf'), float('-inf'))
 
@@ -94,10 +100,25 @@ class ParticleDetectorHit(object):
     on the detector as a numpy array, and :attr:`full_properties_description`, which is a string list matching
     :attr:`full_properties` in size and describing each scalar stored in the array.
     """
-    def __init__(self, hit_position: np.array, particle: 'Particle', dimensionality: int = 3):
-        self.dimensionality = dimensionality
+    def __init__(self, hit_position: np.array, particle: 'Particle'):
+        """
+        The constructor for a ParticleDetectorHit.
+        :param hit_position: An (n,)-shaped np.array representing the hit position of the particle on the detector.
+        n is the number of dimensions and must match
+        :param particle:
+        """
+        dimpos = hit_position.size
+        dimpar = particle.number_of_dimensions
+        if dimpos != dimpar:
+            raise ValueError(
+                f"Hit position dimensionality ({dimpos}) does not match the number of "
+                f"dimensions the particle is simulated in ({dimpar})!"
+            )
+
+        self.number_of_dimensions = particle.number_of_dimensions
         self.full_properties = np.concatenate([hit_position, particle.properties])
-        self.full_properties_description = ['x_d', 'y_d', 'z_d'] + particle.properties_description
+        hit_position_description = [f'{desc}_d' for desc in particle.position_description[:dimpar]]
+        self.full_properties_description = hit_position_description + particle.properties_description
 
     @property
     def hit_position(self) -> np.array:
@@ -105,7 +126,7 @@ class ParticleDetectorHit(object):
         The position where the detector detected the particle hit.
         :return: The position of the hit.
         """
-        return self.full_properties[:self.dimensionality]
+        return self.full_properties[:self.number_of_dimensions]
 
 
 class Particle(NDimensional, ABC):
@@ -142,17 +163,9 @@ class Particle(NDimensional, ABC):
         self.initial_position: np.array = np.copy(position)
         self.trajectory: List[np.array] = []
         self.detector_hits: Dict[int, List['ParticleDetectorHit']] = {}  # TODO naming is nonagnostic about detectors...
-        self.mass: float = self.calculate_mass()
+        self.mass: float = 0.0
         self.time_of_flight: float = start_time
-
-    @abstractmethod
-    def calculate_mass(self) -> float:
-        """
-        An abstract method that subclasses must implement to calculate the particle's mass.
-        Expected to be called only once, at construction.
-        :return: A floating-point value describing the mass in kg.
-        """
-        pass
+        self.number_of_dimensions = None
 
     @property
     @abstractmethod
@@ -174,16 +187,44 @@ class Particle(NDimensional, ABC):
     @abstractmethod
     def properties_description(self) -> List[str]:
         """
-        Returns a list of strings matching what .properties returns, describing each value in the array
+        A list of strings matching the .properties attribute in length, describing each value in the array
         in some manner (most likely using standard physical abbreviations like rho, phi, T, k, ...).
-
-        The size of the returned list must match the size of the numpy array returned by `properties`.
         :return: See above.
         """
         pass
 
     @property
+    def position_description(self) -> List[str]:
+        """
+        A list of strings matching the .position attribute in length, describing each value in the array
+        in some manner (most likely using standard physical abbreviations like x, y, z, vx, vy, vz, ...).
+
+        The default implementation returns
+         - ["x", "y", "z", "vx", "vy", "vz"] for 3D simulations
+         - ["r", "z", "vr", "vz"] for 2D simulations
+         - ["z", "vz"] for 1D simulations
+
+        If your particle implementation deviates from this, override the property.
+        :return: See above.
+        """
+        if self.number_of_dimensions == 3:
+            return ['x', 'y', 'z', 'vx', 'vy', 'vz']
+        elif self.number_of_dimensions == 2:
+            return ['r', 'z', 'vr', 'vz']
+        elif self.number_of_dimensions == 1:
+            return ['z', 'vz']
+        else:
+            raise AttributeError(
+                f"The default implementation of position_description is undefined for {self.number_of_dimensions} "
+                f"dimensions!"
+            )
+
+    @property
     def reached_any_detector(self):
+        """
+        Whether this particle has ever reached any detector.
+        :return: See above.
+        """
         return not not self.detector_hits  # `not not` to convert to boolean, to not leak data here
 
     def set_number_of_dimensions(self, number_of_dimensions: int):
@@ -192,6 +233,8 @@ class Particle(NDimensional, ABC):
                 f"Particle {self} is incompatible with {number_of_dimensions} dimensions: "
                 f"Phase space position is 2*{self.position.size / 2} dimensional."
             )
+        else:
+            self.number_of_dimensions = number_of_dimensions
 
     def __str__(self):
         return f"<{self.__class__.__name__} #{self.identifier}>"
@@ -214,8 +257,9 @@ class Source(NDimensional, ABC):
     @abstractmethod
     def generate_particles(self, start_time: float = 0.0) -> List[Particle]:
         """
-        Generates a list of particles. How this is done is entirely up to the subclass, but it should generally be
-        some distribution around the spatial position (self.position) stored at construction of the instance.
+        Generates a list of particles. How this is done is entirely up to the subclass, by (this is mandatory!)
+        implementing this method in a certain way. It should, however, generally be some distribution around the
+        spatial position (self.position) stored at construction of the instance.
         :return: A list of Particle instances.
         """
         pass
