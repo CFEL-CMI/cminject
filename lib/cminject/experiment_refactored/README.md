@@ -50,8 +50,7 @@ There can be multiple Sources within an Experiment setup, but they must all gene
 (instances of the same subclass) of Particles.
 
 > - `GaussianSphericalSource`: A source generating a gaussian distribution of `SphericalParticle` instances or instances
-of its subclasses; x/y/z, vx/vy/vz and r are randomly distributed according to a gaussian distribution
-with given μ and σ.
+of its subclasses; x/y/z, vx/vy/vz and r are randomly distributed according to a gaussian distribution with given μ and σ.
 
 ### Device
 A Device is a combination of a Field and a Boundary, and is supposed to model a real-world

@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 """
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Any
 from multiprocessing import Pool
 from functools import partial
 
@@ -24,11 +24,11 @@ import numpy as np
 from scipy.integrate import ode
 
 from cminject.experiment_refactored.definitions.base import Particle, Source, Device, Detector, ZBounded, \
-    PropertyUpdater, infinite_interval
+    PropertyUpdater, infinite_interval, NDimensional
 
 
 def spatial_derivatives(time: float, position_and_velocity: np.array,
-                        particle: Particle, devices: List[Device]) -> np.array:
+                        particle: Particle, devices: List[Device], number_of_dimensions: int) -> np.array:
     """
     Calculates the derivatives of position and velocity, which will then be integrated over.
     "n" as used below is the number of the simulation's spatial dimensions.
@@ -36,25 +36,29 @@ def spatial_derivatives(time: float, position_and_velocity: np.array,
     :param position_and_velocity: A (2n,) numpy array containing spatial position and velocity of the particle.
     :param particle: The Particle instance.
     :param devices: The list of devices that (might) affect this particle.
+    :param number_of_dimensions: The number of dimensions of the space the particle moves in.
     :return: A (2n,) numpy array containing velocity and acceleration of the particle.
     """
     particle.position = position_and_velocity
-    total_acceleration = np.zeros(3, dtype=float)
+    total_acceleration = np.zeros(number_of_dimensions, dtype=float)
     for device in devices:
         if device.is_particle_inside(particle):
             total_acceleration += device.field.calculate_acceleration(particle, time)
-    return np.concatenate((position_and_velocity[3:], total_acceleration))
+    return np.concatenate((position_and_velocity[number_of_dimensions:], total_acceleration))
 
 
-def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], devices: List[Device]):
+def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], devices: List[Device],
+                     number_of_dimensions: int):
     """
     Decides whether a particle should be considered lost.
     :param particle: The Particle instance.
     :param z_boundary: The total Z boundary to consider
     :param devices: The list of devices that the particle might potentially be in
+    :param number_of_dimensions: The number of dimensions of the space the particle moves in.
     :return:
     """
-    if particle.position[2] < z_boundary[0] or particle.position[2] > z_boundary[1]:
+    particle_z_pos = particle.position[number_of_dimensions - 1]
+    if particle_z_pos < z_boundary[0] or particle_z_pos > z_boundary[1]:
         # Particles that aren't within the experiment's total Z boundary are considered lost
         return True
     else:
@@ -64,7 +68,7 @@ def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], device
             if is_inside:
                 # Particles inside devices are not considered lost
                 return False
-            if not is_inside and device_z_boundary[0] <= particle.position[2] <= device_z_boundary[1]:
+            if not is_inside and device_z_boundary[0] <= particle_z_pos <= device_z_boundary[1]:
                 # Particles that are outside devices *but* within their Z boundary are considered lost
                 return True
         # Particles that are not inside any device but also not within any device's Z boundary are not considered
@@ -75,7 +79,8 @@ def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], device
 def simulate_particle(particle: Particle, devices: List[Device],
                       detectors: List[Detector], property_updaters: List[PropertyUpdater],
                       time_interval: Tuple[float, float, float],
-                      z_boundary: Tuple[float, float]) -> Particle:
+                      z_boundary: Tuple[float, float],
+                      number_of_dimensions: int) -> Particle:
     """
     Simulates the flight path of a single particle, with a list of devices that can affect the particle,
     a list of detectors that can detect the particle, a list of property updaters that can store additional results
@@ -86,6 +91,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
     :param property_updaters: The list of property_updaters.
     :param time_interval: The time interval of the simulation.
     :param z_boundary: The Z boundary of the simulation.
+    :param number_of_dimensions: The number of dimensions of the space the particle moves in.
     :return: A modified version of the particle instance after the simulation has ended.
     """
     t_start, t_end, dt = time_interval
@@ -93,7 +99,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
     integral = ode(spatial_derivatives)
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(particle.position, t_start)
-    integral.set_f_params(particle, devices)
+    integral.set_f_params(particle, devices, number_of_dimensions)
     print(f"\tSimulating particle {particle.identifier}...")
 
     # Run all property updaters once with the start time
@@ -102,7 +108,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
 
     while integral.successful() and integral.t < t_end and not particle.lost:
         # Check conditions for having lost particle.
-        if not is_particle_lost(particle, z_boundary, devices):
+        if not is_particle_lost(particle, z_boundary, devices, number_of_dimensions):
             # If particle is not lost:
             # - Store the position and velocity calculated by the integrator on the particle
             integral_result = integral.y
@@ -131,8 +137,10 @@ def simulate_particle(particle: Particle, devices: List[Device],
 
 class Experiment:
     def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
-                 property_updaters: List[PropertyUpdater] = None, time_interval: Tuple[float, float, float] = (0.0, 1.8, 1.0e-6),
-                 z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0):
+                 property_updaters: List[PropertyUpdater] = None,
+                 time_interval: Tuple[float, float, float] = (0.0, 1.8, 1.0e-6),
+                 z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0,
+                 number_of_dimensions: int = 3):
         """
         Construct an Experiment to run.
         :param devices: The list of Devices in the experimental setup.
@@ -156,6 +164,12 @@ class Experiment:
         self.sources = sources
         self.detectors = detectors
         self.property_updaters = property_updaters
+
+        # Store the number of dimensions and set it on all relevant objects
+        self.number_of_dimensions = number_of_dimensions
+        dimensional_objects: List[NDimensional] = self.devices + self.sources + self.detectors + self.property_updaters
+        for dimensional_object in dimensional_objects:
+            dimensional_object.set_number_of_dimensions(self.number_of_dimensions)
 
         # Store the time interval
         self.time_interval = time_interval
@@ -233,7 +247,8 @@ class Experiment:
             time_interval=self.time_interval,
             detectors=self.detectors,
             z_boundary=self.z_boundary,
-            property_updaters=self.property_updaters
+            property_updaters=self.property_updaters,
+            number_of_dimensions=self.number_of_dimensions
         )
 
 

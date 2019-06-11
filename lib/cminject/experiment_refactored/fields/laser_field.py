@@ -115,3 +115,8 @@ class PhotophoreticLaserField(Field):
     @property
     def z_boundary(self) -> Tuple[float, float]:
         pass  # TODO
+
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        if number_of_dimensions != 3:
+            raise ValueError("Can only handle 3D simulation setup.")
+        # TODO after extending to more dimensionalities ...

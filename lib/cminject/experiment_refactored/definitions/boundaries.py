@@ -1,4 +1,5 @@
-from typing import Tuple
+from typing import Tuple, List
+import numpy as np
 
 from cminject.experiment_refactored.definitions.base import Boundary, Particle, infinite_interval
 
@@ -11,29 +12,46 @@ class SimpleZBoundary(Boundary):
         self.z_min = z_min
         self.z_max = z_max
         self._z_boundary = (z_min, z_max)
+
+        self.number_of_dimensions = 3
         super().__init__()
+
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        self.number_of_dimensions = number_of_dimensions
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
         return self._z_boundary
 
     def is_particle_inside(self, particle: Particle):
-        return self.z_min <= particle.position[2] <= self.z_max
+        return self.z_min <= particle.position[self.number_of_dimensions] <= self.z_max
 
 
 class CuboidBoundary(SimpleZBoundary):
-    def __init__(self, x_minmax: Tuple[float, float], y_minmax: Tuple[float, float], z_minmax: Tuple[float, float]):
-        self.x_min, self.x_max = x_minmax
-        self.y_min, self.y_max = y_minmax
-        super().__init__(z_minmax)
+    def __init__(self, intervals: List[Tuple[float, float]]):
+        self.intervals = np.array(intervals)
+        super().__init__(intervals[-1])  # last dimension is assumed to be Z
+
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        interval_dimensions = len(self.intervals)
+        if number_of_dimensions != interval_dimensions:
+            raise ValueError(
+                f"Incompatible number of dimensions: {number_of_dimensions}, "
+                f"the cuboid is defined within {interval_dimensions}-dimensional space"
+            )
+        self.number_of_dimensions = number_of_dimensions
 
     def is_particle_inside(self, particle: Particle) -> bool:
-        return self.x_min <= particle.position[0] <= self.x_max and\
-               self.y_min <= particle.position[1] <= self.y_max and\
-               self.z_min <= particle.position[2] <= self.z_max
+        pos = particle.position[:self.number_of_dimensions]
+        return np.all(
+            (self.intervals[:, 0] <= pos) * (pos <= self.intervals[:, 1])
+        )
 
 
 class InfiniteBoundary(Boundary):
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        pass
+
     @property
     def z_boundary(self) -> Tuple[float, float]:
         return infinite_interval

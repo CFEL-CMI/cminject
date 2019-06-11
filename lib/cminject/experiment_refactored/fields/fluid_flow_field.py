@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 """
-from typing import Tuple
+from typing import Tuple, List
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
@@ -61,11 +61,13 @@ class FluidFlowField(Field):
 
         # Construct the interpolator for the drag force from the HDF5 file passed by file name
         self.filename = filename
-        x, y, z, data_grid = self._read_from_hdf5(self.filename)
+        data_index, data_grid = self._read_from_hdf5(self.filename)
+        self.number_of_dimensions = len(data_index)
+        self.f_drag = RegularGridInterpolator(tuple(data_index), data_grid)
+
+        z = data_index[-1]
         self.min_z, self.max_z = np.min(z), np.max(z)
         self._z_boundary = (self.min_z, self.max_z)
-
-        self.f_drag = RegularGridInterpolator((x, y, z), data_grid)
         super().__init__()
 
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
@@ -101,13 +103,13 @@ class FluidFlowField(Field):
                 return result
 
         try:
-            data = self.f_drag(tuple(particle.position[:3]))
-            pressure = data[3]
-            relative_velocity = data[:3] - particle.position[3:]
+            data = self.f_drag(tuple(particle.position[:self.number_of_dimensions]))
+            pressure = data[self.number_of_dimensions]
+            relative_velocity = data[:self.number_of_dimensions] - particle.position[self.number_of_dimensions:]
             result = (relative_velocity, np.linalg.norm(relative_velocity), pressure)
         except ValueError:
             # Return zero velocity and zero pressure, so the particle will be considered outside
-            result = np.zeros(3), 0.0, 0.0
+            result = np.zeros(self.number_of_dimensions), 0.0, 0.0
 
         # Store result for memoization and return it
         if particle.time_of_flight == time:
@@ -128,7 +130,7 @@ class FluidFlowField(Field):
         # Negative pressure or zero pressure is akin to the particle not being in the flow field, force is zero
         # and we can stop considering the particle to be inside this field
         if pressure <= 0:
-            return np.zeros(3)
+            return np.zeros(self.number_of_dimensions)
 
         force_vector = 6 * np.pi * self.dynamic_viscosity * particle.radius * relative_velocity
         return force_vector / self.calc_slip_correction(pressure=pressure, particle=particle)
@@ -256,12 +258,20 @@ class FluidFlowField(Field):
         return c, collision_temperature
 
     @staticmethod
-    def _read_from_hdf5(filename: str) -> Tuple[np.array, np.array, np.array, np.array]:
+    def _read_from_hdf5(filename: str) -> Tuple[List[np.array], np.array]:
         print(f"Reading in HDF5 file {filename}...")
-        x, y, z, data_grid = hdf5_to_data_grid(filename)
+        data_index, data_grid = hdf5_to_data_grid(filename)
         print(f"Done reading in HDF5 file {filename}.")
         # Return x/y/z and the data grid. Both are needed to construct a RegularGridInterpolator.
-        return x, y, z, data_grid
+        return data_index, data_grid
+
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        if number_of_dimensions != self.number_of_dimensions:
+            raise ValueError(
+                f"This field was constructed from a {self.number_of_dimensions}-dimensional grid and is "
+                f"thus incompatible with a {number_of_dimensions}-dimensional simulation."
+            )
+
 
 """
 ### Local Variables:

@@ -32,6 +32,60 @@ empty_interval = (float('inf'), float('-inf'))
 infinite_interval = (float('-inf'), float('inf'))
 
 
+class NDimensional(ABC):
+    """
+    A mixin for objects that are N-dimensional, or at least (may) act different depending on the number of spatial
+    dimensions of the simulation setup they are used within.
+
+    This method is abstract to force every relevant object in the experimental setup to store and respond appropriately
+    to the dimensionality of the whole simulation. If your concrete implementation for any class that's derived from
+    this does not care about dimensionality at all, simply implement `set_number_of_dimensions` and have it do nothing,
+    i.e. just `pass` as an implementation.
+    """
+    @abstractmethod
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        """
+        A method to change this object's data/state/implementation/... to conform to the choice of the simulation
+        setup's number of spatial dimensions.
+
+        What this means concretely really depends on the object type and implementation, but for example,
+        after a `set_number_of_dimensions(2)` call:
+        - A Source will now generate particles with a 2D distribution instead of a 3D distribution
+        - A Field will now calculate a 2D acceleration instead of a 3D acceleration
+
+        You can expect this method to be only called once, when the experiment is preparing to be run.
+        From then on, the dimensionality of the object should be considered fixed.
+
+        NOTE: If your object can only handle certain numbers of dimensions (e.g. only 3D, or only 2D and 3D), it is
+              good practice to raise a ValueError exception when this method is called with a dimensionality value
+              your object can not work with. This will make it clear why the simulation setup does not make sense as
+              it is, and how it must be changed before it can be run.
+        :param number_of_dimensions: The number of spatial dimensions of the setup this object should work within.
+        :return: Nothing.
+        """
+        pass
+
+
+class ZBounded(ABC):
+    """
+    A mixin for objects in an experiment setup that are bounded in the Z direction.
+    Classes deriving from this mixin will have to implement the get_z_boundary method.
+
+    Objects implementing this mixin should be used to determine the minimum/maximum extent of the entire experiment
+    setup in the Z direction, and then allows an Experiment to make a fast preliminary calculation about whether it
+    can consider a particle lost based on this.
+    """
+
+    @property
+    @abstractmethod
+    def z_boundary(self) -> Tuple[float, float]:
+        """
+        Returns the Z boundary of this Z-bounded object.
+        :return: A tuple of floats, the first entry being z_min, the second being z_max.
+        """
+        pass
+
+
 class ParticleDetectorHit(object):
     """
     A small data container class, to store useful information about a hit of a particle on a detector.
@@ -40,7 +94,8 @@ class ParticleDetectorHit(object):
     on the detector as a numpy array, and :attr:`full_properties_description`, which is a string list matching
     :attr:`full_properties` in size and describing each scalar stored in the array.
     """
-    def __init__(self, hit_position: np.array, particle: 'Particle'):
+    def __init__(self, hit_position: np.array, particle: 'Particle', dimensionality: int = 3):
+        self.dimensionality = dimensionality
         self.full_properties = np.concatenate([hit_position, particle.properties])
         self.full_properties_description = ['x_d', 'y_d', 'z_d'] + particle.properties_description
 
@@ -50,10 +105,10 @@ class ParticleDetectorHit(object):
         The position where the detector detected the particle hit.
         :return: The position of the hit.
         """
-        return self.full_properties[:3]
+        return self.full_properties[:self.dimensionality]
 
 
-class Particle(ABC):
+class Particle(NDimensional, ABC):
     """
     Describes a particle whose trajectory we want to simulate.
     It is first and foremost a data container, and it and its subclasses should be written and used as such.
@@ -86,7 +141,7 @@ class Particle(ABC):
         self.position: np.array = np.copy(position)
         self.initial_position: np.array = np.copy(position)
         self.trajectory: List[np.array] = []
-        self.detector_hits: Dict[int, List['ParticleDetectorHit']] = {}
+        self.detector_hits: Dict[int, List['ParticleDetectorHit']] = {}  # TODO naming is nonagnostic about detectors...
         self.mass: float = self.calculate_mass()
         self.time_of_flight: float = start_time
 
@@ -131,11 +186,18 @@ class Particle(ABC):
     def reached_any_detector(self):
         return not not self.detector_hits  # `not not` to convert to boolean, to not leak data here
 
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        if self.position.size != 2 * number_of_dimensions:
+            raise ValueError(
+                f"Particle {self} is incompatible with {number_of_dimensions} dimensions: "
+                f"Phase space position is 2*{self.position.size / 2} dimensional."
+            )
+
     def __str__(self):
         return f"<{self.__class__.__name__} #{self.identifier}>"
 
 
-class Source(ABC):
+class Source(NDimensional, ABC):
     """
     A source of particles, to generate an initial phase space.
 
@@ -145,42 +207,21 @@ class Source(ABC):
     def __init__(self, position: np.array):
         """
         The constructor for Source.
-        :param position: The x/y/z position where the source is placed.
+        :param position: The spatial position where the source is placed.
         """
         self.position = position
 
     @abstractmethod
     def generate_particles(self, start_time: float = 0.0) -> List[Particle]:
         """
-        Generates a list of particles. How this is done is entirely up to the subclass.
-        The only important thing is adhering to the specification here and having this method always return
-        a list of particles.
+        Generates a list of particles. How this is done is entirely up to the subclass, but it should generally be
+        some distribution around the spatial position (self.position) stored at construction of the instance.
         :return: A list of Particle instances.
         """
         pass
 
 
-class ZBounded(ABC):
-    """
-    A mixin for objects in an experiment setup that are bounded in the Z direction.
-    Classes deriving from this mixin will have to implement the get_z_boundary method.
-
-    Objects implementing this mixin should be used to determine the minimum/maximum extent of the entire experiment
-    setup in the Z direction, and then allows an Experiment to make a fast preliminary calculation about whether it
-    can consider a particle lost based on this.
-    """
-
-    @property
-    @abstractmethod
-    def z_boundary(self) -> Tuple[float, float]:
-        """
-        Returns the Z boundary of this Z-bounded object.
-        :return: A tuple of floats, the first entry being z_min, the second being z_max.
-        """
-        pass
-
-
-class Detector(ZBounded, ABC):
+class Detector(NDimensional, ZBounded, ABC):
     """
     Can tell whether a Particle has hit it, and _if_ it has hit it, can also tell where this occurred.
 
@@ -230,13 +271,18 @@ class Detector(ZBounded, ABC):
         Can return a hit position on this detector for a Particle, but might
         also return None (if the Particle isn't considered having reached this detector).
         :param particle: A Particle instance.
-        :return: A (3,)-shaped numpy array describing the hit position if there is a hit position to calculate,
-         None otherwise.
+        :return: An (n,)-shaped numpy array describing the hit position if there is a hit position to calculate,
+         None otherwise. n is the number of spatial dimensions in the experiment.
         """
         pass
 
+    @property
+    @abstractmethod
+    def position_descriptions(self) -> List[str]:
+        pass
 
-class Boundary(ZBounded, ABC):
+
+class Boundary(NDimensional, ZBounded, ABC):
     """
     Can tell whether a Particle is inside of it or not.
     Making the total set of Boundary objects in an experiment closed is - for now - the job of the person implementing
@@ -253,7 +299,7 @@ class Boundary(ZBounded, ABC):
         pass
 
 
-class Field(ZBounded, ABC):
+class Field(NDimensional, ZBounded, ABC):
     """
     A Field interacting with Particle objects.
     """
@@ -266,12 +312,13 @@ class Field(ZBounded, ABC):
         This acceleration will be integrated for in each time step and thus "applied" to the particle.
         :param particle: The Particle to calculate this Field's acceleration for.
         :param time: The time to calculate the acceleration for.
-        :return: A (3,)-shaped numpy array describing the x/y/z acceleration exerted on the particle.
+        :return: A (n,)-shaped numpy array describing the acceleration exerted on the particle. n is the number of
+        spatial dimensions of the experiment.
         """
         pass
 
 
-class Device(ZBounded, ABC):
+class Device(NDimensional, ZBounded, ABC):
     """
     A combination of one Field instance and one Boundary instance.
     Used to model real-world devices in an experiment setup.
@@ -300,6 +347,10 @@ class Device(ZBounded, ABC):
         boundary = self.boundary.z_boundary
         return min(field_boundary[0], boundary[0]), max(field_boundary[1], boundary[1])
 
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        self.field.set_number_of_dimensions(number_of_dimensions)
+        self.boundary.set_number_of_dimensions(number_of_dimensions)
+
     def is_particle_inside(self, particle: Particle) -> bool:
         """
         Returns whether the passed Particle is inside this Boundary or not.
@@ -311,7 +362,7 @@ class Device(ZBounded, ABC):
         return self.boundary.is_particle_inside(particle)
 
 
-class PropertyUpdater(ABC):
+class PropertyUpdater(NDimensional, ABC):
     """
     An object to update a Particle's properties based on its current state. Can do arbitrary calculations to determine
     the values the properties should be set to.

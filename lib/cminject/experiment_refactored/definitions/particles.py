@@ -12,6 +12,7 @@ class SphericalParticle(Particle):
     def __init__(self, *args, radius: float, rho: float, **kwargs):
         self.radius = radius
         self.rho = rho
+
         # self.mass is stored by the super() call.
         super().__init__(*args, **kwargs)
 

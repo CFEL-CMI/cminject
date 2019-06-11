@@ -33,7 +33,16 @@ class GaussianSphericalSource(Source):
         self.seed = seed
         self.subclass = subclass
         self.subclass_kwargs = subclass_kwargs
+
+        self.number_of_dimensions = len(self.position[0])
         super().__init__(position=position)
+
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        if number_of_dimensions != self.number_of_dimensions:
+            raise ValueError(
+                f"Incompatible number of dimensions: {number_of_dimensions},"
+                f"the position mu/sigma description passed at construction is {self.number_of_dimensions}-dimensional."
+            )
 
     def generate_particles(self, start_time: float = 0.0):
         """
@@ -43,25 +52,22 @@ class GaussianSphericalSource(Source):
         if self.seed is not None:
             np.random.seed(self.seed)
 
-        x, y, z = [
-            np.random.normal(self.position[0][i], self.position[1][i], self.number_of_particles)
-            for i in range(3)
-        ]
-        vx, vy, vz = [
-            np.random.normal(self.velocity[0][i], self.velocity[1][i], self.number_of_particles)
-            for i in range(3)
-        ]
+        position = np.random.normal(self.position[0], self.position[1],
+                                    (self.number_of_particles, self.number_of_dimensions))
+        velocity = np.random.normal(self.velocity[0], self.velocity[1],
+                                    (self.number_of_particles, self.number_of_dimensions))
         r = np.random.normal(self.radius[0], self.radius[1], self.number_of_particles)
 
-        self.particles = [
-            self.subclass(
+        self.particles = []
+        for i in range(self.number_of_particles):
+            inst = self.subclass(
                 identifier=i,
-                position=np.array([x[i], y[i], z[i], vx[i], vy[i], vz[i]]),
+                position=np.concatenate([position[i], velocity[i]]),
                 start_time=start_time,
                 radius=r[i],
                 rho=self.rho,
                 **self.subclass_kwargs
             )
-            for i in range(self.number_of_particles)
-        ]
+            self.particles.append(inst)
+
         return self.particles

@@ -198,13 +198,14 @@ def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
         return df
 
 
-def data_frame_to_data_grid(df: pd.DataFrame) -> List[np.array]:
+def data_frame_to_data_grid(df: pd.DataFrame) -> Tuple[List[np.array], np.array]:
     """
     Turns a DataFrame (as constructed by hdf5_to_data_frame) into a data grid that can be used with the
     scipy.interpolate.RegularGridInterpolator.
     The result can be passed on like: RegularGridInterpolator((x,y,z), data_grid).
     :param df: The pandas DataFrame. Must be constructed by or adhere to the format that hdf5_to_data_frame defines.
-    :return: A (n+1)-tuple of numpy arrays: (x, [y, [z, ...]], data_grid), where n is the number of spatial dimensions
+    :return: A 2-tuple like ([x, y, ...], data_grid), where the first component is a list of all index arrays,
+    and the second component is the data grid matching this index.
     """
     # Gather index and number of indices along each axis from the DataFrame's MultiIndex
     index = [level.values for level in df.index.levels]
@@ -214,10 +215,10 @@ def data_frame_to_data_grid(df: pd.DataFrame) -> List[np.array]:
     new_shape = tuple(index_n + [-1])
     data_grid = np.nan_to_num(df.to_numpy().reshape(new_shape))
     # Return the index array and the data grid. Both are needed to construct a RegularGridInterpolator.
-    return index + [data_grid]
+    return index, data_grid
 
 
-def hdf5_to_data_grid(filename: str) -> List[np.array]:
+def hdf5_to_data_grid(filename: str) -> Tuple[List[np.array], np.array]:
     """
     Shortcut function to read in an HDF5 file (as written by txt_to_hdf5) and turn it into a data grid.
     Refer to hdf5_to_data_frame and data_frame_to_data_grid for further info; this function is defined purely
