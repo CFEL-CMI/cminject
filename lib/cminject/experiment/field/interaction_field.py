@@ -110,6 +110,7 @@ class Fluid:
      return h
  
    def ReadFromFile(self, filename):
-     x,y,z,data_grid = hdf5_to_data_grid(filename)
+     xyz,data_grid = hdf5_to_data_grid(filename)
+     x,y,z = xyz
      self.fdrag = RegularGridInterpolator((x, y, z), data_grid)
      self.FlowField = True
