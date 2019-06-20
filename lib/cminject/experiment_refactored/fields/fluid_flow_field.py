@@ -19,6 +19,7 @@
 from typing import Tuple, List
 
 import numpy as np
+from cminject.experiment_refactored.definitions.fields import RegularGridInterpolationField
 from scipy.interpolate import RegularGridInterpolator
 from scipy.constants import pi, Avogadro, Boltzmann, R
 
@@ -27,7 +28,7 @@ from cminject.experiment_refactored.definitions.particles import SphericalPartic
 from cminject.experiment_refactored.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
 
 
-class FluidFlowField(Field):
+class FluidFlowField(RegularGridInterpolationField):
     """
     A flow field that calculates a drag force exerted on a particle, based on a grid defined by an HDF5 file
     that has been converted from a COMSOL .txt file, see comsol_hdf5_tools.txt_to_hdf5.
@@ -56,19 +57,9 @@ class FluidFlowField(Field):
         self.m_gas = m_gas
         self.speed_of_sound = speed_of_sound
 
-        # Memoization storage for interpolation results, as these are expensive
+        # Short-term memoization storage
         self.interpolation_results = {}
-
-        # Construct the interpolator for the drag force from the HDF5 file passed by file name
-        self.filename = filename
-        data_index, data_grid = self._read_from_hdf5(self.filename)
-        self.number_of_dimensions = len(data_index)
-        self.f_drag = RegularGridInterpolator(tuple(data_index), data_grid)
-
-        z = data_index[-1]
-        self.min_z, self.max_z = np.min(z), np.max(z)
-        self._z_boundary = (self.min_z, self.max_z)
-        super().__init__()
+        super().__init__(filename)
 
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
         relative_velocity, _, pressure = self.interpolate(particle, time)
@@ -76,12 +67,12 @@ class FluidFlowField(Field):
         return f / particle.mass
 
     def is_particle_inside(self, particle: Particle) -> bool:
-        return self.min_z <= particle.position[self.number_of_dimensions - 1] <= self.max_z \
+        return self._z_boundary[0] <= particle.position[self.number_of_dimensions - 1] <= self._z_boundary[1] \
                and self.interpolate(particle, particle.time_of_flight)[2] > 0.0
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
-        return self.min_z, self.max_z
+        return self._z_boundary
 
     def interpolate(self, particle: Particle, time: float) -> Tuple[np.array, float, float]:
         """
@@ -102,9 +93,9 @@ class FluidFlowField(Field):
                 return result
 
         try:
-            data = self.f_drag(tuple(particle.position[:self.number_of_dimensions]))
+            data = self.interpolator(tuple(particle.spatial_position,))
             pressure = data[self.number_of_dimensions]
-            relative_velocity = data[:self.number_of_dimensions] - particle.position[self.number_of_dimensions:]
+            relative_velocity = data[:self.number_of_dimensions] - particle.velocity
             result = (relative_velocity, np.linalg.norm(relative_velocity), pressure)
         except ValueError:
             # Return zero velocity and zero pressure, so the particle will be considered outside

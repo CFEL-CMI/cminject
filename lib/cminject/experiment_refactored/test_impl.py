@@ -46,7 +46,7 @@ class FluidFlowFieldDevice(Device):
             filename=filename,
             density=density, dynamic_viscosity=dynamic_viscosity, scale_slip=scale_slip
         )
-        self.boundary: SimpleZBoundary = SimpleZBoundary((self.field.min_z, self.field.max_z))
+        self.boundary: SimpleZBoundary = SimpleZBoundary(tuple(self.field._z_boundary))
         super().__init__(field=self.field, boundary=self.boundary)
 
     def is_particle_inside(self, particle: Particle) -> bool:
@@ -70,7 +70,8 @@ def run_example_experiment(vz, nof_particles, flow_field_filename,
         )
     ]
     detectors = [
-        SimpleZDetector(identifier=0, z_position=-0.052)
+        SimpleZDetector(identifier=0, z_position=0.0),
+        SimpleZDetector(identifier=1, z_position=-0.052)
     ]
     sources = [
         GaussianSphericalSource(
@@ -115,9 +116,7 @@ def main(vz, nof_particles, output_file, flow_field, track_trajectories, single_
 
     # Construct final phase space
     phase_space = [np.concatenate([particle.position, particle.properties]) for particle in result_particles]
-    phase_space_description = [
-        np.concatenate([['x', 'y', 'z', 'u', 'v', 'w'], result_particles[0].properties])
-    ]
+    phase_space_description = result_particles[0].position_description + result_particles[0].properties_description
 
     # Write final phase space, trajectories, and hits with phases at each detector
     with h5py.File(output_file, 'w') as f:

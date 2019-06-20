@@ -7,6 +7,27 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
+def plot_2d_from_hdf5(hd5file: str, dim_a: int, dim_b: int) -> None:
+    import h5py
+    with h5py.File(hd5file) as h5f:
+        particles = h5f['particles']
+        hits = h5f['detector_hits']
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.scatter(particles[:, dim_a], particles[:, dim_b])
+
+        for particle_id in hits.keys():
+            ax.scatter(hits[particle_id][:, dim_a], hits[particle_id][:, dim_b])
+
+    plt.show()
+
+
+if __name__ == '__main__':
+    import sys
+    plot_2d_from_hdf5(sys.argv[1], int(sys.argv[2]), int(sys.argv[3]))
+
+
 def plot_particles(particles: List[Particle], plot_trajectories=False, dimensions: int = 3):
     if dimensions not in [2, 3]:
         raise ValueError("Can only plot for 2 or 3 dimensions.")

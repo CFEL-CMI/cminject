@@ -108,16 +108,16 @@ class ParticleDetectorHit(object):
         :param particle:
         """
         dimpos = hit_position.size
-        dimpar = particle.number_of_dimensions
+        dimpar = particle.number_of_dimensions * 2
         if dimpos != dimpar:
             raise ValueError(
-                f"Hit position dimensionality ({dimpos}) does not match the number of "
-                f"dimensions the particle is simulated in ({dimpar})!"
+                f"Hit position dimensionality ({dimpos / 2}) does not match the number of "
+                f"dimensions the particle is simulated in ({dimpar / 2})!"
             )
 
         self.number_of_dimensions = particle.number_of_dimensions
         self.full_properties = np.concatenate([hit_position, particle.properties])
-        hit_position_description = [f'{desc}_d' for desc in particle.position_description[:dimpar]]
+        hit_position_description = particle.position_description[:dimpar]
         self.full_properties_description = hit_position_description + particle.properties_description
 
     @property
@@ -220,12 +220,28 @@ class Particle(NDimensional, ABC):
             )
 
     @property
-    def reached_any_detector(self):
+    def reached_any_detector(self) -> bool:
         """
         Whether this particle has ever reached any detector.
         :return: See above.
         """
         return not not self.detector_hits  # `not not` to convert to boolean, to not leak data here
+
+    @property
+    def spatial_position(self) -> np.array:
+        """
+        The purely spatial position of the particle.
+        :return: See above.
+        """
+        return self.position[:self.number_of_dimensions]
+
+    @property
+    def velocity(self) -> np.array:
+        """
+        The velocity of the particle.
+        :return: See above.
+        """
+        return self.position[self.number_of_dimensions:]
 
     def set_number_of_dimensions(self, number_of_dimensions: int):
         if self.position.size != 2 * number_of_dimensions:
@@ -318,11 +334,6 @@ class Detector(NDimensional, ZBounded, ABC):
         :return: An (n,)-shaped numpy array describing the hit position if there is a hit position to calculate,
          None otherwise. n is the number of spatial dimensions in the experiment.
         """
-        pass
-
-    @property
-    @abstractmethod
-    def position_descriptions(self) -> List[str]:
         pass
 
 
