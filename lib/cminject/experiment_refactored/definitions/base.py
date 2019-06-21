@@ -449,6 +449,20 @@ class PropertyUpdater(NDimensional, ABC):
         pass
 
 
+class ResultStorage(ABC):
+    """
+    An object to store the results of an experiment in some fashion.
+    """
+    @abstractmethod
+    def store_results(self, particles: List[Particle]) -> None:
+        """
+        Stores the results of an experiment (which are always a list of modified Particle instances).
+        :param particles: The list of particles, each in the state of after running a simulation.
+        :return: Nothing.
+        """
+        pass
+
+
 """
 ### Local Variables:
 ### fill-column: 100

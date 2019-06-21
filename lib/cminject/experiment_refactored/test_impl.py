@@ -18,10 +18,12 @@
 """
 
 import argparse
+import os
 from typing import Tuple
 
 import numpy as np
 import h5py
+from cminject.experiment_refactored.definitions.result_storage import HDF5ResultStorage
 
 from cminject.experiment_refactored.experiment import Experiment
 from cminject.experiment_refactored.definitions.base import \
@@ -33,7 +35,7 @@ from cminject.experiment_refactored.definitions.particles import ThermallyConduc
 from cminject.experiment_refactored.definitions.detectors import SimpleZDetector
 from cminject.experiment_refactored.definitions.boundaries import SimpleZBoundary
 from cminject.experiment_refactored.fields.fluid_flow_field import StokesFluidFlowField
-from cminject.experiment_refactored.visualization.plot import plot_particles
+from cminject.experiment_refactored.visualization.plot import get_3d_figure_from_particles, get_hist2d_figure_from_hdf5
 
 
 class FluidFlowFieldDevice(Device):
@@ -110,44 +112,31 @@ def run_example_experiment(vz, nof_particles, flow_field_filename,
     return experiment_result
 
 
-def main(vz, nof_particles, output_file, flow_field, track_trajectories, single_threaded, visualize=False):
-    result_particles = run_example_experiment(vz=vz, nof_particles=nof_particles, flow_field_filename=flow_field,
-                                              track_trajectories=track_trajectories, single_threaded=single_threaded)
+def main(args):
+    if os.path.isfile(args.output_file):
+        raise ValueError("Output file already exists! Please delete or move the existing file.")
 
-    # Construct final phase space
-    phase_space = [np.concatenate([particle.position, particle.properties]) for particle in result_particles]
-    phase_space_description = result_particles[0].position_description + result_particles[0].properties_description
+    result_particles = run_example_experiment(
+        vz=args.z_velocity,
+        nof_particles=args.nof_particles,
+        flow_field_filename=args.flow_field,
+        track_trajectories=args.store_traj,
+        single_threaded=args.single_threaded
+    )
 
-    # Write final phase space, trajectories, and hits with phases at each detector
-    with h5py.File(output_file, 'w') as f:
-        f['particles'] = np.array(phase_space)
-        f['particles'].attrs['description'] = phase_space_description
+    HDF5ResultStorage(args.output_file).store_results(result_particles)
 
-        for particle in result_particles:
-            if particle.trajectory:
-                f[f'trajectories/{particle.identifier}'] = np.array(particle.trajectory)
-                f[f'trajectories/{particle.identifier}'].attrs['description'] = [
-                    't', 'x', 'y', 'z', 'u', 'v', 'w'
-                ]
-
-        # Construct inverse association
-        # (detector ID -> list of particle hits) from (particle ID -> list of detector hits), as this is what we
-        # would like to store in the file
-        detector_hits = {}
-        for particle in result_particles:
-            if particle.detector_hits:
-                for detector_id, hits in particle.detector_hits.items():
-                    if detector_id not in detector_hits:
-                        detector_hits[detector_id] = []
-                    detector_hits[detector_id] += hits
-        for detector_id, hits in detector_hits.items():
-            if hits:
-                f[f'detector_hits/{detector_id}'] = np.array([hit.full_properties for hit in hits])
-                f[f'detector_hits/{detector_id}'].attrs['description'] = hits[0].full_properties_description
-
-    if visualize:
+    if args.visualize:
         print(f"Plotting {len(result_particles)} particles...")
-        plot_particles(result_particles, plot_trajectories=track_trajectories, dimensions=3)
+        fig = get_hist2d_figure_from_hdf5(
+            args.output_file,
+            [
+                ('x', 'y'), ('y', 'z'), ('x', 'z'),
+                ('vx', 'vy'), ('vy', 'vz'), ('vx', 'vz')
+            ]
+        )
+        fig.show()
+        return fig
 
 
 if __name__ == '__main__':
@@ -157,20 +146,25 @@ if __name__ == '__main__':
             raise argparse.ArgumentTypeError("Minimum is 1")
         return x
 
+
     parser = argparse.ArgumentParser(prog='cminject',
                                      formatter_class=argparse.MetavarTypeHelpFormatter)
-    parser.add_argument('-n', help='Number of particles', type=natural_number, required=True)
-    parser.add_argument('-v', help='Initial average velocity (in Z direction)', type=float, required=True)
-    parser.add_argument('-o', help='Output filename for phase space (hdf5 format)', type=str, required=True)
-    parser.add_argument('-f', help='Flow field filename (hdf5 format)', type=str, required=True)
-    parser.add_argument('-t', help='Store trajectories?', action='store_true')
-    parser.add_argument('-V', help='Visualize the particles after running?', action='store_true')
-    parser.add_argument('-s', help='Run single threaded? CAUTION: Very slow, only for debugging purposes',
+    parser.add_argument('-n', '--nof-particles', help='Number of particles',
+                        type=natural_number, required=True)
+    parser.add_argument('-v', '--z-velocity', help='Initial average velocity (in Z direction)',
+                        type=float, required=True)
+    parser.add_argument('-o', '--output-file', help='Output filename for phase space (hdf5 format)',
+                        type=str, required=True)
+    parser.add_argument('-f', '--flow-field', help='Flow field filename (hdf5 format)',
+                        type=str, required=True)
+    parser.add_argument('-t', '--store-traj', help='Store trajectories?',
                         action='store_true')
-    args = parser.parse_args()
-
-    main(vz=args.v, nof_particles=args.n, flow_field=args.f, output_file=args.o,
-         track_trajectories=args.t, single_threaded=args.s, visualize=args.V)
+    parser.add_argument('-V', '--visualize', help='Visualize the particles after running?',
+                        action='store_true')
+    parser.add_argument('-s', '--single-threaded',
+                        help='Run single threaded? CAUTION: Very slow, only for debugging purposes',
+                        action='store_true')
+    main(parser.parse_args())
 
 
 """

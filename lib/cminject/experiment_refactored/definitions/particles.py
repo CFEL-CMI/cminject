@@ -24,21 +24,16 @@ class SphericalParticle(Particle):
 
     @property
     def properties(self) -> np.array:
-        return np.concatenate([
-            [
-                self.identifier,
-                self.time_of_flight,
-                self.radius,
-                self.mass
-            ],
-            self.initial_position,
+        return np.array([
+            self.identifier,
+            self.time_of_flight,
+            self.radius,
+            self.mass
         ])
 
     @property
     def properties_description(self) -> List[str]:
-        base = ['ID', 't', 'r', 'm']
-        ipos = [f'{desc}_i' for desc in self.position_description]
-        return base + ipos
+        return ['ID', 't', 'r', 'm']
 
 
 class ThermallyConductiveSphericalParticle(SphericalParticle):
