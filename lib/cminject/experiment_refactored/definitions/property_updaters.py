@@ -3,7 +3,7 @@ from typing import Dict, Any
 import numpy as np
 from cminject.experiment_refactored.definitions.base import PropertyUpdater, Particle
 from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
-from cminject.experiment_refactored.fields.fluid_flow_field import FluidFlowField
+from cminject.experiment_refactored.fields.fluid_flow_field import StokesFluidFlowField
 
 
 class TrajectoryPropertyUpdater(PropertyUpdater):
@@ -17,8 +17,8 @@ class TrajectoryPropertyUpdater(PropertyUpdater):
 
 
 class ParticleTemperaturePropertyUpdater(PropertyUpdater):
-    def __init__(self, field: FluidFlowField, dt: float):
-        self.field: FluidFlowField = field
+    def __init__(self, field: StokesFluidFlowField, dt: float):
+        self.field: StokesFluidFlowField = field
         self.dt: float = dt
 
     def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> None:

@@ -3,7 +3,7 @@ from typing import Tuple
 
 import numpy as np
 from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
-from cminject.experiment_refactored.fields.fluid_flow_field import FluidFlowField
+from cminject.experiment_refactored.fields.fluid_flow_field import StokesFluidFlowField
 from scipy.integrate import dblquad
 from scipy.constants import R, pi
 
@@ -13,7 +13,7 @@ from cminject.experiment_refactored.definitions.base import Field, Particle
 
 
 class PhotophoreticLaserField(Field):
-    def __init__(self, fluid_flow_field: FluidFlowField, power: float, lambda_: float, radius: float):
+    def __init__(self, fluid_flow_field: StokesFluidFlowField, power: float, lambda_: float, radius: float):
         self.fluid = fluid_flow_field
         self.power = power
         self.lambda_ = lambda_

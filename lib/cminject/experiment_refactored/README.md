@@ -74,7 +74,7 @@ Fields are the only objects that have an actual effect on Particles' velocity an
 The acceleration "felt" by any Particle at any moment in time is the sum of the accelerations of all
 Fields that have an effect at the Particle's position.
 
-> - `FluidFlowField`: An acceleration field based on an interpolated drag force from a grid-based fluid flow field.
+> - `StokesFluidFlowField`: An acceleration field based on an interpolated drag force from a grid-based fluid flow field.
 
 ### Detector
 A Detector is something that will try detecting any Particle hitting it and can calculate (interpolate)

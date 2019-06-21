@@ -32,7 +32,7 @@ from cminject.experiment_refactored.definitions.sources import GaussianSpherical
 from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.experiment_refactored.definitions.detectors import SimpleZDetector
 from cminject.experiment_refactored.definitions.boundaries import SimpleZBoundary
-from cminject.experiment_refactored.fields.fluid_flow_field import FluidFlowField
+from cminject.experiment_refactored.fields.fluid_flow_field import StokesFluidFlowField
 from cminject.experiment_refactored.visualization.plot import plot_particles
 
 
@@ -42,7 +42,7 @@ class FluidFlowFieldDevice(Device):
         return self.boundary.z_boundary
 
     def __init__(self, filename: str, density: float, dynamic_viscosity: float, scale_slip: float):
-        self.field: FluidFlowField = FluidFlowField(
+        self.field: StokesFluidFlowField = StokesFluidFlowField(
             filename=filename,
             density=density, dynamic_viscosity=dynamic_viscosity, scale_slip=scale_slip
         )

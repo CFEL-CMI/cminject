@@ -28,10 +28,10 @@ from cminject.experiment_refactored.definitions.particles import SphericalPartic
 from cminject.experiment_refactored.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
 
 
-class FluidFlowField(RegularGridInterpolationField):
+class StokesFluidFlowField(RegularGridInterpolationField):
     """
-    A flow field that calculates a drag force exerted on a particle, based on a grid defined by an HDF5 file
-    that has been converted from a COMSOL .txt file, see comsol_hdf5_tools.txt_to_hdf5.
+    A flow field that calculates a drag force exerted on a particle, based on the stokes force and interpolation
+    on a grid defined by an HDF5 file like comsol_hdf5_tools.txt_to_hdf5 outputs.
     """
     def __init__(self, filename: str,
                  density: float, dynamic_viscosity: float,
