@@ -35,7 +35,7 @@ def get_hist2d_figure_from_hdf5(hdf5_filename: str, dimension_pairs: List[Tuple[
                 ax.set_ylabel(dims[1])
 
                 ax.autoscale(enable=False)
-                ax.scatter(x[0], y[0], s=100, c='r', marker='o')
+                ax.scatter([0.0], [0.0], s=100, c='r', marker='o')
 
         return fig
 
