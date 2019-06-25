@@ -74,7 +74,7 @@ def run_example_experiment(args):
         )
     ]
     detectors = [
-        SimpleZDetector(identifier=i, z_position=-0.01 * i)
+        SimpleZDetector(identifier=i, z_position=-0.005 * i)
         for i in range(12)
         #SimpleZDetector(identifier=1, z_position=-0.052)
     ]
