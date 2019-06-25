@@ -40,7 +40,7 @@ class GaussianSphericalSource(Source):
     def set_number_of_dimensions(self, number_of_dimensions: int):
         if number_of_dimensions != self.number_of_dimensions:
             raise ValueError(
-                f"Incompatible number of dimensions: {number_of_dimensions},"
+                f"Incompatible number of dimensions: {number_of_dimensions}, "
                 f"the position mu/sigma description passed at construction is {self.number_of_dimensions}-dimensional."
             )
 
