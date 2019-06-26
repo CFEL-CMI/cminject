@@ -85,15 +85,15 @@ class PhotophoreticLaserField(Field):
 
     def absorption_integrator_fn(self, particle: ThermallyConductiveSphericalParticle, theta, phi, comp):
         """Integrate the absorption over a sphere"""
-        x = np.sin(theta) * np.cos(phi) * self.radius
-        y = np.sin(theta) * np.sin(phi) * self.radius
-        z = np.cos(theta) * self.radius
+        x = np.sin(theta) * np.cos(phi) * particle.radius
+        y = np.sin(theta) * np.sin(phi) * particle.radius
+        z = np.cos(theta) * particle.radius
         power = self.calculate_power_absorption(particle, x, y, z)  # TODO nt?
 
         if comp == 'x':
             return abs(power * x) * np.sin(phi)
         elif comp == 'z':
-            return power * z * np.sin(phi)  # TODO no abs?
+            return abs(power * z) * np.sin(phi)  # TODO no abs?
         else:
             raise ValueError("comp needs to be 'x' or 'z'!")
 
