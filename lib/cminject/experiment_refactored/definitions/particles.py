@@ -44,11 +44,13 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
     def __init__(self, *args,
                  thermal_conductivity: float = 6.3,
                  temperature: float = 298.0,
+                 refraction_index: float = 1.0,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.thermal_conductivity = thermal_conductivity
         self.temperature = temperature
         self.collision_temperature = temperature
+        self.refraction_index = refraction_index
 
         self.time_to_liquid_n = float('inf')
         self.collision_time_to_liquid_n = float('inf')

@@ -21,8 +21,6 @@ import argparse
 import os
 from typing import Tuple
 
-import numpy as np
-import h5py
 from cminject.experiment_refactored.definitions.result_storage import HDF5ResultStorage
 
 from cminject.experiment_refactored.experiment import Experiment
@@ -34,8 +32,7 @@ from cminject.experiment_refactored.definitions.sources import GaussianSpherical
 from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.experiment_refactored.definitions.detectors import SimpleZDetector
 from cminject.experiment_refactored.definitions.boundaries import SimpleZBoundary
-from cminject.experiment_refactored.fields.fluid_flow_field import StokesFluidFlowField
-from cminject.experiment_refactored.visualization.plot import get_3d_figure_from_particles, get_hist2d_figure_from_hdf5
+from cminject.experiment_refactored.definitions.fields.stokes_fluid_flow_field import StokesFluidFlowField
 
 
 class StokesFluidFlowFieldDevice(Device):

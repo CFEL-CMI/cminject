@@ -18,8 +18,6 @@ def get_hist2d_figure_from_hdf5(hdf5_filename: str, dimension_pairs: List[Tuple[
         plot_count = len(dimension_pairs)
 
         fig, axes = plt.subplots(detector_count, plot_count)
-        print(axes)
-
         for j in range(plot_count):
             for i in range(detector_count):
                 hits = detectors[str(i)]
@@ -37,7 +35,7 @@ def get_hist2d_figure_from_hdf5(hdf5_filename: str, dimension_pairs: List[Tuple[
                 ax.autoscale(enable=False)
                 ax.scatter([0.0], [0.0], s=100, c='r', marker='o')
 
-        return fig
+        return fig, axes
 
 
 def get_3d_figure_from_particles(particles: List[Particle], plot_trajectories=False):

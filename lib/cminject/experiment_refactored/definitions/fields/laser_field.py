@@ -2,14 +2,14 @@ from functools import partial
 from typing import Tuple
 
 import numpy as np
-from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
-from cminject.experiment_refactored.fields.fluid_flow_field import StokesFluidFlowField
 from scipy.integrate import dblquad
 from scipy.constants import R, pi
 
 import cmath  # TODO can't we do this with np?
 
-from cminject.experiment_refactored.definitions.base import Field, Particle
+from cminject.experiment_refactored.definitions.base import Field, empty_interval
+from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
+from cminject.experiment_refactored.definitions.fields.stokes_fluid_flow_field import StokesFluidFlowField
 
 
 class PhotophoreticLaserField(Field):
@@ -40,20 +40,24 @@ class PhotophoreticLaserField(Field):
 
     @staticmethod
     def calculate_sp_split(x, y, z, phi):
-        """Returns the percentage of the S and P component in the beam."""
+        """Returns the percentages of the S and P component in the beam."""
         r2 = x**2 + y**2 + z**2
         s = ((x * np.sin(phi) - y * np.cos(phi))**2) / r2
         p = ((x * np.cos(phi) - y * np.sin(phi))**2) / r2
         return s, p
 
     @staticmethod
-    def calculate_absorption_coefficient(x, y, refraction_index=0.0):
+    def calculate_absorption_coefficient(x: float, y: float, refraction_index: float = 1.0) \
+            -> Tuple[float, float, float]:
         """
         Calculates the absorption coefficients for S and P polarisation components according to the Fresnel equations.
-        nt is the index of refraction of the sphere.
+        :param x: The x position.
+        :param y: The y position.
+        :param refraction_index: The refraction index of the sphere.
+        :return: The absorption coefficient.
         """
         incident_angle = np.arcsin(np.sqrt(x**2 + y**2))
-        if incident_angle != 0:
+        if incident_angle != 0.0:
             transmit_angle = cmath.asin(np.sin(incident_angle) / refraction_index)
             delta_angle = incident_angle - transmit_angle
             total_angle = incident_angle + transmit_angle
@@ -64,28 +68,28 @@ class PhotophoreticLaserField(Field):
             p = 1 - abs((refraction_index - 1) / (refraction_index + 1))**2
             return p, p, 1.0
 
-    def calculate_power_absorption(self, particle: Particle, x, y, z):
+    def calculate_power_absorption(self, particle: ThermallyConductiveSphericalParticle, x, y, z):
         """
         The absorption is calculated for each component s and p.
         """
-        p_abs, s_abs, cos_theta = self.calculate_absorption_coefficient(x, y)
+        p_abs, s_abs, cos_theta = self.calculate_absorption_coefficient(x, y, particle.refraction_index)
 
         p, s = self.calculate_sp_split(x, y, z, phi=0)
         p_abs *= p
         s_abs *= s
 
         offset_position = particle.position + np.array([x, y, z])
-        intensity = self.calculate_vortex_intensity(*offset_position)
+        intensity = self.calculate_vortex_intensity(*offset_position) / self.radius**2
         absorbed_power = intensity * (p_abs + s_abs)
         return absorbed_power
 
-    def calculate_integrated_absorption(self, particle: Particle, theta, phi, comp):
+    def absorption_integrator_fn(self, particle: ThermallyConductiveSphericalParticle, theta, phi, comp):
         """Integrate the absorption over a sphere"""
         x = np.sin(theta) * np.cos(phi) * self.radius
         y = np.sin(theta) * np.sin(phi) * self.radius
         z = np.cos(theta) * self.radius
+        power = self.calculate_power_absorption(particle, x, y, z)  # TODO nt?
 
-        power = self.calculate_power_absorption(particle, x, y, z, 0)  # TODO nt?
         if comp == 'x':
             return abs(power * x) * np.sin(phi)
         elif comp == 'z':
@@ -93,18 +97,38 @@ class PhotophoreticLaserField(Field):
         else:
             raise ValueError("comp needs to be 'x' or 'z'!")
 
-    def calculate_photophoretic_force(self, particle: ThermallyConductiveSphericalParticle):
+    def intensity_integrator_fn(self, particle: ThermallyConductiveSphericalParticle, theta, phi):
+        """
+        The function to be integrated to calculate the total intensity along a sphere section.
+        :param particle: The spherical particle to integrate over.
+        :param theta: Theta in spherical coordinates.
+        :param phi: Phi in spherical coordinates.
+        :return: The local intensity.
+        """
+        x = np.sin(theta) * np.cos(phi) * particle.radius
+        y = np.sin(theta) * np.sin(phi) * particle.radius
+        z = np.cos(theta)
+        return np.sin(phi) * self.calculate_vortex_intensity(
+            *(particle.position + np.array([x, y, z]))
+        )
+
+    def calculate_photophoretic_force(self, particle: ThermallyConductiveSphericalParticle) -> Tuple[float, float]:
+        """
+        Calculates the photophoretic force exerted on a particle based on a simple model,
+        based amongst other things on the fluid flow force field this field was constructed with.
+        :param particle: The particle instance.
+        :return: The photophoretic forces in transverse and axial direction.
+        """
         fl = self.fluid
         d = pi/2 * np.sqrt(pi/3) * fl.thermal_creep * (fl.dynamic_viscosity / fl.density) \
             * np.sqrt(fl.temperature * 8 * R / (pi * fl.molar_mass)) / fl.temperature
         char_p = (3/pi) * d * fl.temperature * particle.radius
 
-        i = self.calculate_integrated_absorption()
-        integrate_fn = partial(self.calculate_integrated_absorption, particle)
-        first_half_sphere = dblquad(integrate_fn, 0, pi, 0, pi)[0]
-        first_half_sphere_ax = dblquad(integrate_fn, 0, pi/2, 0, 2*pi)[0]
-        second_half_sphere = dblquad(integrate_fn, 0, pi, pi, 2*pi)[0]
-        second_half_sphere_ax = dblquad(integrate_fn, pi/2, pi, 0, 2 * pi)[0]
+        integrator_fn = partial(self.intensity_integrator_fn, particle)
+        first_half_sphere = dblquad(integrator_fn,     0,     pi,    0,   pi)[0]
+        first_half_sphere_ax = dblquad(integrator_fn,  0,     pi/2,  0,   2*pi)[0]
+        second_half_sphere = dblquad(integrator_fn,    0,     pi,    pi,  2*pi)[0]
+        second_half_sphere_ax = dblquad(integrator_fn, pi/2,  pi,    0,   2*pi)[0]
 
         diff_transverse = second_half_sphere - first_half_sphere
         diff_axial = second_half_sphere_ax - first_half_sphere_ax
@@ -114,9 +138,8 @@ class PhotophoreticLaserField(Field):
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
-        pass  # TODO
+        return empty_interval  # TODO this ain't great
 
     def set_number_of_dimensions(self, number_of_dimensions: int):
         if number_of_dimensions != 3:
-            raise ValueError("Can only handle 3D simulation setup.")
-        # TODO after extending to more dimensionalities ...
+            raise ValueError("PhotophoreticLaserField can currently only handle a 3D simulation setup.")

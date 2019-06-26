@@ -1,9 +1,7 @@
-from typing import Dict, Any
-
 import numpy as np
 from cminject.experiment_refactored.definitions.base import PropertyUpdater, Particle
 from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
-from cminject.experiment_refactored.fields.fluid_flow_field import StokesFluidFlowField
+from cminject.experiment_refactored.definitions.fields.stokes_fluid_flow_field import StokesFluidFlowField
 
 
 class TrajectoryPropertyUpdater(PropertyUpdater):

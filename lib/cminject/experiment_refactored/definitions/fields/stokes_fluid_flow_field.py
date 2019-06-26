@@ -19,12 +19,14 @@
 from typing import Tuple, List
 
 import numpy as np
-from cminject.experiment_refactored.definitions.fields import RegularGridInterpolationField
-from scipy.interpolate import RegularGridInterpolator
+
 from scipy.constants import pi, Avogadro, Boltzmann, R
 
-from cminject.experiment_refactored.definitions.base import Field, Particle
-from cminject.experiment_refactored.definitions.particles import SphericalParticle, ThermallyConductiveSphericalParticle
+from cminject.experiment_refactored.definitions.base import Particle
+from cminject.experiment_refactored.definitions.fields.regular_grid_interpolation_field\
+    import RegularGridInterpolationField
+from cminject.experiment_refactored.definitions.particles\
+    import SphericalParticle, ThermallyConductiveSphericalParticle
 from cminject.experiment_refactored.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
 
 
@@ -246,14 +248,6 @@ class StokesFluidFlowField(RegularGridInterpolationField):
         # TODO in the original code, dT was calculated but unused?
         collision_temperature = self.temperature + (particle.collision_temperature - self.temperature) * np.exp(-c / k)
         return c, collision_temperature
-
-    @staticmethod
-    def _read_from_hdf5(filename: str) -> Tuple[List[np.array], np.array]:
-        print(f"Reading in HDF5 file {filename}...")
-        data_index, data_grid = hdf5_to_data_grid(filename)
-        print(f"Done reading in HDF5 file {filename}.")
-        # Return x/y/z and the data grid. Both are needed to construct a RegularGridInterpolator.
-        return data_index, data_grid
 
     def set_number_of_dimensions(self, number_of_dimensions: int):
         if number_of_dimensions != self.number_of_dimensions:
