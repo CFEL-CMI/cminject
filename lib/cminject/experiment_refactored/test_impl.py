@@ -57,7 +57,7 @@ def run_example_experiment(args):
         raise ValueError("Output file already exists! Please delete or move the existing file.")
 
     print("Setting up experiment...")
-    print(f"The initial velocity of the particles is around {args.z_velocity} m/s in Z direction.")
+    print(f"The initial velocity of the particles is around {args.velocity[args.dimensions - 1]} m/s in Z direction.")
 
     t_start, dt, t_end = 0.0, 1.0e-6, 1.0
     print(f"Simulating from t0={t_start} to {t_end} with dt={dt}.")
@@ -73,19 +73,14 @@ def run_example_experiment(args):
     detectors = [
         SimpleZDetector(identifier=i, z_position=-0.005 * i)
         for i in range(12)
-        #SimpleZDetector(identifier=1, z_position=-0.052)
     ]
 
     sources = [
         GaussianSphericalSource(
             args.nof_particles,
-            position=([0.0, 0.0, 0.0048], [0.0002, 0.0002, 0.00001])
-                if args.dimensions == 3
-                else ([0.0, 0.0048], [0.0002, 0.00001]),
-            velocity=([0.0, 0.7, args.z_velocity], [0.10, 0.30, 2.00])
-                if args.dimensions == 3
-                else ([0.7, args.z_velocity], [0.30, 2.00]),
-            radius=(args.radius, 7.5e-9),
+            position=(args.position, args.position_sigma),
+            velocity=(args.velocity, args.velocity_sigma),
+            radius=(args.radius, args.radius_sigma),
             seed=args.seed,
             rho=args.density,
 
@@ -127,22 +122,39 @@ if __name__ == '__main__':
             raise argparse.ArgumentTypeError("Minimum is 1")
         return x
 
+    def float_list(x):
+        entries = x.split(',')
+        return [float(entry) for entry in entries]
 
     parser = argparse.ArgumentParser(prog='cminject',
                                      formatter_class=argparse.MetavarTypeHelpFormatter)
     parser.add_argument('-n', '--nof-particles', help='Number of particles',
                         type=natural_number, required=True)
-    parser.add_argument('-v', '--z-velocity', help='Average initial velocity (in Z direction) of the particles',
-                        type=float, required=True)
     parser.add_argument('-f', '--flow-field', help='Flow field filename (hdf5 format)',
                         type=str, required=True)
     parser.add_argument('-o', '--output-file', help='Output filename for phase space (hdf5 format)',
                         type=str, required=True)
 
-    parser.add_argument('-r', '--radius', help='Average radius of the particles',
+    parser.add_argument('-r', '--radius', help='Radius mu (Gaussian mean) of the particles',
+                        type=float)
+    parser.add_argument('-rsg', '--radius_sigma', help='Radius sigma (Gaussian standard deviation) of the particles',
                         type=float)
     parser.add_argument('-d', '--density', help='Density of the particles',
                         type=float)
+    parser.add_argument('-p', '--position',
+                        help='Initial position mu (Gaussian mean), as a tuple of floats separated by commas.',
+                        type=float_list)
+    parser.add_argument('-psg', '--position_sigma',
+                        help='Initial position sigma (Gaussian standard deviation), as a tuple of floats '
+                             'separated by commas.',
+                        type=float_list)
+    parser.add_argument('-v', '--velocity',
+                        help='Initial position mu (Gaussian mean), as a tuple of floats separated by commas.',
+                        type=float_list)
+    parser.add_argument('-vsg', '--velocity_sigma',
+                        help='Initial position sigma (Gaussian standard deviation), '
+                             'as a tuple of floats separated by commas. ',
+                        type=float_list)
 
     parser.add_argument('-fd', '--flow-density', help='Density of the gas in the flow field',
                         type=float)
@@ -161,9 +173,19 @@ if __name__ == '__main__':
     parser.add_argument('-S', '--seed', help='Seed for the random generator',
                         type=int)
 
-    parser.set_defaults(radius=2.45e-7, density=1050.0, dimensions=3, seed=1000,
-                        flow_dynamic_viscosity=1.02e-6, flow_density=0.0009, flow_scale_slip=4.1)
+    parser.set_defaults(density=1050.0, dimensions=3, seed=1000,
+                        flow_dynamic_viscosity=1.02e-6, flow_density=0.0009, flow_scale_slip=4.1,
+                        radius=2.45e-7, radius_sigma=7.5e-9,
+                        position=[0.0, 0.0, 0.0048], position_sigma=[0.0002, 0.0002, 0.00001],
+                        velocity=[0.0, 0.7, -43.0], velocity_sigma=[0.10, 0.30, 2.00])
     args = parser.parse_args()
+
+    # Verify dimensionality match for position description and dimensions parameter
+    if len(args.position) != args.dimensions or len(args.position_sigma) != args.dimensions:
+        parser.error("The length of the position description vectors must match the simulation dimensionality!")
+    if len(args.velocity) != args.dimensions or len(args.velocity_sigma) != args.dimensions:
+        parser.error("The length of the velocity description vectors must match the simulation dimensionality!")
+
     run_example_experiment(args)
 
 
