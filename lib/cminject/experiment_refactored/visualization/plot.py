@@ -15,12 +15,13 @@ def get_hist2d_figure_from_hdf5(hdf5_filename: str, dimension_pairs: List[Tuple[
     with h5py.File(hdf5_filename) as h5f:
         detectors = h5f['detector_hits']
         detector_count = len(detectors)
+        detector_keys = list(detectors.keys())
         plot_count = len(dimension_pairs)
 
         fig, axes = plt.subplots(detector_count, plot_count)
         for j in range(plot_count):
             for i in range(detector_count):
-                hits = detectors[str(i)]
+                hits = detectors[detector_keys[i]]
 
                 dims = dimension_pairs[j]
                 dim_a, dim_b = _find_dims(hits.attrs['description'], dims)
@@ -38,9 +39,11 @@ def get_hist2d_figure_from_hdf5(hdf5_filename: str, dimension_pairs: List[Tuple[
         return fig, axes
 
 
-def get_3d_figure_from_particles(particles: List[Particle], plot_trajectories=False):
+def get_traj_figure_from_particles(particles: List[Particle], plot_trajectories=False):
     from mpl_toolkits.mplot3d import Axes3D
-    dimensions = 3
+    dimensions = int(len(particles[0].position) / 2)
+    if dimensions not in [2, 3]:
+        raise ValueError("Can only plot 2D/3D!")
 
     initial_positions = np.array([p.initial_position[:dimensions] for p in particles]).transpose()
     positions = np.array([p.position[:dimensions] for p in particles]).transpose()
@@ -50,15 +53,22 @@ def get_3d_figure_from_particles(particles: List[Particle], plot_trajectories=Fa
     ]
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection='3d') if dimensions == 3 else fig.add_subplot(111)
 
-    plt.scatter(positions[0], positions[1], zs=positions[2], s=3, c=color)
-    plt.scatter(initial_positions[0], initial_positions[1], zs=initial_positions[2], s=3, c='black')
+    if dimensions == 3:
+        plt.scatter(positions[0], positions[1], zs=positions[2], s=3, c=color)
+        plt.scatter(initial_positions[0], initial_positions[1], zs=initial_positions[2], s=3, c='black')
+    elif dimensions == 2:
+        plt.scatter(positions[0], positions[1], s=3, c=color)
+        plt.scatter(initial_positions[0], initial_positions[1], s=3, c='black')
 
     for p in particles:
         for detector_id, hits in p.detector_hits.items():
             hits = np.array([hit.hit_position for hit in hits])
-            plt.scatter(hits[:, 0], hits[:, 1], zs=hits[:, 2], s=10, color='yellow')
+            if dimensions == 3:
+                plt.scatter(hits[:, 0], hits[:, 1], zs=hits[:, 2], s=10, color='yellow')
+            elif dimensions == 2:
+                plt.scatter(hits[:, 0], hits[:, 1], s=10, color='yellow')
 
         if plot_trajectories and p.trajectory:
             trajectory = np.array(p.trajectory)
@@ -68,5 +78,7 @@ def get_3d_figure_from_particles(particles: List[Particle], plot_trajectories=Fa
 
     ax.set_xlabel('x')
     ax.set_ylabel('y')
-    ax.set_zlabel('z')
-    plt.show()
+    if dimensions == 3:
+        ax.set_zlabel('z')
+
+    return fig

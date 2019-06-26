@@ -27,7 +27,7 @@ from cminject.experiment_refactored.experiment import Experiment
 from cminject.experiment_refactored.definitions.base import \
     Particle, Device
 from cminject.experiment_refactored.definitions.property_updaters import TrajectoryPropertyUpdater, \
-    ParticleTemperaturePropertyUpdater
+    ParticleTemperaturePropertyUpdater, RadialSymmetryPropertyUpdater
 from cminject.experiment_refactored.definitions.sources import GaussianSphericalSource
 from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.experiment_refactored.definitions.detectors import SimpleZDetector
@@ -103,7 +103,8 @@ def run_example_experiment(args):
         sources=sources,
         property_updaters=property_updaters,
         time_interval=(t_start, t_end, dt),
-        delta_z_end=0.001
+        delta_z_end=0.001,
+        number_of_dimensions=args.dimensions
     )
 
     print(f"The total Z boundary of the experiment is {experiment.z_boundary}.")

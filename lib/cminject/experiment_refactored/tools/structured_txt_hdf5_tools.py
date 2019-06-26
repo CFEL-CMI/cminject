@@ -59,7 +59,6 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3) -> Non
     This will be stored as metadata too.
 
     The number of columns after X/Y/Z is arbitrary.
-    NOTE: X is the dimension that increments first. This convention MUST be adhered to.
 
     The constructed HDF5 file will have the following entries:
     - index: Each of these is the set of indices found for each dimension, in order of occurrence
@@ -76,6 +75,8 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3) -> Non
     the behavior will be undefined.
     :param outfile_name: The output file name.
     :param dimensions: The number of spatial dimensions in the txt file. 3 by default, will be 2 or 3 for most cases.
+    :param flip_indices: Flip the indices: Should be set to True if the flow field index (x,y,z / r,z / ...) iterates
+    the fastest in the first dimension (which is atypical from a CS point of view).
     :return: None.
     """
     f = open(infile_name, 'r')
@@ -121,8 +122,13 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3) -> Non
         for header in headers:
             values[header[0]] = []
 
+    # Needed below, to recognise whether we need to flip the index or not
+    first_cols = None
+    flip_indices = None
+    guessed_flip_indices_flag = False
+
     # From here on we assume every line to only contain data
-    for line in f:
+    for line_no, line in enumerate(f):
         # After the header handling: Split current line on spaces, update index and values
         cols = line.split()
         for d in range(dimensions):
@@ -131,15 +137,29 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3) -> Non
         for i in range(len(headers)):
             values[headers[i][0]].append(float(cols[dimensions+i]))
 
+        # To recognise whether we need to flip the index order or not, based on the first two data lines:
+        if first_cols is None:
+            # Remember the first set of columns, this will only occur once
+            first_cols = cols
+        elif not guessed_flip_indices_flag:
+            # This will also only occur once, and set the "flip_indices" flag based on whether the first column has
+            # changed between the first and second lines or not. If it has, we need to flip the index. Otherwise not.
+            flip_indices = float(first_cols[0]) != float(cols[0])
+            if flip_indices:
+                print("NOTE: Recognised that conversion needs to flip the index. You can read up on what this means in "
+                      "the code, but most likely this will work exactly as intended for you.")
+            guessed_flip_indices_flag = True
+
     # Construct numpy arrays for each collected index set per dimension
     index = [np.array(list(i.keys()), dtype=float) for i in index]
     index_n = [len(i) for i in index]
 
     for i in range(len(headers)):
         val_arr = np.array(values[headers[i][0]], dtype=np.float)
-        # Transpose the whole array to match "normal" X/Y/Z/... iteration order. The order that the dimensions
-        # increment in is inverted in the txt file format, so transpose it here.
-        val_arr = val_arr.reshape(tuple(reversed(index_n))).transpose().reshape((np.prod(index_n),))
+        if flip_indices:
+            # Transpose the whole array to match "normal" X/Y/Z/... iteration order. The order that the dimensions
+            # increment in is inverted in the txt file format, so transpose it here.
+            val_arr = val_arr.reshape(tuple(reversed(index_n))).transpose().reshape((np.prod(index_n),))
         val_mat = csr_matrix(np.nan_to_num(val_arr))
         values[headers[i][0]] = val_mat
 
@@ -158,7 +178,7 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3) -> Non
 
         # Store the index definitions for each spatial dimension
         for i in range(dimensions):
-            h5f.create_dataset(f'index/{i}', data=index[i])
+            h5f[f'index/{i}'] = index[i]
 
 
 def hdf5_to_data_frame(filename: str) -> pd.DataFrame:

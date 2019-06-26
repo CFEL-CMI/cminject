@@ -14,6 +14,21 @@ class TrajectoryPropertyUpdater(PropertyUpdater):
         pass
 
 
+class RadialSymmetryPropertyUpdater(PropertyUpdater):
+    def __init__(self, dimension: int = 0, position: float = 0.0):
+        self.dimension = dimension
+        self.position = position
+        self.number_of_dimensions = 2
+
+    def update(self, particle: Particle, time: float) -> None:
+        if particle.position[self.dimension] < 0.0:
+            particle.position[self.dimension] = abs(particle.position[self.dimension])
+            particle.position[self.dimension + self.number_of_dimensions] *= -1
+
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        self.number_of_dimensions = number_of_dimensions
+
+
 class ParticleTemperaturePropertyUpdater(PropertyUpdater):
     def __init__(self, field: StokesFluidFlowField, dt: float):
         self.field: StokesFluidFlowField = field
