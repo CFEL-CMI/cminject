@@ -27,7 +27,7 @@ from cminject.experiment_refactored.experiment import Experiment
 from cminject.experiment_refactored.definitions.base import \
     Particle, Device
 from cminject.experiment_refactored.definitions.property_updaters import TrajectoryPropertyUpdater, \
-    ParticleTemperaturePropertyUpdater, RadialSymmetryPropertyUpdater
+    ParticleTemperaturePropertyUpdater, MirrorSymmetryPropertyUpdater
 from cminject.experiment_refactored.definitions.sources import GaussianSphericalSource
 from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.experiment_refactored.definitions.detectors import SimpleZDetector
@@ -89,13 +89,8 @@ def run_example_experiment(args):
     ]
 
     property_updaters = [TrajectoryPropertyUpdater()] if args.store_traj else []
-    if 0 == 1 % 2:
-        property_updaters += [
-            ParticleTemperaturePropertyUpdater(
-                field=devices[0].field,
-                dt=dt
-            )
-        ]
+    if args.dimensions == 2:
+        property_updaters += [MirrorSymmetryPropertyUpdater()]
 
     experiment = Experiment(
         devices=devices,
