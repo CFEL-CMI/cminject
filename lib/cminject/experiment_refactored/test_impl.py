@@ -59,7 +59,7 @@ def run_example_experiment(args):
     print("Setting up experiment...")
     print(f"The initial velocity of the particles is around {args.velocity[args.dimensions - 1]} m/s in Z direction.")
 
-    t_start, dt, t_end = 0.0, 1.0e-6, 1.0
+    t_start, t_end, dt = args.time_interval
     print(f"Simulating from t0={t_start} to {t_end} with dt={dt}.")
 
     devices = [
@@ -70,9 +70,9 @@ def run_example_experiment(args):
             scale_slip=args.flow_scale_slip,
         )
     ]
+
     detectors = [
-        SimpleZDetector(identifier=i, z_position=-0.005 * i)
-        for i in range(12)
+        SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)
     ]
 
     sources = [
@@ -105,9 +105,10 @@ def run_example_experiment(args):
     print(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
     print("Running experiment...")
     result_particles = experiment.run(single_threaded=args.single_threaded)
-    print("Done running experiment.")
-
+    print("Done running experiment. Storing results...")
     HDF5ResultStorage(args.output_file).store_results(result_particles)
+    print(f"Saved results to {args.output_file}.")
+
     return result_particles
 
 
@@ -118,16 +119,17 @@ if __name__ == '__main__':
             raise argparse.ArgumentTypeError("Minimum is 1")
         return x
 
-    def float_list(x):
-        entries = x.split(',')
-        return [float(entry) for entry in entries]
-
     parser = argparse.ArgumentParser(prog='cminject',
                                      formatter_class=argparse.MetavarTypeHelpFormatter)
-    parser.add_argument('-n', '--nof-particles', help='Number of particles',
+    parser.add_argument('-n', '--nof-particles', help='The number of particles to simulate',
                         type=natural_number, required=True)
+    parser.add_argument('-t', '--time-interval',
+                        help='The time interval to run the simulation within, as a 3-list (t_start, t_end, dt)',
+                        type=float, nargs=3)
     parser.add_argument('-f', '--flow-field', help='Flow field filename (hdf5 format)',
                         type=str, required=True)
+    parser.add_argument('-d', '--detectors', help='The Z positions of the detectors', nargs='+',
+                        type=float, required=True)
     parser.add_argument('-o', '--output-file', help='Output filename for phase space (hdf5 format)',
                         type=str, required=True)
 
@@ -135,22 +137,20 @@ if __name__ == '__main__':
                         type=float)
     parser.add_argument('-rsg', '--radius_sigma', help='Radius sigma (Gaussian standard deviation) of the particles',
                         type=float)
-    parser.add_argument('-d', '--density', help='Density of the particles',
+    parser.add_argument('-rho', '--density', help='Density of the particles',
                         type=float)
     parser.add_argument('-p', '--position',
-                        help='Initial position mu (Gaussian mean), as a tuple of floats separated by commas.',
-                        type=float_list)
+                        help='Initial position mu (Gaussian mean), one for each dimension',
+                        nargs='*', type=float)
     parser.add_argument('-psg', '--position_sigma',
-                        help='Initial position sigma (Gaussian standard deviation), as a tuple of floats '
-                             'separated by commas.',
-                        type=float_list)
+                        help='Initial position sigma (Gaussian standard deviation), one for each dimension.',
+                        nargs='*', type=float)
     parser.add_argument('-v', '--velocity',
-                        help='Initial position mu (Gaussian mean), as a tuple of floats separated by commas.',
-                        type=float_list)
+                        help='Initial position mu (Gaussian mean), one for each dimension.',
+                        nargs='*', type=float)
     parser.add_argument('-vsg', '--velocity_sigma',
-                        help='Initial position sigma (Gaussian standard deviation), '
-                             'as a tuple of floats separated by commas. ',
-                        type=float_list)
+                        help='Initial position sigma (Gaussian standard deviation), one for each dimension.',
+                        nargs='*',  type=float)
 
     parser.add_argument('-fd', '--flow-density', help='Density of the gas in the flow field',
                         type=float)
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     parser.add_argument('-fs', '--flow-scale-slip', help='Slip scale factor of the flow field',
                         type=float)
 
-    parser.add_argument('-t', '--store-traj', help='Store trajectories?',
+    parser.add_argument('-T', '--store-traj', help='Store trajectories?',
                         action='store_true')
     parser.add_argument('-s', '--single-threaded',
                         help='Run single threaded? CAUTION: Very slow, only for debugging purposes',
@@ -173,7 +173,8 @@ if __name__ == '__main__':
                         flow_dynamic_viscosity=1.02e-6, flow_density=0.0009, flow_scale_slip=4.1,
                         radius=2.45e-7, radius_sigma=7.5e-9,
                         position=[0.0, 0.0, 0.0048], position_sigma=[0.0002, 0.0002, 0.00001],
-                        velocity=[0.0, 0.7, -43.0], velocity_sigma=[0.10, 0.30, 2.00])
+                        velocity=[0.0, 0.7, -43.0], velocity_sigma=[0.10, 0.30, 2.00],
+                        detectors=[0.0, -0.052], time_interval=[0.0, 1.0, 1e-6])
     args = parser.parse_args()
 
     # Verify dimensionality match for position description and dimensions parameter
