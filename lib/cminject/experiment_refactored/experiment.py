@@ -126,19 +126,13 @@ def simulate_particle(particle: Particle, devices: List[Device],
 
             # - Have each detector try to detect the particle
             for detector in detectors:
-                if detector.try_to_detect(particle):
-                    print(f"\t\tParticle {particle.identifier} reached at ~{particle.position}.")
-                    if particle.trajectory:
-                        print(f"\t\tTracked {len(particle.trajectory)} positions until this hit.")
+                detector.try_to_detect(particle)
 
             # Propagate by integrating until the next time step
             integral.integrate(integral.t + dt)
         else:
             # If particle is lost, store this and (implicitly) break the loop
             particle.lost = True
-            print(f"\t\tParticle {particle.identifier} lost at {particle.position}.")
-            if particle.trajectory:
-                print(f"\t\tTracked {len(particle.trajectory)} positions in total.")
 
     print(f"\tDone simulating particle {particle.identifier}.")
     return particle
