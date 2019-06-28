@@ -30,12 +30,16 @@ class HDF5ResultStorage(ResultStorage):
 
     def store_results(self, particles: List[Particle]) -> None:
         with h5py.File(self.filename) as h5f:
+            h5f.attrs['dimensions'] = len(particles[0].spatial_position)
             detector_hits = {}
 
             for particle in particles:
+                h5f[f'particles/{particle.identifier}/initial_position'] = np.array(particle.initial_position)
+                h5f[f'particles/{particle.identifier}/final_position'] = np.array(particle.position)
+
                 if particle.trajectory:
-                    h5f[f'trajectories/{particle.identifier}'] = np.array(particle.trajectory)
-                    h5f[f'trajectories/{particle.identifier}'].attrs['description'] = \
+                    h5f[f'particles/{particle.identifier}/trajectory'] = np.array(particle.trajectory)
+                    h5f[f'particles/{particle.identifier}/trajectory'].attrs['description'] = \
                         ['t'] + particle.position_description
                 if particle.detector_hits:
                     for detector_id, hits in particle.detector_hits.items():
