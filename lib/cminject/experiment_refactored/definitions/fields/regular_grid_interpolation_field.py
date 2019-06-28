@@ -16,11 +16,12 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 """
+
 from abc import ABC
 from typing import Tuple
 
 import numpy as np
-from cminject.experiment_refactored.definitions.base import Field, Particle
+from cminject.experiment_refactored.definitions.base import Field
 from cminject.experiment_refactored.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
 from scipy.interpolate import RegularGridInterpolator
 
