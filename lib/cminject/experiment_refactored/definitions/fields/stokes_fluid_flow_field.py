@@ -20,7 +20,7 @@ from typing import Tuple
 
 import numpy as np
 
-from scipy.constants import pi, Avogadro, Boltzmann, R
+from scipy.constants import pi, Boltzmann
 
 from cminject.experiment_refactored.definitions.base import Particle
 from cminject.experiment_refactored.definitions.fields.regular_grid_interpolation_field\
@@ -35,32 +35,58 @@ class StokesFluidFlowField(RegularGridInterpolationField):
     on a grid defined by an HDF5 file like comsol_hdf5_tools.txt_to_hdf5 outputs.
     """
     def __init__(self, filename: str,
-                 density: float, dynamic_viscosity: float,
-                 temperature: float = 4.0, pressure: float = 100.0, thermal_creep: float = 1.0,
-                 # inflow_speed: float = 20.0, outflow_pressure: float = 0.0, k_n: float = 912.0,
-                 # kinetic_d: float = 260.0e-12, conv: float = 0.00001,
-                 # m_gas_mol: float = 0.004002602,
+                 dynamic_viscosity: float, m_gas: float = None,
+                 temperature: float = 4.0,
+                 slip_correction_model: str = None, slip_correction_scale: float = 1.0,
+                 # For temperature calculations done by ParticleTemperaturePropertyUpdater
+                 pressure: float = 100.0, thermal_creep: float = 1.0,
                  molar_mass: float = 0.004002602, molar_heat_capacity: float = 12.5,
                  specific_gas_constant: float = 2077.0, specific_heat_capacity: float = 3116.0,
-                 m_gas: float = 6.6e-27, speed_of_sound: float = 117.7,
-                 scale_slip: float = 1.0):
+                 speed_of_sound: float = 117.7):
         # Store all the fixed initial properties
-        self.density = density
         self.dynamic_viscosity = dynamic_viscosity
         self.temperature = temperature
-        self.scale_slip = scale_slip
+        self.slip_correction_scale = slip_correction_scale
+        self.m_gas = m_gas
         self.pressure = pressure
+
+        # Set the correct slip correction model
+        self._init_slip_correction_model(slip_correction_model, temperature)
+
+        # Store additional properties needed for particle temperature calculations
         self.thermal_creep = thermal_creep
         self.molar_mass = molar_mass
         self.molar_heat_capacity = molar_heat_capacity
         self.specific_gas_constant = specific_gas_constant
         self.specific_heat_capacity = specific_heat_capacity
-        self.m_gas = m_gas
         self.speed_of_sound = speed_of_sound
 
         # Short-term memoization storage
         self.interpolation_results = {}
         super().__init__(filename)
+
+    def _init_slip_correction_model(self, slip_correction_model: str, temperature: float):
+        # Either take the manually set slip correction model,
+        if slip_correction_model is not None:
+            self.slip_correction_model = slip_correction_model
+        else:  # or define it automatically based on the temperature.
+            if temperature == 4.0:
+                self.slip_correction_model = '4_kelvin'
+            elif temperature == 293.15:
+                self.slip_correction_model = 'room_temp'
+            else:  # Use some heuristic for the model but warn the user that this has been used.
+                self.slip_correction_model = '4_kelvin' if 0.0 <= temperature <= 200.0 else 'room_temp'
+                print(f"WARNING: Auto-picked slip correction model '{self.slip_correction_model}' based on"
+                      f" a temperature here the model might not be applicable. You might need to set the model by hand,"
+                      f" or even implement a new model, for optimal results.")
+
+        # In any case, check that the model that has been set is one that is actually implemented
+        if self.slip_correction_model not in ['4_kelvin', 'room_temp']:
+            raise ValueError(f"Invalid slip correction model: {self.slip_correction_model}")
+        if self.slip_correction_model == 'room_temp':
+            # Require m_gas for the room_temp model
+            if self.m_gas is None:
+                raise ValueError("m_gas is a required parameter for the 'room_temp' slip correction model!")
 
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
         relative_velocity, _, pressure = self.interpolate(particle, time)
@@ -128,125 +154,26 @@ class StokesFluidFlowField(RegularGridInterpolationField):
 
     def calc_slip_correction(self, pressure: float, particle: SphericalParticle) -> float:
         """
-        Calculates the slip correction factor with temperature corrections.
-        The Sutherland constant for helium is 79.4 at reference temperature of 273.0 K.
-        I took a reference pressure of 1 Pascal, in which the mean free path of helium is 0.01754.
-
-        see J. Aerosol Sci. 1976 Vol. 7. pp 381-387 by Klaus Willeke
+        Calculates the slip correction factor with temperature corrections. Works for models '4_kelvin' at 4K,
+        and 'room_temp' at 293.15K.
         """
-        c_sutherland = 79.4
-        ref_temp = 273.0
-        knudsen = 0.01754 * 1 / (pressure * particle.radius)\
-                  * self.temperature / ref_temp * (1 + c_sutherland / ref_temp)\
-                  / (1 + c_sutherland / self.temperature)
-        s = 1 + knudsen * (1.246 + (0.42 * np.exp(-0.87 / knudsen)))
-        return s * self.scale_slip
-
-    def calc_mean_free_path(self):
-        k = 1.38065e-23
-        return self.dynamic_viscosity / self.pressure * np.sqrt(pi * k * self.temperature / (2 * self.m_gas))
-
-    def calc_thermal_conductivity(self, particle: Particle, time: float) -> float:
-        """
-        Calculates the thermal conductivity based on the ideal gas law
-        http://hyperphysics.phy-astr.gsu.edu/hbase/thermo/thercond.html
-        :param particle: A Particle
-        :param time: The current time
-        :return: The thermal conductivity
-        """
-        v: float = self.interpolate(particle, time)[1]
-        mean_free_path = self.calc_mean_free_path()
-        k = self.pressure * v * mean_free_path * self.molar_heat_capacity / \
-            (3 * self.molar_mass * self.specific_gas_constant * self.temperature)
-        return k
-
-    def calc_prandtl(self, particle: Particle, time: float):
-        """
-        Calculates the Prandtl number.
-        :param particle: A Particle
-        :param time: The current time
-        :return: The Prandtl number.
-        """
-        return self.specific_heat_capacity * self.dynamic_viscosity / self.calc_thermal_conductivity(particle, time)
-
-    def calc_reynolds(self, particle: Particle, d: float, time: float) -> float:
-        """
-        Calculates the Reynolds number.
-        :param d: A characteristic length (in meters)
-        :param particle: A Particle
-        :param time: The current time.
-        :return: The Reynolds number.
-        """
-        rho = self.pressure * self.specific_gas_constant * self.temperature
-        v: float = self.interpolate(particle, time)[1]
-        return rho * v * d / self.dynamic_viscosity
-
-    def calc_nusselt(self, reynolds: float, prandtl: float, mu_s: float) -> float:
-        """
-        Calculates the Nusselt number based on the Reynolds and Prandtl number.
-        :param d: A characteristic length (in meters)
-        :param mu_s: The dynamic viscosity at the surface temperature of nanoparticle
-        :param reynolds: The Reynolds number.
-        :param prandtl: The Prandtl number.
-        :return: The Nusselt number
-        """
-        re, pr = reynolds, prandtl  # to keep the equation shorter
-        nu = 2 + (0.4 * re**0.5 + 0.06 * re**0.67) * pr**0.4 * (self.dynamic_viscosity / mu_s)**0.25
-        return nu
-
-    def calc_mach(self, particle: Particle, time: float):
-        """
-        Calculates the Mach number of the fluid at a Particle's position
-        :param particle: A Particle
-        :param time: The current time
-        :return: The Mach number
-        """
-        v: float = self.interpolate(particle, time)[1]
-        return v / self.speed_of_sound
-
-    def calc_convective_heat_transfer_coefficient(self, particle: Particle, nu: float, d: float, time: float):
-        return nu / d * self.calc_thermal_conductivity(particle, time)
-
-    def calc_particle_temperature(self, particle: ThermallyConductiveSphericalParticle, time: float):
-        """
-        Calculates a particle's "temperature" within this fluid at a given time.
-        :param particle: A particle
-        :param time: A time
-        :return: The particle's temperature
-        """
-        d = 2 * particle.radius
-        mu_s = 1.96e-5
-        re = self.calc_reynolds(particle, d, time=time)
-        pr = self.calc_prandtl(particle, time=time)
-        m = self.calc_mach(particle, time=time)
-
-        nu_0 = self.calc_nusselt(re, pr, mu_s)
-        nu = nu_0 / (1 + 3.42 * (m * nu_0 / (re * pr)))
-
-        h = self.calc_convective_heat_transfer_coefficient(particle, nu, d, time)
-        c = particle.thermal_conductivity * particle.mass
-        r = h * (4 * pi * particle.radius**2) / c  # TODO move surface area to particle class? method or field?
-        return self.temperature + (particle.temperature - self.temperature) * np.exp(-r * time)
-
-    def calc_particle_collisions(self,
-                                 particle: ThermallyConductiveSphericalParticle,
-                                 dt: float,
-                                 time: float) -> Tuple[float, float]:
-        """
-        Estimates the number of collisions of a particle within a time frame based on Kinetic Gas Theory
-        :param particle: A Particle
-        :param dt: A time delta
-        :param time: The current time
-        :return: A tuple of (the number of collisions, the new temperature based on them)
-        """
-        v = np.sqrt(8 * self.temperature * Boltzmann / (self.m_gas * pi))
-        v += self.interpolate(particle, time)[1]
-        n = self.pressure * Avogadro / (R * self.temperature)
-        c = 0.5 * n * v * dt * (4 * pi * particle.radius**2)
-        k = (particle.mass + self.m_gas)**2 / (2 * particle.mass * self.m_gas)
-        # TODO in the original code, dT was calculated but unused?
-        collision_temperature = self.temperature + (particle.collision_temperature - self.temperature) * np.exp(-c / k)
-        return c, collision_temperature
+        s = 0.0
+        if self.slip_correction_model == '4_kelvin':
+            # The Sutherland constant for helium is 79.4 at reference temperature of 273.0 K.
+            # I took a reference pressure of 1 Pascal, in which the mean free path of helium is 0.01754.
+            # see J. Aerosol Sci. 1976 Vol. 7. pp 381-387 by Klaus Willeke
+            c_sutherland = 79.4
+            ref_temp = 273.0
+            knudsen = 0.01754 * 1 / (pressure * particle.radius)\
+                      * self.temperature / ref_temp * (1 + c_sutherland / ref_temp)\
+                      / (1 + c_sutherland / self.temperature)
+            s = 1 + knudsen * (1.246 + (0.42 * np.exp(-0.87 / knudsen)))
+        elif self.slip_correction_model == 'room_temp':
+            # TODO Reference ?
+            knudsen = self.dynamic_viscosity / (pressure * particle.radius) *\
+                      np.sqrt(pi * Boltzmann * self.temperature / (2 * self.m_gas))
+            s = 1 + knudsen * (1.231 + 0.4695 * np.exp(-1.1783 / knudsen))
+        return s * self.slip_correction_scale
 
     def set_number_of_dimensions(self, number_of_dimensions: int):
         if number_of_dimensions != self.number_of_dimensions:
