@@ -49,7 +49,7 @@ A Source is something capable of generating an initial distribution of Particles
 There can be multiple Sources within an Experiment setup, but they must all generate the same type
 (instances of the same subclass) of Particles.
 
-> - `GaussianSphericalSource`: A source generating a gaussian distribution of `SphericalParticle` instances or instances
+> - `GaussianDistributedSphericalSource`: A source generating a gaussian distribution of `SphericalParticle` instances or instances
 of its subclasses; x/y/z, vx/vy/vz and r are randomly distributed according to a gaussian distribution with given μ and σ.
 
 ### Device
