@@ -19,7 +19,7 @@
 
 import argparse
 from abc import abstractmethod, ABC
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Callable, Union
 
 import h5py
 import numpy as np
@@ -75,7 +75,11 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
     are the same along both dimensions, a 1D histogram for the second dimension will be drawn, but it will be rather
     boring).
     """
-    def __init__(self, filename: str, dimension_pairs: List[Tuple[str, str]],
+    # describes a dimension as either a string or a callable that takes a list of np.arrays and returns one np.array
+    # (a function that works on a list of hits and returns an array of values, one per hit)
+    DimensionType = Union[str, Callable[[List[np.array]], np.array]]
+
+    def __init__(self, filename: str, dimension_pairs: List[Tuple[DimensionType, DimensionType]],
                  colormap: str = 'viridis', highlight_origin: bool = True,
                  bins: int = 100, bins_1d: int = 30):
         """
@@ -98,19 +102,19 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
         self.bins_1d = bins_1d
 
     @staticmethod
-    def _find_dims(description: List[str], dims: List[str]) -> List[int]:
-        """
-        Searches for the indices of a list of dimension names in a 'description list', i.e. the list of all
-        dimension names in index order. Essentially just a small wrapper around np.where.
-        :param description: The list of strings describing each dimension, in order.
-        :param dims: The list of strings we're looking for in the description list.
-        :return: A list of indices matching the searched-for dimensions.
-        """
-        return [np.where(description == dim)[0][0] for dim in dims]
+    def _get_dims(description: List[str],
+                  dims: List[DimensionType],
+                  hits: List[np.array])\
+            -> List[np.array]:
+        return [
+            dim(hits) if callable(dim)
+            else hits[np.where(description == dim)[0][0]]
+            for dim in dims
+        ]
 
     def visualize(self) -> Tuple[Figure, np.ndarray]:
         """
-Visualize the results as a plot of (potentially multiple) 1D/2D histograms.
+        Visualize the results as a plot of (potentially multiple) 1D/2D histograms.
         There will be m*n subplots arranged on a grid, with m being the number of detectors in the file,
         and n being the number of dimension pairs given at construction of this instance.
         :return: A Matplotlib figure and a 2-dimensional ndarray of all axes present in the figure.
@@ -128,21 +132,23 @@ Visualize the results as a plot of (potentially multiple) 1D/2D histograms.
                 for i in range(detector_count):
                     # Get all hits for this detector
                     hits = detectors[detector_keys[i]]
+                    description = hits.attrs['description']
+                    hits = hits[:].transpose()
 
                     # Find the dimensions' indices and get the correct axis to plot on
                     dim_a, dim_b = self.dimension_pairs[j]
-                    dim_idx_a, dim_idx_b = self._find_dims(hits.attrs['description'], [dim_a, dim_b])
+                    x, y = self._get_dims(description, [dim_a, dim_b], hits=hits)
                     ax = axes[i, j]
-
-                    # reconstruct the 'x' and 'y' data from the hit to plot
-                    x, y = hits[:, dim_idx_a], hits[:, dim_idx_b]
-
                     ax.autoscale(enable=True, tight=False)  # enable auto-scaling here :)
-                    if (x == x[0]).all():
+
+                    one_dimensional = False
+                    if (x == x[0]).all():  # X values are all equal, plot 1D histogram of Y
+                        one_dimensional = True
                         ax.hist(y, bins=self.bins_1d)
                         ax.set_xlabel(dim_b)
                         ax.set_ylabel('Frequency')
-                    elif (y == y[0]).all():
+                    elif (y == y[0]).all():  # Y values are all equal, plot 1D histogram of X
+                        one_dimensional = True
                         ax.hist(x, bins=self.bins_1d)
                         ax.set_xlabel(dim_a)
                         ax.set_ylabel('Frequency')
@@ -151,7 +157,7 @@ Visualize the results as a plot of (potentially multiple) 1D/2D histograms.
                         ax.set_xlabel(dim_a)  # set the labels for the 'x'/'y' axis as passed in the dimension pair
                         ax.set_ylabel(dim_b)
 
-                    if self.highlight_origin:
+                    if self.highlight_origin and not one_dimensional:
                         # Disable auto-scaling here: If 0.0,0.0 is outside the existing bounds, that's fine, we don't
                         # want to stretch the existing plot just to show the origin marker
                         ax.autoscale(enable=False)
