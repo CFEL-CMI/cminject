@@ -27,8 +27,9 @@ from cminject.experiment_refactored.experiment import Experiment
 from cminject.experiment_refactored.definitions.base import \
     Particle, Device
 from cminject.experiment_refactored.definitions.property_updaters import TrajectoryPropertyUpdater, \
-    ParticleTemperaturePropertyUpdater, MirrorSymmetryPropertyUpdater
-from cminject.experiment_refactored.definitions.sources import GaussianSphericalSource
+    MirrorSymmetryPropertyUpdater, BrownianMotionPropertyUpdater
+from cminject.experiment_refactored.definitions.sources import GaussianDistributedSphericalSource, \
+    LinearlyDistributedSphericalSource
 from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.experiment_refactored.definitions.detectors import SimpleZDetector
 from cminject.experiment_refactored.definitions.boundaries import SimpleZBoundary
@@ -40,10 +41,14 @@ class StokesFluidFlowFieldDevice(Device):
     def z_boundary(self) -> Tuple[float, float]:
         return self.boundary.z_boundary
 
-    def __init__(self, filename: str, density: float, dynamic_viscosity: float, scale_slip: float):
+    def __init__(self, filename: str, temperature: float,
+                 dynamic_viscosity: float, slip_correction_scale: float, m_gas: float):
         self.field: StokesFluidFlowField = StokesFluidFlowField(
             filename=filename,
-            density=density, dynamic_viscosity=dynamic_viscosity, scale_slip=scale_slip
+            slip_correction_scale=slip_correction_scale,
+            dynamic_viscosity=dynamic_viscosity,
+            m_gas=m_gas,
+            temperature=temperature
         )
         self.boundary: SimpleZBoundary = SimpleZBoundary(tuple(self.field.z_boundary))
         super().__init__(field=self.field, boundary=self.boundary)
@@ -57,17 +62,18 @@ def run_example_experiment(args):
         raise ValueError("Output file already exists! Please delete or move the existing file.")
 
     print("Setting up experiment...")
-    print(f"The initial velocity of the particles is around {args.velocity[args.dimensions - 1]} m/s in Z direction.")
-
     t_start, t_end, dt = args.time_interval
-    print(f"Simulating from t0={t_start} to {t_end} with dt={dt}.")
+
+    print(f"Simulating in {args.dimensions}D space from t0={t_start} to {t_end} with dt={dt}.")
+    print(f"The initial velocity of the particles is around {args.velocity[args.dimensions - 1]} m/s in Z direction.")
 
     devices = [
         StokesFluidFlowFieldDevice(
             filename=args.flow_field,
-            density=args.flow_density,
+            temperature=args.flow_temperature,
             dynamic_viscosity=args.flow_dynamic_viscosity,
-            scale_slip=args.flow_scale_slip,
+            m_gas=args.flow_gas_mass,
+            slip_correction_scale=args.flow_scale_slip,
         )
     ]
 
@@ -76,7 +82,7 @@ def run_example_experiment(args):
     ]
 
     sources = [
-        GaussianSphericalSource(
+        GaussianDistributedSphericalSource(
             args.nof_particles,
             position=(args.position, args.position_sigma),
             velocity=(args.velocity, args.velocity_sigma),
@@ -87,10 +93,24 @@ def run_example_experiment(args):
             subclass=ThermallyConductiveSphericalParticle,
         )
     ]
+    # TODO implement arguments to specify these distributions
+    """sources = [
+        LinearlyDistributedSphericalSource(
+            args.nof_particles,
+            position_intervals=[(0, 3e-3), (-0.0253, -0.0253)],
+            velocity_intervals=[(0.0, 0.0), (.1, .1)],
+            radius_interval=(25e-9, 25e-9),
+            rho=args.density,
+            seed=args.seed
+        )
+    ]"""
 
-    property_updaters = [TrajectoryPropertyUpdater()] if args.store_traj else []
+    property_updaters = []
+    if args.brownian:
+        property_updaters += [BrownianMotionPropertyUpdater(field=devices[0].field, dt=dt)]
     if args.dimensions == 2:
         property_updaters += [MirrorSymmetryPropertyUpdater()]
+    property_updaters += [TrajectoryPropertyUpdater()] if args.store_traj else []
 
     experiment = Experiment(
         devices=devices,
@@ -106,6 +126,7 @@ def run_example_experiment(args):
     print("Running experiment...")
     result_particles = experiment.run(single_threaded=args.single_threaded)
     print("Done running experiment. Storing results...")
+    print([(p.initial_position, p.position) for p in result_particles])
     HDF5ResultStorage(args.output_file).store_results(result_particles)
     print(f"Saved results to {args.output_file}.")
 
@@ -137,8 +158,6 @@ if __name__ == '__main__':
                         type=float)
     parser.add_argument('-rsg', '--radius_sigma', help='Radius sigma (Gaussian standard deviation) of the particles',
                         type=float)
-    parser.add_argument('-rho', '--density', help='Density of the particles',
-                        type=float)
     parser.add_argument('-p', '--position',
                         help='Initial position mu (Gaussian mean), one for each dimension',
                         nargs='*', type=float)
@@ -151,12 +170,16 @@ if __name__ == '__main__':
     parser.add_argument('-vsg', '--velocity_sigma',
                         help='Initial position sigma (Gaussian standard deviation), one for each dimension.',
                         nargs='*',  type=float)
-
-    parser.add_argument('-fd', '--flow-density', help='Density of the gas in the flow field',
+    parser.add_argument('-rho', '--density', help='Density of the particles',
                         type=float)
+
     parser.add_argument('-fv', '--flow-dynamic-viscosity', help='Dynamic viscosity of the flow field',
                         type=float)
     parser.add_argument('-fs', '--flow-scale-slip', help='Slip scale factor of the flow field',
+                        type=float)
+    parser.add_argument('-fm', '--flow-gas-mass', help='Mass of the gas particles in the flow field',
+                        type=float)
+    parser.add_argument('-ft', '--flow-temperature', help='Temperature of the flow field',
                         type=float)
 
     parser.add_argument('-T', '--store-traj', help='Store trajectories?',
@@ -168,6 +191,7 @@ if __name__ == '__main__':
                         type=int)
     parser.add_argument('-S', '--seed', help='Seed for the random generator',
                         type=int)
+    parser.add_argument('-B', '--brownian', help='Enable Brownian motion', action='store_true')
 
     parser.set_defaults(density=1050.0, dimensions=3, seed=1000,
                         flow_dynamic_viscosity=1.02e-6, flow_density=0.0009, flow_scale_slip=4.1,
