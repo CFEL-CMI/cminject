@@ -96,15 +96,20 @@ def simulate_particle(particle: Particle, devices: List[Device],
     """
     t_start, t_end, dt = time_interval
 
+    # Run all property updaters once with the start time
+    for property_updater in property_updaters:
+        property_updater.update(particle, t_start)
+
+    # Run all detectors once
+    for detector in detectors:
+        detector.try_to_detect(particle)
+
+    # Construct integrals
     integral = ode(spatial_derivatives)
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(particle.position, t_start)
     integral.set_f_params(particle, devices, number_of_dimensions)
     print(f"\tSimulating particle {particle.identifier}...")
-
-    # Run all property updaters once with the start time
-    for property_updater in property_updaters:
-        property_updater.update(particle, t_start)
 
     # TODO:
     """
@@ -178,7 +183,7 @@ class Experiment:
         self.time_interval = time_interval
 
         # Initialise list of particles from all sources
-        particle_types = set()
+        particle_types = set()  # Remember a set of particle types to raise an error if there are multiple
         self.particles = []
         for source in self.sources:
             source_particles = source.generate_particles(self.time_interval[0])  # 0 is t_start
@@ -203,7 +208,7 @@ class Experiment:
             # If a z_boundary was passed, use it
             self.z_boundary = z_boundary
         else:
-            # Otherwise, use the global min/max from all devices and detectors
+            # Otherwise, use the global min/max from all devices and detectors, -/+ the end Z delta
             self.z_boundary = min(self.detectors_z_boundary[0], self.devices_z_boundary[0]) - delta_z_end,\
                               max(self.detectors_z_boundary[1], self.devices_z_boundary[1]) + delta_z_end
 
