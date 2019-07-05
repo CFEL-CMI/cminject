@@ -24,7 +24,7 @@ from cminject.experiment_refactored.definitions.base import Source
 from cminject.experiment_refactored.definitions.particles import SphericalParticle
 
 
-class GaussianSphericalSource(Source):
+class GaussianDistributedSphericalSource(Source):
     """
     A Source generating a Gaussian distribution of SphericalParticles wrt position, velocity and radius.
 
@@ -54,13 +54,12 @@ class GaussianSphericalSource(Source):
         self.subclass_kwargs = subclass_kwargs
 
         self.number_of_dimensions = len(self.position[0])
-        super().__init__(position=position)
 
     def set_number_of_dimensions(self, number_of_dimensions: int):
         if number_of_dimensions != self.number_of_dimensions:
             raise ValueError(
                 f"Incompatible number of dimensions: {number_of_dimensions}, "
-                f"the position mu/sigma description passed at construction is {self.number_of_dimensions}-dimensional."
+                f"the position mu/sigma description passed at construction was {self.number_of_dimensions}-dimensional."
             )
 
     def generate_particles(self, start_time: float = 0.0):

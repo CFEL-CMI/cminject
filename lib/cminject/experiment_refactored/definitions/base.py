@@ -258,24 +258,16 @@ class Particle(NDimensional, ABC):
 
 class Source(NDimensional, ABC):
     """
-    A source of particles, to generate an initial phase space.
+    A source of particles, to generate an initial position (and property) distribution.
 
     One can implement sources following different distributions and generating different particle types by subclassing
     this class and implementing generate_particles however they want.
     """
-    def __init__(self, position: np.array):
-        """
-        The constructor for Source.
-        :param position: The spatial position where the source is placed.
-        """
-        self.position = position
-
     @abstractmethod
     def generate_particles(self, start_time: float = 0.0) -> List[Particle]:
         """
         Generates a list of particles. How this is done is entirely up to the subclass, by (this is mandatory!)
-        implementing this method in a certain way. It should, however, generally be some distribution around the
-        spatial position (self.position) stored at construction of the instance.
+        implementing this method in some way.
         :return: A list of Particle instances.
         """
         pass
