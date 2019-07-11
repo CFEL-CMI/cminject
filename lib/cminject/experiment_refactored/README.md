@@ -1,11 +1,10 @@
 # CMInject: A framework for particle injection trajectory simulations
 
 CMInject is a Python3 framework that can be used to define and run particle trajectory simulations
-for sample injection. It runs both 2D and 3D simulations, and is in principle agnostic to the number of spatial
-dimensions: It's up to the concrete implementations of all parts of the simulated experimental setup to be able
-to deal with any number of spatial dimensions.
+for sample injection. It can run 1D, 2D and 3D simulations, given that all parts in a simulation setup allow
+the given dimensionality.
 
-It is meant to be used by different groups of people and match different needs, and so it is meant to be both
+It is meant to be used by different groups of people and match different needs, and so it is meant to be both:
 
 - a library that provides a generic way to define and run whole simulation setups, and
 - a collection of such setups (coming soon).
@@ -22,6 +21,9 @@ A user creates an `Experiment` instance and passes the constructor lists of (i.e
 which are all described in more detail below. They can then call the Experiment's `.run()` method
 to actually run the simulation and get back a list of all Particle objects that were initially generated,
 modified as they were during the course of the simulated experiment.
+
+See also the file `test_impl.py`, where exactly this is done for a specific kind of setup
+and a console-based interface is added around it.
 
 ## Overview of abstract base definitions
 
@@ -53,7 +55,7 @@ There can be multiple Sources within an Experiment setup, but they must all gene
 of its subclasses; x/y/z, vx/vy/vz and r are randomly distributed according to a gaussian distribution with given μ and σ.
 
 ### Device
-A Device is a combination of a Field and a Boundary, and is supposed to model a real-world
+A Device is a combination of Fields and a Boundary, and is supposed to model a real-world
 device in a real-world experimental setup.
 
 ### Boundary
@@ -65,14 +67,15 @@ Boundary, it is considered having hit the "wall" of the device and its simulatio
 
 > - `SimpleZBoundary`: A Boundary enclosing a finite interval along the Z axis, but otherwise unbounded.
 > - `CuboidBoundary`: A cuboid-shaped Boundary, i.e. defined in terms of a finite interval for every dimension.
+> - `GridFieldBasedBoundary`: A Boundary that encompasses the cuboid that a grid interpolation field's coordinates enclose.
 
 ### Field
 A Field is a description of an _acceleration field_, i.e. an object that can calculate the acceleration
 of a Particle when it is inside the Field.
 
-Fields are the only objects that have an actual effect on Particles' velocity and thus position.
-The acceleration "felt" by any Particle at any moment in time is the sum of the accelerations of all
-Fields that have an effect at the Particle's position.
+Fields are, apart from special PropertyUpdaters, the only objects that have an actual effect on Particles'
+velocity and thus position. The acceleration "felt" by any Particle at any moment in time is the sum of
+the accelerations of all Fields that have an effect at the Particle's position.
 
 > - `StokesFluidFlowField`: An acceleration field based on an interpolated drag force from a grid-based fluid flow field.
 
@@ -95,6 +98,11 @@ position and properties, or also not involve any calculation at all
 and appends them to a trajectory list).
 
 > - `TrajectoryPropertyUpdater`: Tracks the particle phase position along its whole flight path.
+> - `MirrorSymmetryPropertyUpdater`: Ensures mirror symmetry of particles around some axis by ensuring they're on the
+ "right" (larger) side of the axis position. Useful in things like 2D simulations that model radially symmetrical
+ 3D simulations, as particles should always be positioned at r >= 0.0.
+> - `BrownianMotionPropertyUpater`: Adds Brownian motion to the particle flight path based on some fluid flow field's
+macroscopic properties and the time step size of the integrator.
 
 ### ZBounded
 A ZBounded object is something that is bounded in the Z direction (which is usually considered the last
