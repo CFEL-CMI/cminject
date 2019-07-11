@@ -28,6 +28,9 @@ from cminject.experiment_refactored.definitions.fields.stokes_fluid_flow_field i
 
 
 class TrajectoryPropertyUpdater(PropertyUpdater):
+    """
+    A simple property updater to append to the trajectory of the particle after each time step.
+    """
     def update(self, particle: Particle, time: float) -> None:
         particle.trajectory.append(
             np.concatenate([[time], particle.position])
