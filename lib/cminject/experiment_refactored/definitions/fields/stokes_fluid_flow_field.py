@@ -26,7 +26,7 @@ from cminject.experiment_refactored.definitions.base import Particle
 from cminject.experiment_refactored.definitions.fields.regular_grid_interpolation_field\
     import RegularGridInterpolationField
 from cminject.experiment_refactored.definitions.particles\
-    import SphericalParticle, ThermallyConductiveSphericalParticle
+    import SphericalParticle
 
 
 class StokesFluidFlowField(RegularGridInterpolationField):
@@ -35,8 +35,7 @@ class StokesFluidFlowField(RegularGridInterpolationField):
     on a grid defined by an HDF5 file like comsol_hdf5_tools.txt_to_hdf5 outputs.
     """
     def __init__(self, filename: str,
-                 dynamic_viscosity: float, m_gas: float = None,
-                 temperature: float = 4.0,
+                 dynamic_viscosity: float, density: float, m_gas: float = None, temperature: float = 4.0,
                  slip_correction_model: str = None, slip_correction_scale: float = 1.0,
                  # For temperature calculations done by ParticleTemperaturePropertyUpdater
                  pressure: float = 100.0, thermal_creep: float = 1.0,
@@ -45,6 +44,7 @@ class StokesFluidFlowField(RegularGridInterpolationField):
                  speed_of_sound: float = 117.7):
         # Store all the fixed initial properties
         self.dynamic_viscosity = dynamic_viscosity
+        self.density = density
         self.temperature = temperature
         self.slip_correction_scale = slip_correction_scale
         self.m_gas = m_gas
@@ -72,7 +72,7 @@ class StokesFluidFlowField(RegularGridInterpolationField):
         else:  # or define it automatically based on the temperature.
             if temperature == 4.0:
                 self.slip_correction_model = '4_kelvin'
-            elif temperature == 293.15:
+            elif temperature == 298.15:
                 self.slip_correction_model = 'room_temp'
             else:  # Use some heuristic for the model but warn the user that this has been used.
                 self.slip_correction_model = '4_kelvin' if 0.0 <= temperature <= 200.0 else 'room_temp'
@@ -93,9 +93,8 @@ class StokesFluidFlowField(RegularGridInterpolationField):
         f = self.calculate_drag_force(relative_velocity, pressure, particle)
         return f / particle.mass
 
-    def is_particle_inside(self, particle: Particle) -> bool:
-        return self._z_boundary[0] <= particle.position[self.number_of_dimensions - 1] <= self._z_boundary[1] \
-               and self.interpolate(particle, particle.time_of_flight)[2] > 0.0
+    def is_particle_inside(self, particle: Particle, time: float) -> bool:
+        return super().is_particle_inside(particle, time) and self.interpolate(particle, time)[2] > 0.0
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
@@ -155,7 +154,7 @@ class StokesFluidFlowField(RegularGridInterpolationField):
     def calc_slip_correction(self, pressure: float, particle: SphericalParticle) -> float:
         """
         Calculates the slip correction factor with temperature corrections. Works for models '4_kelvin' at 4K,
-        and 'room_temp' at 293.15K.
+        and 'room_temp' at 298.15K.
         """
         s = 0.0
         if self.slip_correction_model == '4_kelvin':

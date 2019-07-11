@@ -19,21 +19,19 @@
 
 import argparse
 import os
-from typing import Tuple
+from typing import Tuple, List
 
-from cminject.experiment_refactored.definitions.result_storage import HDF5ResultStorage
-
-from cminject.experiment_refactored.experiment import Experiment
-from cminject.experiment_refactored.definitions.base import \
-    Particle, Device
+from cminject.experiment_refactored.definitions.base import Device
+from cminject.experiment_refactored.definitions.boundaries import GridFieldBasedBoundary
+from cminject.experiment_refactored.definitions.detectors import SimpleZDetector
+from cminject.experiment_refactored.definitions.fields.stokes_fluid_flow_field import StokesFluidFlowField
+from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.experiment_refactored.definitions.property_updaters import TrajectoryPropertyUpdater, \
     MirrorSymmetryPropertyUpdater, BrownianMotionPropertyUpdater
+from cminject.experiment_refactored.definitions.result_storage import HDF5ResultStorage
 from cminject.experiment_refactored.definitions.sources import GaussianDistributedSphericalSource, \
     LinearlyDistributedSphericalSource
-from cminject.experiment_refactored.definitions.particles import ThermallyConductiveSphericalParticle
-from cminject.experiment_refactored.definitions.detectors import SimpleZDetector
-from cminject.experiment_refactored.definitions.boundaries import SimpleZBoundary
-from cminject.experiment_refactored.definitions.fields.stokes_fluid_flow_field import StokesFluidFlowField
+from cminject.experiment_refactored.experiment import Experiment
 
 
 class StokesFluidFlowFieldDevice(Device):
@@ -41,20 +39,11 @@ class StokesFluidFlowFieldDevice(Device):
     def z_boundary(self) -> Tuple[float, float]:
         return self.boundary.z_boundary
 
-    def __init__(self, filename: str, temperature: float,
-                 dynamic_viscosity: float, slip_correction_scale: float, m_gas: float):
-        self.field: StokesFluidFlowField = StokesFluidFlowField(
-            filename=filename,
-            slip_correction_scale=slip_correction_scale,
-            dynamic_viscosity=dynamic_viscosity,
-            m_gas=m_gas,
-            temperature=temperature
-        )
-        self.boundary: SimpleZBoundary = SimpleZBoundary(tuple(self.field.z_boundary))
-        super().__init__(field=self.field, boundary=self.boundary)
-
-    def is_particle_inside(self, particle: Particle) -> bool:
-        return self.field.is_particle_inside(particle)
+    def __init__(self, *args, **kwargs):
+        field = StokesFluidFlowField(*args, **kwargs)
+        self.fields: List[StokesFluidFlowField] = [field]
+        self.boundary: GridFieldBasedBoundary = GridFieldBasedBoundary(field)
+        super().__init__(fields=self.fields, boundary=self.boundary)
 
 
 def run_example_experiment(args):
@@ -71,6 +60,7 @@ def run_example_experiment(args):
         StokesFluidFlowFieldDevice(
             filename=args.flow_field,
             temperature=args.flow_temperature,
+            density=args.density,
             dynamic_viscosity=args.flow_dynamic_viscosity,
             m_gas=args.flow_gas_mass,
             slip_correction_scale=args.flow_scale_slip,
@@ -80,6 +70,7 @@ def run_example_experiment(args):
     detectors = [
         SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)
     ]
+
 
     sources = [
         GaussianDistributedSphericalSource(
@@ -107,7 +98,7 @@ def run_example_experiment(args):
 
     property_updaters = []
     if args.brownian:
-        property_updaters += [BrownianMotionPropertyUpdater(field=devices[0].field, dt=dt)]
+        property_updaters += [BrownianMotionPropertyUpdater(field=devices[0].fields[0], dt=dt)]
     if args.dimensions == 2:
         property_updaters += [MirrorSymmetryPropertyUpdater()]
     property_updaters += [TrajectoryPropertyUpdater()] if args.store_traj else []
@@ -175,6 +166,8 @@ if __name__ == '__main__':
 
     parser.add_argument('-fv', '--flow-dynamic-viscosity', help='Dynamic viscosity of the flow field',
                         type=float)
+    parser.add_argument('-fd', '--flow-density', help='Density of the flow field',
+                        type=float)
     parser.add_argument('-fs', '--flow-scale-slip', help='Slip scale factor of the flow field',
                         type=float)
     parser.add_argument('-fm', '--flow-gas-mass', help='Mass of the gas particles in the flow field',
@@ -193,12 +186,13 @@ if __name__ == '__main__':
                         type=int)
     parser.add_argument('-B', '--brownian', help='Enable Brownian motion', action='store_true')
 
-    parser.set_defaults(density=1050.0, dimensions=3, seed=1000,
+    parser.set_defaults(dimensions=3, seed=1000,
                         flow_dynamic_viscosity=1.02e-6, flow_density=0.0009, flow_scale_slip=4.1,
-                        radius=2.45e-7, radius_sigma=7.5e-9,
+                        flow_temperature=4.0, flow_gas_mass=6.6e-27,  # Assume Helium at 4K by default
+                        density=1050.0, radius=2.45e-7, radius_sigma=7.5e-9,
                         position=[0.0, 0.0, 0.0048], position_sigma=[0.0002, 0.0002, 0.00001],
                         velocity=[0.0, 0.7, -43.0], velocity_sigma=[0.10, 0.30, 2.00],
-                        detectors=[0.0, -0.052], time_interval=[0.0, 1.0, 1e-6])
+                        detectors=[0.0, -0.052], time_interval=[0.0, 1.8, 1e-6])
     args = parser.parse_args()
 
     # Verify dimensionality match for position description and dimensions parameter

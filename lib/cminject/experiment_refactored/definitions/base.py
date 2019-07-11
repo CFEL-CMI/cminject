@@ -92,43 +92,6 @@ class ZBounded(ABC):
         pass
 
 
-class ParticleDetectorHit(object):
-    """
-    A small data container class, to store useful information about a hit of a particle on a detector.
-
-    Contains :attr:`full_properties`, which is a full description of the particle's state starting with the hit position
-    on the detector as a numpy array, and :attr:`full_properties_description`, which is a string list matching
-    :attr:`full_properties` in size and describing each scalar stored in the array.
-    """
-    def __init__(self, hit_position: np.array, particle: 'Particle'):
-        """
-        The constructor for a ParticleDetectorHit.
-        :param hit_position: An (n,)-shaped np.array representing the hit position of the particle on the detector.
-        n is the number of dimensions and must match
-        :param particle:
-        """
-        dimpos = hit_position.size
-        dimpar = particle.number_of_dimensions * 2
-        if dimpos != dimpar:
-            raise ValueError(
-                f"Hit position dimensionality ({dimpos / 2}) does not match the number of "
-                f"dimensions the particle is simulated in ({dimpar / 2})!"
-            )
-
-        self.number_of_dimensions = particle.number_of_dimensions
-        self.full_properties = np.concatenate([hit_position, particle.properties])
-        hit_position_description = particle.position_description[:dimpar]
-        self.full_properties_description = hit_position_description + particle.properties_description
-
-    @property
-    def hit_position(self) -> np.array:
-        """
-        The position where the detector detected the particle hit.
-        :return: The position of the hit.
-        """
-        return self.full_properties[:self.number_of_dimensions]
-
-
 class Particle(NDimensional, ABC):
     """
     Describes a particle whose trajectory we want to simulate.
@@ -256,6 +219,43 @@ class Particle(NDimensional, ABC):
         return f"<{self.__class__.__name__} #{self.identifier}>"
 
 
+class ParticleDetectorHit(object):
+    """
+    A small data container class, to store useful information about a hit of a particle on a detector.
+
+    Contains :attr:`full_properties`, which is a full description of the particle's state starting with the hit position
+    on the detector as a numpy array, and :attr:`full_properties_description`, which is a string list matching
+    :attr:`full_properties` in size and describing each scalar stored in the array.
+    """
+    def __init__(self, hit_position: np.array, particle: 'Particle'):
+        """
+        The constructor for a ParticleDetectorHit.
+        :param hit_position: An (n,)-shaped np.array representing the hit position of the particle on the detector.
+        n is the number of dimensions and must match
+        :param particle:
+        """
+        dimpos = hit_position.size
+        dimpar = particle.number_of_dimensions * 2
+        if dimpos != dimpar:
+            raise ValueError(
+                f"Hit position dimensionality ({dimpos / 2}) does not match the number of "
+                f"dimensions the particle is simulated in ({dimpar / 2})!"
+            )
+
+        self.number_of_dimensions = particle.number_of_dimensions
+        self.full_properties = np.concatenate([hit_position, particle.properties])
+        hit_position_description = particle.position_description[:dimpar]
+        self.full_properties_description = hit_position_description + particle.properties_description
+
+    @property
+    def hit_position(self) -> np.array:
+        """
+        The position where the detector detected the particle hit.
+        :return: The position of the hit.
+        """
+        return self.full_properties[:self.number_of_dimensions]
+
+
 class Source(NDimensional, ABC):
     """
     A source of particles, to generate an initial position (and property) distribution.
@@ -332,14 +332,16 @@ class Detector(NDimensional, ZBounded, ABC):
 class Boundary(NDimensional, ZBounded, ABC):
     """
     Can tell whether a Particle is inside of it or not.
+
     Making the total set of Boundary objects in an experiment closed is - for now - the job of the person implementing
     the experiment setup.
     """
     @abstractmethod
-    def is_particle_inside(self, particle: Particle) -> bool:
+    def is_particle_inside(self, particle: Particle, time: float) -> bool:
         """
         Tells whether the passed Particle is inside of this Boundary or not.
         :param particle: The Particle to tell this for.
+        :param time: The time to tell this for.
         :return: True if the particle is definitely inside this Boundary,
         False if it is not inside this Boundary or if this cannot be known.
         """
@@ -367,19 +369,16 @@ class Field(NDimensional, ZBounded, ABC):
 
 class Device(NDimensional, ZBounded, ABC):
     """
-    A combination of one Field instance and one Boundary instance.
+    A combination of Field instances and a Boundary instance.
     Used to model real-world devices in an experiment setup.
-
-    As the correspondence to Field and Boundary is one-to-one, complex kinds of Fields and Boundaries should be
-    implemented internally in a subclass of these classes.
     """
-    def __init__(self, field: Field, boundary: Boundary):
+    def __init__(self, fields: List[Field], boundary: Boundary):
         """
         Constructor for Device.
-        :param field: The Field this device has.
+        :param fields: The Fields that are present in this device.
         :param boundary: The Boundary this device has.
         """
-        self.field = field
+        self.fields = fields
         self.boundary = boundary
         super().__init__()
 
@@ -390,23 +389,27 @@ class Device(NDimensional, ZBounded, ABC):
         Z boundary is required.
         :return: A (z_min, z_max) tuple as defined in ZBoundedMixin.
         """
-        field_boundary = self.field.z_boundary
         boundary = self.boundary.z_boundary
-        return min(field_boundary[0], boundary[0]), max(field_boundary[1], boundary[1])
+        return boundary
 
     def set_number_of_dimensions(self, number_of_dimensions: int):
-        self.field.set_number_of_dimensions(number_of_dimensions)
+        for field in self.fields:
+            field.set_number_of_dimensions(number_of_dimensions)
         self.boundary.set_number_of_dimensions(number_of_dimensions)
 
-    def is_particle_inside(self, particle: Particle) -> bool:
+    def calculate_acceleration(self, particle: Particle, time: float) -> np.array:
+        return np.sum([field.calculate_acceleration(particle, time) for field in self.fields], axis=0)
+
+    def is_particle_inside(self, particle: Particle, time: float) -> bool:
         """
-        Returns whether the passed Particle is inside this Boundary or not.
+        Returns whether the passed Particle is inside this Device or not.
         Defaults to returning what the Boundary's method with the same name returns, but should be overridden
         if a more complex decision is required.
         :param particle: A Particle instance.
-        :return: True if the Particle inside this device, False if it is not or if this is unknown.
+        :param time: The current time.
+        :return: True if the Particle inside this Device, False if it is not (or if this is unknown).
         """
-        return self.boundary.is_particle_inside(particle)
+        return self.boundary.is_particle_inside(particle, time)
 
 
 class PropertyUpdater(NDimensional, ABC):

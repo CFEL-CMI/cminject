@@ -69,7 +69,7 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
         self.thermal_conductivity = thermal_conductivity
         self.temperature = temperature
         self.collision_temperature = temperature
-        self.refraction_index = refraction_index
+        self.refractive_index = refraction_index
 
         self.time_to_liquid_n = float('inf')
         self.collision_time_to_liquid_n = float('inf')

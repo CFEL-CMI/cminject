@@ -42,16 +42,18 @@ def spatial_derivatives(time: float, position_and_velocity: np.array,
     particle.position = position_and_velocity
     total_acceleration = np.zeros(number_of_dimensions, dtype=float)
     for device in devices:
-        if device.is_particle_inside(particle):
-            total_acceleration += device.field.calculate_acceleration(particle, time)
+        if device.is_particle_inside(particle, time):
+            total_acceleration += device.calculate_acceleration(particle, time)
     return np.concatenate((position_and_velocity[number_of_dimensions:], total_acceleration))
 
 
-def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], devices: List[Device],
+def is_particle_lost(particle: Particle, time: float,
+                     z_boundary: Tuple[float, float], devices: List[Device],
                      number_of_dimensions: int):
     """
     Decides whether a particle should be considered lost.
     :param particle: The Particle instance.
+    :param time: The current simulation time in seconds
     :param z_boundary: The total Z boundary to consider
     :param devices: The list of devices that the particle might potentially be in
     :param number_of_dimensions: The number of dimensions of the space the particle moves in.
@@ -64,7 +66,7 @@ def is_particle_lost(particle: Particle, z_boundary: Tuple[float, float], device
     else:
         for device in devices:
             device_z_boundary = device.z_boundary
-            is_inside = device.is_particle_inside(particle)
+            is_inside = device.is_particle_inside(particle, time)
             if is_inside:
                 # Particles inside devices are not considered lost
                 return False
@@ -118,7 +120,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
     """
     while integral.successful() and integral.t < t_end and not particle.lost:
         # Check conditions for having lost particle.
-        if not is_particle_lost(particle, z_boundary, devices, number_of_dimensions):
+        if not is_particle_lost(particle, integral.t, z_boundary, devices, number_of_dimensions):
             # If particle is not lost:
             # - Store the position and velocity calculated by the integrator on the particle
             integral_result = integral.y
@@ -175,8 +177,7 @@ class Experiment:
 
         # Store the number of dimensions and set it on all relevant objects
         self.number_of_dimensions = number_of_dimensions
-        dimensional_objects: List[NDimensional] = self.devices + self.sources + self.detectors + self.property_updaters
-        for dimensional_object in dimensional_objects:
+        for dimensional_object in (self.devices + self.sources + self.detectors + self.property_updaters):
             dimensional_object.set_number_of_dimensions(self.number_of_dimensions)
 
         # Store the time interval
@@ -218,12 +219,13 @@ class Experiment:
 
     def run(self, single_threaded=False) -> List[Particle]:
         """
-        Run the Experiment. An ExperimentResult is returned.
+        Run the Experiment. A list of resulting Particle instances is returned.
         :param single_threaded: Whether to run this experiment on a single thread, i.e. without parallelization. False
-        by default. It's mostly only useful to pass True for developers, as many debuggers, profilers, etc. are not able
+        by default: It's mostly only useful to pass True for developers, as many debuggers, profilers, etc. are not able
         to deal well with different processes/threads. To run the experiment and get results quickly, leave this on
         False.
-        :return: An ExperimentResult instance. See the documentation there.
+        :return: A list of resulting Particle instances. Things like detector hits and trajectories should be stored on
+        them and can be read off each Particle.
         """
         simulate = self._get_run_function()
 
@@ -248,9 +250,9 @@ class Experiment:
         """
         max_z, min_z = infinite_interval
         for obj in z_bounded_objects:
-            device_min_z, device_max_z = obj.z_boundary
-            min_z = min(min_z, device_min_z)
-            max_z = max(max_z, device_max_z)
+            obj_min_z, obj_max_z = obj.z_boundary
+            min_z = min(min_z, obj_min_z)
+            max_z = max(max_z, obj_max_z)
         return min_z, max_z
 
     def _get_run_function(self):

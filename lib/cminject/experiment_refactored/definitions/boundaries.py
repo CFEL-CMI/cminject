@@ -21,6 +21,8 @@ from typing import Tuple, List
 import numpy as np
 
 from cminject.experiment_refactored.definitions.base import Boundary, Particle, infinite_interval
+from cminject.experiment_refactored.definitions.fields.regular_grid_interpolation_field import \
+    RegularGridInterpolationField
 
 
 class SimpleZBoundary(Boundary):
@@ -42,7 +44,7 @@ class SimpleZBoundary(Boundary):
     def z_boundary(self) -> Tuple[float, float]:
         return self._z_boundary
 
-    def is_particle_inside(self, particle: Particle):
+    def is_particle_inside(self, particle: Particle, time: float):
         return self.z_min <= particle.position[self.number_of_dimensions] <= self.z_max
 
 
@@ -60,7 +62,7 @@ class CuboidBoundary(SimpleZBoundary):
             )
         self.number_of_dimensions = number_of_dimensions
 
-    def is_particle_inside(self, particle: Particle) -> bool:
+    def is_particle_inside(self, particle: Particle, time: float) -> bool:
         pos = particle.position[:self.number_of_dimensions]
         return np.all(
             (self.intervals[:, 0] <= pos) * (pos <= self.intervals[:, 1])
@@ -75,8 +77,26 @@ class InfiniteBoundary(Boundary):
     def z_boundary(self) -> Tuple[float, float]:
         return infinite_interval
 
-    def is_particle_inside(self, particle: Particle) -> bool:
+    def is_particle_inside(self, particle: Particle, time: float) -> bool:
         return True
+
+
+class GridFieldBasedBoundary(Boundary):
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        d = number_of_dimensions
+        fd = self.field.number_of_dimensions
+        if d != fd:
+            raise ValueError(f"Dimensionality {d} does not match associated field's dimensionality {fd}!")
+
+    def __init__(self, field: RegularGridInterpolationField):
+        self.field = field
+
+    @property
+    def z_boundary(self) -> Tuple[float, float]:
+        return self.field.z_boundary
+
+    def is_particle_inside(self, particle: Particle, time: float) -> bool:
+        return self.field.is_particle_inside(particle, time)
 
 
 """

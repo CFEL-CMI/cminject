@@ -21,7 +21,7 @@ from abc import ABC
 from typing import Tuple
 
 import numpy as np
-from cminject.experiment_refactored.definitions.base import Field
+from cminject.experiment_refactored.definitions.base import Field, Particle
 from cminject.experiment_refactored.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
 from scipy.interpolate import RegularGridInterpolator
 
@@ -44,14 +44,19 @@ class RegularGridInterpolationField(Field, ABC):
         self.interpolator = RegularGridInterpolator(tuple(data_index), data_grid)
 
         # Assuming that Z is always the last dimension, construct the Z boundary from it
-        z = data_index[self.number_of_dimensions - 1]
-        min_z, max_z = np.min(z), np.max(z)
-        self._z_boundary = (min_z, max_z)
+        minima = list(np.min(d) for d in data_index)
+        maxima = list(np.max(d) for d in data_index)
+        self._z_boundary = (minima[self.number_of_dimensions - 1], maxima[self.number_of_dimensions - 1])
+        self.grid_boundary = np.array(list(zip(minima, maxima)))
         super().__init__()
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
         return self._z_boundary
+
+    def is_particle_inside(self, particle: Particle, time: float) -> bool:
+        return np.all(particle.spatial_position >= self.grid_boundary[:, 0]) and\
+               np.all(particle.spatial_position <= self.grid_boundary[:, 1])
 
     def set_number_of_dimensions(self, number_of_dimensions: int):
         if number_of_dimensions != self.number_of_dimensions:
