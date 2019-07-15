@@ -72,7 +72,7 @@ class StokesFluidFlowField(RegularGridInterpolationField):
         else:  # or define it automatically based on the temperature.
             if temperature == 4.0:
                 self.slip_correction_model = '4_kelvin'
-            elif temperature == 298.15:
+            elif temperature == 293.15:
                 self.slip_correction_model = 'room_temp'
             else:  # Use some heuristic for the model but warn the user that this has been used.
                 self.slip_correction_model = '4_kelvin' if 0.0 <= temperature <= 200.0 else 'room_temp'
@@ -154,8 +154,11 @@ class StokesFluidFlowField(RegularGridInterpolationField):
     def calc_slip_correction(self, pressure: float, particle: SphericalParticle) -> float:
         """
         Calculates the slip correction factor with temperature corrections. Works for models '4_kelvin' at 4K,
-        and 'room_temp' at 298.15K.
+        and 'room_temp' at 293.15K.
         """
+        if pressure == 0.0:
+            return float('inf')  # Correct force to 0 by dividing by infinity. FIXME better way?
+
         s = 0.0
         if self.slip_correction_model == '4_kelvin':
             # The Sutherland constant for helium is 79.4 at reference temperature of 273.0 K.
