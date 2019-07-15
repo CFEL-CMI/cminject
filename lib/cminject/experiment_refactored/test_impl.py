@@ -29,8 +29,7 @@ from cminject.experiment_refactored.definitions.particles import ThermallyConduc
 from cminject.experiment_refactored.definitions.property_updaters import TrajectoryPropertyUpdater, \
     MirrorSymmetryPropertyUpdater, BrownianMotionPropertyUpdater
 from cminject.experiment_refactored.definitions.result_storage import HDF5ResultStorage
-from cminject.experiment_refactored.definitions.sources import GaussianDistributedSphericalSource, \
-    LinearlyDistributedSphericalSource
+from cminject.experiment_refactored.definitions.sources import VariableDistributionSource
 from cminject.experiment_refactored.experiment import Experiment
 
 
@@ -54,7 +53,6 @@ def run_example_experiment(args):
     t_start, t_end, dt = args.time_interval
 
     print(f"Simulating in {args.dimensions}D space from t0={t_start} to {t_end} with dt={dt}.")
-    print(f"The initial velocity of the particles is around {args.velocity[args.dimensions - 1]} m/s in Z direction.")
 
     devices = [
         StokesFluidFlowFieldDevice(
@@ -71,20 +69,18 @@ def run_example_experiment(args):
         SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)
     ]
 
-
     sources = [
-        GaussianDistributedSphericalSource(
+        VariableDistributionSource(
             args.nof_particles,
-            position=(args.position, args.position_sigma),
-            velocity=(args.velocity, args.velocity_sigma),
-            radius=(args.radius, args.radius_sigma),
-            seed=args.seed,
+            position=args.position,
+            velocity=args.velocity,
+            radius=args.radius,
             rho=args.density,
 
-            subclass=ThermallyConductiveSphericalParticle,
-        )
+            seed=args.seed,
+            subclass=ThermallyConductiveSphericalParticle
+        ),
     ]
-    # TODO implement arguments to specify these distributions
     """sources = [
         LinearlyDistributedSphericalSource(
             args.nof_particles,
@@ -117,14 +113,28 @@ def run_example_experiment(args):
     print("Running experiment...")
     result_particles = experiment.run(single_threaded=args.single_threaded)
     print("Done running experiment. Storing results...")
-    print([(p.initial_position, p.position) for p in result_particles])
     HDF5ResultStorage(args.output_file).store_results(result_particles)
     print(f"Saved results to {args.output_file}.")
 
     return result_particles
 
 
+# Everything below is just argument parsing even if it looks like a lot of code :)
 if __name__ == '__main__':
+    def dist_description(x):
+        values = x.split()
+        kind = values[0]
+        if kind == 'G':
+            if len(values) != 3:
+                parser.error("Need a mu and sigma for a gaussian distribution description!")
+            return {'kind': 'gaussian', 'mu': float(values[1]), 'sigma': float(values[2])}
+        elif kind == 'L':
+            if len(values) != 3:
+                parser.error("Need a min and max for a linear distribution description!")
+            return {'kind': 'linear', 'min': float(values[1]), 'max': float(values[2])}
+        else:
+            parser.error(f"Unknown distribution kind: {kind}!")
+
     def natural_number(x):
         x = int(x)
         if x < 1:
@@ -145,23 +155,15 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output-file', help='Output filename for phase space (hdf5 format)',
                         type=str, required=True)
 
-    parser.add_argument('-r', '--radius', help='Radius mu (Gaussian mean) of the particles',
-                        type=float)
-    parser.add_argument('-rsg', '--radius_sigma', help='Radius sigma (Gaussian standard deviation) of the particles',
-                        type=float)
+    parser.add_argument('-r', '--radius', help='Distribution description for the radius.',
+                        type=dist_description)
     parser.add_argument('-p', '--position',
-                        help='Initial position mu (Gaussian mean), one for each dimension',
-                        nargs='*', type=float)
-    parser.add_argument('-psg', '--position_sigma',
-                        help='Initial position sigma (Gaussian standard deviation), one for each dimension.',
-                        nargs='*', type=float)
+                        help='Distribution description for the position.',
+                        nargs='*', type=dist_description)
     parser.add_argument('-v', '--velocity',
-                        help='Initial position mu (Gaussian mean), one for each dimension.',
-                        nargs='*', type=float)
-    parser.add_argument('-vsg', '--velocity_sigma',
-                        help='Initial position sigma (Gaussian standard deviation), one for each dimension.',
-                        nargs='*',  type=float)
-    parser.add_argument('-rho', '--density', help='Density of the particles',
+                        help='Distribution description for the velocity.',
+                        nargs='*', type=dist_description)
+    parser.add_argument('-rho', '--density', help='Density of the particles.',
                         type=float)
 
     parser.add_argument('-fG', '--flow-gas', choices=['N', 'He'],
@@ -190,13 +192,25 @@ if __name__ == '__main__':
                         type=int)
     parser.add_argument('-B', '--brownian', help='Enable Brownian motion', action='store_true')
 
-    parser.set_defaults(dimensions=3, seed=1000,
-                        flow_dynamic_viscosity=1.02e-6, flow_density=0.0009, flow_scale_slip=4.1,
-                        flow_temperature=4.0, flow_gas_mass=6.6e-27,  # Assume Helium at 4K by default
-                        density=1050.0, radius=2.45e-7, radius_sigma=7.5e-9,
-                        position=[0.0, 0.0, 0.0048], position_sigma=[0.0002, 0.0002, 0.00001],
-                        velocity=[0.0, 0.7, -43.0], velocity_sigma=[0.10, 0.30, 2.00],
-                        detectors=[0.0, -0.052], time_interval=[0.0, 1.8, 1e-6])
+    parser.set_defaults(dimensions=3,
+                        time_interval=[0.0, 1.8, 1e-6],
+                        seed=1000,
+                        # Assume Helium at 4.0 K by default
+                        flow_dynamic_viscosity=1.02e-6, flow_temperature=4.0, flow_gas_mass=6.6e-27,
+                        flow_density=0.0009, flow_scale_slip=4.1,
+                        radius={'kind': 'gaussian', 'mu': 2.45e-7, 'sigma': 7.5e-9},
+                        position=[
+                            {'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.0002},
+                            {'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.0002},
+                            {'kind': 'gaussian', 'mu': 0.0048, 'sigma': 0.00001}
+                        ],
+                        velocity=[
+                            {'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.1},
+                            {'kind': 'gaussian', 'mu': 0.7, 'sigma': 0.3},
+                            {'kind': 'gaussian', 'mu': -43.0, 'sigma': 2.0},
+                        ],
+                        density=1050.0,
+                        detectors=[0.0, -0.052])
     args = parser.parse_args()
 
     # Set mu/m_gas if --flow-gas was set
@@ -219,9 +233,9 @@ if __name__ == '__main__':
                   f"approximation for room temperature (293.15K).")
 
     # Verify dimensionality match for position description and dimensions parameter
-    if len(args.position) != args.dimensions or len(args.position_sigma) != args.dimensions:
+    if len(args.position) != args.dimensions:
         parser.error("The length of the position description vectors must match the simulation dimensionality!")
-    if len(args.velocity) != args.dimensions or len(args.velocity_sigma) != args.dimensions:
+    if len(args.velocity) != args.dimensions:
         parser.error("The length of the velocity description vectors must match the simulation dimensionality!")
 
     run_example_experiment(args)
