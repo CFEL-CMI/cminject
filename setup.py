@@ -30,6 +30,7 @@ packages = find_packages(where="lib")
 provides = [
     'cminject',
     'txt_to_hdf5',
+    'visualize'
 ]
 
 install_requires = [
