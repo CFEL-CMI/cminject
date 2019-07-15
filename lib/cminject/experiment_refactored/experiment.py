@@ -141,7 +141,17 @@ def simulate_particle(particle: Particle, devices: List[Device],
             # If particle is lost, store this and (implicitly) break the loop
             particle.lost = True
 
-    print(f"\tDone simulating particle {particle.identifier}.")
+    if particle.lost:
+        if z_boundary[0] <= particle.spatial_position[number_of_dimensions - 1] <= z_boundary[1]:
+            reason = 'hit boundary within the experiment'
+        else:
+            reason = 'left experiment Z boundary'
+    elif integral.t >= t_end:
+        reason = 'whole timespan simulated'
+    else:
+        reason = 'unknown reason'
+
+    print(f"\tDone simulating particle {particle.identifier}: {reason}.")
     return particle
 
 
