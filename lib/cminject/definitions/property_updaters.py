@@ -53,6 +53,7 @@ class MirrorSymmetryPropertyUpdater(PropertyUpdater):
     def __init__(self, dimension: int = 0, position: float = 0.0):
         """
         The constructor for MirrorSymmetryPropertyUpdater.
+
         :param dimension: The index of the dimension. 0 by default, i.e. the first dimension.
         :param position: The position of the mirror axis relative to the origin. 0.0 by default, i.e. the default
         axis goes through the origin.
@@ -129,6 +130,7 @@ class ParticleTemperaturePropertyUpdater(PropertyUpdater):
         """
         Calculates the thermal conductivity based on the ideal gas law
         http://hyperphysics.phy-astr.gsu.edu/hbase/thermo/thercond.html
+
         :param particle: A Particle
         :param time: The current time
         :return: The thermal conductivity
@@ -142,6 +144,7 @@ class ParticleTemperaturePropertyUpdater(PropertyUpdater):
     def calc_prandtl(self, particle: Particle, time: float):
         """
         Calculates the Prandtl number.
+
         :param particle: A Particle
         :param time: The current time
         :return: The Prandtl number.
@@ -152,6 +155,7 @@ class ParticleTemperaturePropertyUpdater(PropertyUpdater):
     def calc_reynolds(self, particle: Particle, d: float, time: float) -> float:
         """
         Calculates the Reynolds number.
+
         :param d: A characteristic length (in meters)
         :param particle: A Particle
         :param time: The current time.
@@ -164,7 +168,7 @@ class ParticleTemperaturePropertyUpdater(PropertyUpdater):
     def calc_nusselt(self, reynolds: float, prandtl: float, mu_s: float) -> float:
         """
         Calculates the Nusselt number based on the Reynolds and Prandtl number.
-        :param d: A characteristic length (in meters)
+
         :param mu_s: The dynamic viscosity at the surface temperature of nanoparticle
         :param reynolds: The Reynolds number.
         :param prandtl: The Prandtl number.
@@ -177,6 +181,7 @@ class ParticleTemperaturePropertyUpdater(PropertyUpdater):
     def calc_mach(self, particle: Particle, time: float):
         """
         Calculates the Mach number of the fluid at a Particle's position
+
         :param particle: A Particle
         :param time: The current time
         :return: The Mach number
@@ -190,6 +195,7 @@ class ParticleTemperaturePropertyUpdater(PropertyUpdater):
     def calc_particle_temperature(self, particle: ThermallyConductiveSphericalParticle, time: float):
         """
         Calculates a particle's "temperature" within this fluid at a given time.
+
         :param particle: A particle
         :param time: A time
         :return: The particle's temperature
@@ -214,6 +220,7 @@ class ParticleTemperaturePropertyUpdater(PropertyUpdater):
                                  time: float) -> Tuple[float, float]:
         """
         Estimates the number of collisions of a particle within a time frame based on Kinetic Gas Theory
+
         :param particle: A Particle
         :param dt: A time delta
         :param time: The current time

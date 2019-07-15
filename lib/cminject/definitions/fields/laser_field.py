@@ -68,6 +68,7 @@ class PhotophoreticLaserField(Field):
             -> Tuple[float, float, float]:
         """
         Calculates the absorption coefficients for S and P polarisation components according to the Fresnel equations.
+
         :param x: The x position.
         :param y: The y position.
         :param refraction_index: The refraction index of the sphere.
@@ -118,6 +119,7 @@ class PhotophoreticLaserField(Field):
     def intensity_integrator_fn(self, particle: ThermallyConductiveSphericalParticle, theta, phi):
         """
         The function to be integrated to calculate the total intensity across a sphere section.
+
         :param particle: The spherical particle to integrate over.
         :param theta: Theta in spherical coordinates.
         :param phi: Phi in spherical coordinates.
@@ -134,6 +136,7 @@ class PhotophoreticLaserField(Field):
         """
         Calculates the photophoretic force exerted on a particle based on a simple model,
         based amongst other things on the fluid flow force field this field was constructed with.
+
         :param particle: The particle instance.
         :return: The photophoretic forces in transverse and axial direction.
         """

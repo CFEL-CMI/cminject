@@ -45,6 +45,7 @@ class Visualizer(ABC):
 
         Note that it's not conceptually required that calling this method shows anything on screen, see e.g.
         the docstring for MatplotlibVisualizer as to why this is.
+
         :return: Any set of objects ne. See e.g. MatplotlibVisualizer for a more concretely types
         """
         pass
@@ -82,6 +83,7 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
                  bins: int = 100, bins_1d: int = 30):
         """
         The constructor for DetectorHistogramVisualizer.
+
         :param filename: The HDF5 file to read in. The expected format is the one like written by HDF5ResultStorage.
         :param dimension_pairs: A List of tuples, each defining a pair of dimensions that should be plotted against
         each other on a 2D histogram. Example: [('x', 'y'), ('x', 'z'), ('y', 'z')]. The dimensions must be present
@@ -115,6 +117,7 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
         Visualize the results as a plot of (potentially multiple) 1D/2D histograms.
         There will be m*n subplots arranged on a grid, with m being the number of detectors in the file,
         and n being the number of dimension pairs given at construction of this instance.
+
         :return: A Matplotlib figure and a 2-dimensional ndarray of all axes present in the figure.
         """
         with h5py.File(self.filename) as h5f:

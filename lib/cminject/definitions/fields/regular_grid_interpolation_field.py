@@ -33,6 +33,7 @@ class RegularGridInterpolationField(Field, ABC):
     def __init__(self, filename: str):
         """
         The constructor for RegularGridInterpolationField.
+
         :param filename: The filename of an HDF5 file in the format as constructed by `tools/txt_to_hdf5`.
         """
         # Construct the interpolator from the HDF5 file passed by file name

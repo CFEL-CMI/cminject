@@ -101,6 +101,7 @@ class StokesFluidFlowField(RegularGridInterpolationField):
         """
         Calculates an (interpolated) relative velocity vector and pressure for a particle.
         Does memoization based on the particle identifier and current time.
+
         :param particle: The particle.
         :param time: The current time.
         :return: A 3-tuple of:
@@ -135,6 +136,7 @@ class StokesFluidFlowField(RegularGridInterpolationField):
                              particle: SphericalParticle) -> np.array:
         """
         Calculates the drag force using Stokes' law for spherical particles in continuum
+
         :param relative_velocity: The velocity of the field relative to the particle
         :param pressure: The pressure exerted on the particle at the point
         :param particle: A Particle

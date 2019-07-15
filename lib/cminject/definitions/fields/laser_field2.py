@@ -29,6 +29,7 @@ class PhotophoreticLaserField2(Field):
     def vortex_intensity(self, particle: ThermallyConductiveSphericalParticle) -> Tuple[float, float]:
         """
         Calculates the vortex intensity (propagating along the Z axis) at a particle's x/y/z position
+
         :param particle: The particle whose position to look at
         :return: A 2-tuple of the intensity and the power on the particle
         """
@@ -48,6 +49,7 @@ class PhotophoreticLaserField2(Field):
         """
         Calculates the polarization components on a sphere based on an x/y position on the sphere
         and the angle between phase components of the incoming beam
+
         :param x: The x position on the sphere
         :param y: The y position on the sphere
         :param phi: The angle between phase components of the incoming beam
@@ -68,6 +70,7 @@ class PhotophoreticLaserField2(Field):
         """
         Calculates the absorption coefficients for S and P polarisation components according to the
         Fresnel formulae.
+
         :param x: The x position on the sphere
         :param y: The y position on the sphere
         :param nt: The refractive index of the sphere
@@ -92,6 +95,7 @@ class PhotophoreticLaserField2(Field):
         """
         Calculates the power absorbed by a particle at some position for a given
         angle between linear polarisation states.
+
         :param particle: The particle to calculate the absorbed power for.
         :param phi: The angle between linear polarisation states
         :param alpha: The absorption coefficient of the particle. 1.0 by default.
