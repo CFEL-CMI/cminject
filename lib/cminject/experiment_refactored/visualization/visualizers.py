@@ -219,12 +219,13 @@ class TrajectoryVisualizer(MatplotlibVisualizer):
                     ax.plot(*trajectory_positions, color='grey')
 
             # Plot detector hits
-            for detector_id in h5f['detector_hits']:
-                hits = h5f['detector_hits'][detector_id][:]
-                if dimensions == 3:
-                    plt.scatter(hits[:, 0], hits[:, 1], zs=hits[:, 2], s=10, color='yellow')
-                elif dimensions == 2:
-                    plt.scatter(hits[:, 0], hits[:, 1], s=10, color='yellow')
+            if 'detector_hits' in h5f:
+                for detector_id in h5f['detector_hits']:
+                    hits = h5f['detector_hits'][detector_id][:]
+                    if dimensions == 3:
+                        plt.scatter(hits[:, 0], hits[:, 1], zs=hits[:, 2], s=10, color='blue')
+                    elif dimensions == 2:
+                        plt.scatter(hits[:, 0], hits[:, 1], s=10, color='blue')
 
         return fig, np.array([ax]).reshape((1, 1))  # reshape to adhere to 2D axes ndarray
 
