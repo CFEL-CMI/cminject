@@ -164,6 +164,12 @@ if __name__ == '__main__':
     parser.add_argument('-rho', '--density', help='Density of the particles',
                         type=float)
 
+    parser.add_argument('-fG', '--flow-gas', choices=['N', 'He'],
+                        help='Shortcut for -fv, -fd and -fg for common gas types. Warns if values are unknown'
+                             'for the given flow temperature.',
+                        type=str)
+    parser.add_argument('-ft', '--flow-temperature', help='Temperature of the gas in the flow field',
+                        type=float)
     parser.add_argument('-fv', '--flow-dynamic-viscosity', help='Dynamic viscosity of the flow field',
                         type=float)
     parser.add_argument('-fd', '--flow-density', help='Density of the flow field',
@@ -171,8 +177,6 @@ if __name__ == '__main__':
     parser.add_argument('-fs', '--flow-scale-slip', help='Slip scale factor of the flow field',
                         type=float)
     parser.add_argument('-fm', '--flow-gas-mass', help='Mass of the gas particles in the flow field',
-                        type=float)
-    parser.add_argument('-ft', '--flow-temperature', help='Temperature of the flow field',
                         type=float)
 
     parser.add_argument('-T', '--store-traj', help='Store trajectories?',
@@ -194,6 +198,25 @@ if __name__ == '__main__':
                         velocity=[0.0, 0.7, -43.0], velocity_sigma=[0.10, 0.30, 2.00],
                         detectors=[0.0, -0.052], time_interval=[0.0, 1.8, 1e-6])
     args = parser.parse_args()
+
+    # Set mu/m_gas if --flow-gas was set
+    if args.flow_gas is not None:
+        print(f"Automatically setting mu and m_gas for gas type '{args.flow_gas}' at {args.flow_temperature}K.")
+    if args.flow_gas == 'He':
+        args.flow_gas_mass = 6.6e-27
+        if args.flow_temperature == 4.0:
+            args.flow_dynamic_viscosity = 1.02e-6
+        else:
+            args.flow_dynamic_viscosity = 1.96e-5
+            if args.flow_temperature != 293.15:
+                print(f"WARNING: Unknown mu/m for gas type {args.flow_gas} at {args.flow_temperature}. Using "
+                      f"approximation for room temperature (293.15K).")
+    elif args.flow_gas == 'N':
+        args.flow_gas_mass = 4.7e-26
+        args.flow_dynamic_viscosity = 1.76e-5
+        if args.flow_temperature != 293.15:
+            print(f"WARNING: Unknown mu/m for gas type {args.flow_gas} at {args.flow_temperature}. Using "
+                  f"approximation for room temperature (293.15K).")
 
     # Verify dimensionality match for position description and dimensions parameter
     if len(args.position) != args.dimensions or len(args.position_sigma) != args.dimensions:
