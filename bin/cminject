@@ -82,7 +82,8 @@ def run_example_experiment(args):
             subclass=ThermallyConductiveSphericalParticle
         ),
     ]
-    """sources = [
+    """
+    sources = [
         LinearlyDistributedSphericalSource(
             args.nof_particles,
             position_intervals=[(0, 3e-3), (-0.0253, -0.0253)],
@@ -91,7 +92,8 @@ def run_example_experiment(args):
             rho=args.density,
             seed=args.seed
         )
-    ]"""
+    ]
+    """
 
     property_updaters = []
     if args.brownian:
