@@ -207,8 +207,9 @@ class TrajectoryVisualizer(MatplotlibVisualizer):
 
             ax.set_xlabel('x')
             ax.set_ylabel('y')
-            ax.scatter(initial_positions[:, 0], initial_positions[:, 1], s=3, c='black', **initial_positions_kwargs)
-            ax.scatter(final_positions[:, 0], final_positions[:, 1], s=3, c='green', **final_positions_kwargs)
+            #ax.scatter(initial_positions[:, 0], initial_positions[:, 1], s=3, c='black', **initial_positions_kwargs)
+            # FIXME these are often buggy so let's not plot them for now
+            #ax.scatter(final_positions[:, 0], final_positions[:, 1], s=3, c='green', **final_positions_kwargs)
 
             # Plot trajectories, if present
             for particle_id in h5f['particles']:
