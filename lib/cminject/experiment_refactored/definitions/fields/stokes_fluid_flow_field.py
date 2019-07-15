@@ -155,6 +155,10 @@ class StokesFluidFlowField(RegularGridInterpolationField):
         """
         Calculates the slip correction factor with temperature corrections. Works for models '4_kelvin' at 4K,
         and 'room_temp' at 293.15K.
+
+        The 'room_temp' models is based on the paper:
+        D. K. Hutchins, M. H. Harper, R. L. Felder, Slip correction measurements for solid spherical particles
+        by modulated dynamic light scattering, Aerosol Sci. Techn. 22 (2) (1995) 202–218. doi:10.1080/02786829408959741.
         """
         if pressure == 0.0:
             return float('inf')  # Correct force to 0 by dividing by infinity. FIXME better way?
@@ -171,7 +175,6 @@ class StokesFluidFlowField(RegularGridInterpolationField):
                       / (1 + c_sutherland / self.temperature)
             s = 1 + knudsen * (1.246 + (0.42 * np.exp(-0.87 / knudsen)))
         elif self.slip_correction_model == 'room_temp':
-            # TODO Reference ?
             knudsen = self.dynamic_viscosity / (pressure * particle.radius) *\
                       np.sqrt(pi * Boltzmann * self.temperature / (2 * self.m_gas))
             s = 1 + knudsen * (1.231 + 0.4695 * np.exp(-1.1783 / knudsen))

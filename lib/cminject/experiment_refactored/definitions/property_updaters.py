@@ -74,6 +74,11 @@ class MirrorSymmetryPropertyUpdater(PropertyUpdater):
 
 
 class BrownianMotionPropertyUpdater(PropertyUpdater):
+    """
+    Models brownian motion based on the paper:
+    A. Li, G. Ahmadi, Dispersion and deposition of spherical particles from point sources in a turbulent channel flow,
+    Aerosol Sci. Techn. 16 (24) (1992) 209–226. doi:10.1080/02786829208959550
+    """
     def set_number_of_dimensions(self, number_of_dimensions: int):
         self.number_of_dimensions = number_of_dimensions  # TODO validate against field dimensions
 
