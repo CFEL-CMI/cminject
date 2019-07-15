@@ -6,10 +6,10 @@
 __doc__ = """Example input file demonstrating a simple aerodynamic-lens stack"""
 
 
-from cminject.experiment.source import Source
-from cminject.experiment.device.als import AerodynamicsLensStack
-from cminject.experiment.experiment import Experiment
-from cminject.experiment.detector import Detector
+from cminject.experiment import Source
+from cminject.experiment import AerodynamicsLensStack
+from cminject.experiment import Experiment
+from cminject.experiment import Detector
 
 particlesource = Source(number_of_particles = 1,
                         position = (0,0,5e-4),
