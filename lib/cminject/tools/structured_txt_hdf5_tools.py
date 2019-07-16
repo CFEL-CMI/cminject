@@ -17,7 +17,6 @@
 
 from typing import Tuple, List
 
-import h5py
 import h5sparse
 
 from scipy.sparse import csr_matrix
