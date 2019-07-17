@@ -29,7 +29,7 @@ from cminject.definitions.particles import SphericalParticle
 
 class MolecularFlowDragField(RegularGridInterpolationField):
     """
-    A flow field that calculates a drag force exerted on a particle, based on the stokes force and interpolation
+    A flow field that calculates a drag force exerted on a particle, based on the Epstein force for high velocities and interpolation
     on a grid defined by an HDF5 file like comsol_hdf5_tools.txt_to_hdf5 outputs.
     """
     def __init__(self, filename: str, m_gas: float = None, temperature: float = 4.0):
@@ -93,7 +93,7 @@ class MolecularFlowDragField(RegularGridInterpolationField):
                              pressure: float,
                              particle: SphericalParticle) -> np.array:
         """
-        Calculates the drag force using Stokes' law for spherical particles in continuum
+        Calculates the drag force using Epstein's law for spherical particles in molecular flow with corrections for high velocities
 
         :param relative_velocity: The velocity of the field relative to the particle
         :param pressure: The pressure exerted on the particle at the point
@@ -105,8 +105,11 @@ class MolecularFlowDragField(RegularGridInterpolationField):
         if pressure <= 0:
             return np.zeros(self.number_of_dimensions)
         h=self.m_gas/(2*Boltzmann*self.temperature)
-        f_spec=pressure*np.sqrt(pi)*particle.radius**2/(2*h*relative_velocity**2)*(-2*np.exp(-h*relative_velocity**2)*np.sqrt(h)*relative_velocity*(1+2*h*relative_velocity**2)+np.sqrt(pi)*(1-4*h*relative_velocity**2-4*h**2*relative_velocity**4)*erfc(np.sqrt(h)*relative_velocity))
-        force_vector = f_spec-1.8/3*pressure*pi**(3/2)*np.sqrt(h)*particle.radius**2*relative_velocity
+        # calculationg the force for two different cases 
+        # 1. Epseints formula (V<10 m/s)
+        # 2. Epsteins formula corrected for high velocities (V>=10 m/s)
+        f_spec=np.where(abs(relative_velocity)<10,16/3*pressure*np.sqrt(pi*h)*particle.radius**2*relative_velocity,-pressure*np.sqrt(pi)*particle.radius**2/(2*h*relative_velocity**2)*(-2*np.exp(-h*relative_velocity**2)*np.sqrt(h)*relative_velocity*(1+2*h*relative_velocity**2)+np.sqrt(pi)*(1-4*h*relative_velocity**2-4*h**2*relative_velocity**4)*erf(np.sqrt(h)*relative_velocity)))
+        force_vector = f_spec+1.8/3*pressure*pi**(3/2)*np.sqrt(h)*particle.radius**2*relative_velocity
         return force_vector
 
 
