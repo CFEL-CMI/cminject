@@ -24,6 +24,7 @@ from scipy.constants import pi, Avogadro, Boltzmann, R
 from cminject.definitions.base import PropertyUpdater, Particle
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle, SphericalParticle
 from cminject.definitions.fields.stokes_fluid_flow_field import StokesFluidFlowField
+from cminject.definitions.fields.molecular_flow_drag_field import MolecularFlowDragField
 
 
 class TrajectoryPropertyUpdater(PropertyUpdater):
@@ -100,6 +101,36 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
             velocity = particle.velocity + (a * self.dt)
             particle.position = np.concatenate([position, velocity])
 
+class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
+    """
+    Models brownian motion based on the fluctuation-dissipation-theorem 
+    and a numerical represantation of the delta function
+    """
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        self.number_of_dimensions = number_of_dimensions  # TODO validate against field dimensions
+
+    def __init__(self, field: MolecularFlowDragField, dt: float):
+        self.field = field
+        self.dt = dt
+        self.number_of_dimensions = None
+
+    def update(self, particle: SphericalParticle, time: float) -> None:
+        # TODO what is this model ?
+        _, _, pressure = self.field.interpolate(particle, time)
+        if pressure >= 0.0:
+            h = self.field.m_gas / (2 * Boltzmann * self.field.temperature)
+            s0 = (16/3+3*pi/5)*np.sqrt(pi/h)*pressure*self.field.m_gas*particle.radius**2
+            if self.number_of_dimensions == 2:
+                a = np.random.normal(0.0, 1.0, 3) * np.sqrt(s0 / self.dt) / particle.mass
+                particle.position[0]=np.sqrt((particle.position[0] + (0.5 * a[0] * self.dt**2))**2 + (0.5 * a[1] * self.dt**2)**2)
+                particle.position[1]=particle.position[1] + (0.5 * a[2] * self.dt**2)
+                particle.position[2]=np.sqrt((particle.position[2] + (a[0] * self.dt))**2 + (a[1] * self.dt)**2)
+                particle.position[3]=particle.position[3] + (a[2] * self.dt)
+            else:
+                a = np.random.normal(0.0, 1.0, self.number_of_dimensions) * np.sqrt(s0 / self.dt) / particle.mass                
+                position = particle.spatial_position + (0.5 * a * self.dt**2)
+                velocity = particle.velocity + (a * self.dt)
+                particle.position = np.concatenate([position, velocity])
 
 class ParticleTemperaturePropertyUpdater(PropertyUpdater):
     """
