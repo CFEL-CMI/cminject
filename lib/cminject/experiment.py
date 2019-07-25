@@ -83,7 +83,8 @@ def simulate_particle(particle: Particle, devices: List[Device],
                       detectors: List[Detector], property_updaters: List[PropertyUpdater],
                       time_interval: Tuple[float, float, float],
                       z_boundary: Tuple[float, float],
-                      number_of_dimensions: int) -> Particle:
+                      number_of_dimensions: int,
+                      base_seed: int) -> Particle:
     """
     Simulates the flight path of a single particle, with a list of devices that can affect the particle,
     a list of detectors that can detect the particle, a list of property updaters that can store additional results
@@ -96,9 +97,12 @@ def simulate_particle(particle: Particle, devices: List[Device],
     :param time_interval: The time interval of the simulation.
     :param z_boundary: The Z boundary of the simulation.
     :param number_of_dimensions: The number of dimensions of the space the particle moves in.
+    :param base_seed: The "base seed", i.e. the random seed the experiment was defined with, to derive a local
+    random seed from.
     :return: A modified version of the particle instance after the simulation has ended.
     """
     t_start, t_end, dt = time_interval
+    np.random.seed(base_seed + int(particle.identifier))  # reseed RandomState from the base seed and particle ID
 
     # Run all property updaters once with the start time
     for property_updater in property_updaters:
@@ -281,7 +285,8 @@ class Experiment:
             detectors=self.detectors,
             z_boundary=self.z_boundary,
             property_updaters=self.property_updaters,
-            number_of_dimensions=self.number_of_dimensions
+            number_of_dimensions=self.number_of_dimensions,
+            base_seed=self.seed
         )
 
 
