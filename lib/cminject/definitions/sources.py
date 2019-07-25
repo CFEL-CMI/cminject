@@ -73,6 +73,17 @@ class VariableDistributionSource(Source):
         elif dist['kind'] == 'linear':
             l, r = dist['min'], dist['max']
             return np.linspace(l, r, self.number_of_particles)
+        elif dist['kind'] == 'radial_gaussian':
+            mu, sigma = dist['mu'], dist['sigma']
+            random_x=np.random.normal(mu, sigma, self.number_of_particles)
+            random_y=np.random.normal(0, sigma, self.number_of_particles)
+            return np.sqrt(random_x**2 + random_y**2)
+        elif dist['kind'] == 'radial_linear':
+            l, r = dist['min'], dist['max']
+            lin=np.linspace(l,r,self.number_of_particles)
+            h=abs(1/lin[np.where(lin!=0)])
+            c=np.cumsum(h)
+            return l+(c*(r-l)/np.sum(h))
 
     def _rotate_around_z(self, positions):
         size = positions.shape[0]
