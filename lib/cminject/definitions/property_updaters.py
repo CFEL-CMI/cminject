@@ -23,8 +23,7 @@ from scipy.constants import pi, Avogadro, Boltzmann, R
 
 from cminject.definitions.base import PropertyUpdater, Particle
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle, SphericalParticle
-from cminject.definitions.fields.stokes_fluid_flow_field import StokesFluidFlowField
-from cminject.definitions.fields.molecular_flow_drag_field import MolecularFlowDragField
+from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField, MolecularFlowDragForceField
 
 
 class TrajectoryPropertyUpdater(PropertyUpdater):
@@ -83,7 +82,7 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
     def set_number_of_dimensions(self, number_of_dimensions: int):
         self.number_of_dimensions = number_of_dimensions  # TODO validate against field dimensions
 
-    def __init__(self, field: StokesFluidFlowField, dt: float):
+    def __init__(self, field: StokesDragForceField, dt: float):
         self.field = field
         self.dt = dt
         self.number_of_dimensions = None
@@ -110,7 +109,7 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
     def set_number_of_dimensions(self, number_of_dimensions: int):
         self.number_of_dimensions = number_of_dimensions  # TODO validate against field dimensions
 
-    def __init__(self, field: MolecularFlowDragField, dt: float):
+    def __init__(self, field: MolecularFlowDragForceField, dt: float):
         self.field = field
         self.dt = dt
         self.number_of_dimensions = None
@@ -144,8 +143,8 @@ class ParticleTemperaturePropertyUpdater(PropertyUpdater):
     WARNING: This is untested and most likely incorrect at the moment. We'll need to revisit the code in the flow field
     that does the calculations if this code becomes necessary to use.
     """
-    def __init__(self, field: StokesFluidFlowField, dt: float):
-        self.field: StokesFluidFlowField = field
+    def __init__(self, field: StokesDragForceField, dt: float):
+        self.field: StokesDragForceField = field
         self.dt: float = dt
 
     def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> None:

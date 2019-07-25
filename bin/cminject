@@ -22,10 +22,12 @@ import argparse
 import os
 from typing import Tuple, List
 
+import numpy as np
+
 from cminject.definitions.base import Device
 from cminject.definitions.boundaries import GridFieldBasedBoundary
 from cminject.definitions.detectors import SimpleZDetector
-from cminject.definitions.fields.stokes_fluid_flow_field import StokesFluidFlowField
+from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.definitions.property_updaters import TrajectoryPropertyUpdater, \
     MirrorSymmetryPropertyUpdater, BrownianMotionPropertyUpdater
@@ -40,8 +42,8 @@ class StokesFluidFlowFieldDevice(Device):
         return self.boundary.z_boundary
 
     def __init__(self, *args, **kwargs):
-        field = StokesFluidFlowField(*args, **kwargs)
-        self.fields: List[StokesFluidFlowField] = [field]
+        field = StokesDragForceField(*args, **kwargs)
+        self.fields: List[StokesDragForceField] = [field]
         self.boundary: GridFieldBasedBoundary = GridFieldBasedBoundary(field)
         super().__init__(fields=self.fields, boundary=self.boundary)
 

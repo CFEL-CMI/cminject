@@ -26,7 +26,7 @@ import cmath  # TODO can't we do this with np?
 
 from cminject.definitions.base import Field, empty_interval
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
-from cminject.definitions.fields.stokes_fluid_flow_field import StokesFluidFlowField
+from cminject.definitions.fields.fluid_flow_fields import StokesFluidFlowField
 
 
 class PhotophoreticLaserField(Field):
