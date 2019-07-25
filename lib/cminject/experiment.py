@@ -163,7 +163,7 @@ class Experiment:
                  property_updaters: List[PropertyUpdater] = None,
                  time_interval: Tuple[float, float, float] = (0.0, 1.8, 1.0e-6),
                  z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0,
-                 number_of_dimensions: int = 3):
+                 number_of_dimensions: int = 3, seed = None):
         """
         Construct an Experiment to run.
 
@@ -194,8 +194,10 @@ class Experiment:
         for dimensional_object in (self.devices + self.sources + self.detectors + self.property_updaters):
             dimensional_object.set_number_of_dimensions(self.number_of_dimensions)
 
-        # Store the time interval
+        # Store the time interval and the seed, use the seed to seed numpy's RandomState
         self.time_interval = time_interval
+        self.seed = seed
+        np.random.seed(self.seed)
 
         # Initialise list of particles from all sources
         particle_types = set()  # Remember a set of particle types to raise an error if there are multiple

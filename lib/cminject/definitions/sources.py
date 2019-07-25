@@ -80,9 +80,6 @@ class VariableDistributionSource(Source):
         return np.array([rotated.real, rotated.imag, positions[:, 2]]).transpose()
 
     def generate_particles(self, start_time: float = 0.0):
-        if self.seed is not None:
-            np.random.seed(self.seed)
-
         position = np.array([self._generate(pdist) for pdist in self.position]).transpose()
         if self.randomly_rotate_around_z:
             position = self._rotate_around_z(position)

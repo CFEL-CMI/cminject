@@ -77,8 +77,6 @@ def run_example_experiment(args):
             velocity=args.velocity,
             radius=args.radius,
             rho=args.density,
-
-            seed=args.seed,
             subclass=ThermallyConductiveSphericalParticle
         ),
     ]
@@ -109,6 +107,7 @@ def run_example_experiment(args):
         property_updaters=property_updaters,
         time_interval=(t_start, t_end, dt),
         delta_z_end=0.001,
+        seed=args.seed,
         number_of_dimensions=args.dimensions
     )
 
