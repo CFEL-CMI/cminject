@@ -200,6 +200,8 @@ class Experiment:
 
         # Store the time interval and the seed, use the seed to seed numpy's RandomState
         self.time_interval = time_interval
+        if seed is None:
+            seed = np.random.randint(2**31)
         self.seed = seed
         np.random.seed(self.seed)
 
