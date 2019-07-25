@@ -29,11 +29,10 @@ from cminject.definitions.particles import SphericalParticle
 
 class MolecularFlowDragField(RegularGridInterpolationField):
     """
-    A flow field that calculates a drag force exerted on a particle, based on the Epstein force for high velocities and interpolation
-    on a grid defined by an HDF5 file like comsol_hdf5_tools.txt_to_hdf5 outputs.
+    A flow field that calculates a drag force exerted on a particle, based on the Epstein force for high velocities and
+    interpolation on a grid defined by an HDF5 file like comsol_hdf5_tools.txt_to_hdf5 outputs.
     """
     def __init__(self, filename: str, m_gas: float = None, temperature: float = 4.0):
-                 # For temperature calculations done by ParticleTemperaturePropertyUpdater
         # Store all the fixed initial properties
         self.temperature = temperature
         self.m_gas = m_gas
@@ -41,7 +40,6 @@ class MolecularFlowDragField(RegularGridInterpolationField):
         # Short-term memoization storage
         self.interpolation_results = {}
         super().__init__(filename)
-
 
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
         relative_velocity, _, pressure = self.interpolate(particle, time)
@@ -93,7 +91,8 @@ class MolecularFlowDragField(RegularGridInterpolationField):
                              pressure: float,
                              particle: SphericalParticle) -> np.array:
         """
-        Calculates the drag force using Epstein's law for spherical particles in molecular flow with corrections for high velocities
+        Calculates the drag force using Epstein's law for spherical particles
+        in molecular flow with corrections for high velocities
 
         :param relative_velocity: The velocity of the field relative to the particle
         :param pressure: The pressure exerted on the particle at the point
@@ -105,13 +104,12 @@ class MolecularFlowDragField(RegularGridInterpolationField):
         if pressure <= 0:
             return np.zeros(self.number_of_dimensions)
         h=self.m_gas/(2*Boltzmann*self.temperature)
-        # calculationg the force for two different cases 
-        # 1. Epseints formula (V<10 m/s)
-        # 2. Epsteins formula corrected for high velocities (V>=10 m/s)
+        # calculating the force for two different cases
+        # 1. Epstein's formula (V<10 m/s)
+        # 2. Epstein's formula corrected for high velocities (V>=10 m/s)
         f_spec=np.where(abs(relative_velocity)<10,16/3*pressure*np.sqrt(pi*h)*particle.radius**2*relative_velocity,-pressure*np.sqrt(pi)*particle.radius**2/(2*h*relative_velocity**2)*(-2*np.exp(-h*relative_velocity**2)*np.sqrt(h)*relative_velocity*(1+2*h*relative_velocity**2)+np.sqrt(pi)*(1-4*h*relative_velocity**2-4*h**2*relative_velocity**4)*erf(np.sqrt(h)*relative_velocity)))
         force_vector = f_spec+1.8/3*pressure*pi**(3/2)*np.sqrt(h)*particle.radius**2*relative_velocity
         return force_vector
-
 
     def set_number_of_dimensions(self, number_of_dimensions: int):
         if number_of_dimensions != self.number_of_dimensions:

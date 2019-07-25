@@ -101,10 +101,11 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
             velocity = particle.velocity + (a * self.dt)
             particle.position = np.concatenate([position, velocity])
 
+
 class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
     """
     Models brownian motion based on the fluctuation-dissipation-theorem 
-    and a numerical represantation of the delta function
+    and a numerical representation of the delta function
     """
     def set_number_of_dimensions(self, number_of_dimensions: int):
         self.number_of_dimensions = number_of_dimensions  # TODO validate against field dimensions
@@ -131,6 +132,7 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
                 position = particle.spatial_position + (0.5 * a * self.dt**2)
                 velocity = particle.velocity + (a * self.dt)
                 particle.position = np.concatenate([position, velocity])
+
 
 class ParticleTemperaturePropertyUpdater(PropertyUpdater):
     """
