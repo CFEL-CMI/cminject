@@ -81,7 +81,7 @@ class VariableDistributionSource(Source):
         elif dist['kind'] == 'radial_linear':
             l, r = dist['min'], dist['max']
             lin=np.linspace(l,r,self.number_of_particles)
-            h=abs(1/lin[np.where(lin!=0)])
+            h=1/np.abs(lin[np.where(lin!=0)])**0.5
             c=np.cumsum(h)
             return l+(c*(r-l)/np.sum(h))
 
