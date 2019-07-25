@@ -20,7 +20,7 @@ from typing import Tuple
 import numpy as np
 
 from scipy.constants import pi, Boltzmann
-from scipy.special import erf,erfc
+from scipy.special import erf, erfc
 
 from cminject.definitions.base import Particle
 from cminject.definitions.fields.regular_grid_interpolation_field import RegularGridInterpolationField
@@ -103,12 +103,20 @@ class MolecularFlowDragField(RegularGridInterpolationField):
         # and we can stop considering the particle to be inside this field
         if pressure <= 0:
             return np.zeros(self.number_of_dimensions)
-        h=self.m_gas/(2*Boltzmann*self.temperature)
+        h = self.m_gas/(2*Boltzmann*self.temperature)
         # calculating the force for two different cases
         # 1. Epstein's formula (V<10 m/s)
         # 2. Epstein's formula corrected for high velocities (V>=10 m/s)
-        f_spec=np.where(abs(relative_velocity)<10,16/3*pressure*np.sqrt(pi*h)*particle.radius**2*relative_velocity,-pressure*np.sqrt(pi)*particle.radius**2/(2*h*relative_velocity**2)*(-2*np.exp(-h*relative_velocity**2)*np.sqrt(h)*relative_velocity*(1+2*h*relative_velocity**2)+np.sqrt(pi)*(1-4*h*relative_velocity**2-4*h**2*relative_velocity**4)*erf(np.sqrt(h)*relative_velocity)))
-        force_vector = f_spec+1.8/3*pressure*pi**(3/2)*np.sqrt(h)*particle.radius**2*relative_velocity
+        f_spec = np.where(
+            abs(relative_velocity) < 10,
+            16/3 * pressure * np.sqrt(pi*h) * particle.radius**2 * relative_velocity,
+            -pressure * np.sqrt(pi) * particle.radius**2 * (
+                -2*np.exp(-h*relative_velocity**2) * np.sqrt(h) * relative_velocity * (1+2*h*relative_velocity**2) + \
+                np.sqrt(pi) * (1 - 4 * h * relative_velocity**2 - 4 * h**2 * relative_velocity**4) * \
+                erf(np.sqrt(h) * relative_velocity)
+            ) / (2 * h * relative_velocity**2)
+        )
+        force_vector = f_spec + 1.8 / 3 * pressure * pi**(3/2) * np.sqrt(h) * particle.radius**2 * relative_velocity
         return force_vector
 
     def set_number_of_dimensions(self, number_of_dimensions: int):

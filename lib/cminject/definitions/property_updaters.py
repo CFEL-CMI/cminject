@@ -120,13 +120,15 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
         _, _, pressure = self.field.interpolate(particle, time)
         if pressure >= 0.0:
             h = self.field.m_gas / (2 * Boltzmann * self.field.temperature)
-            s0 = (16/3+3*pi/5)*np.sqrt(pi/h)*pressure*self.field.m_gas*particle.radius**2
-            if self.number_of_dimensions == 2:
+            s0 = (16/3 + 3*pi/5) * np.sqrt(pi/h) * pressure * self.field.m_gas * particle.radius**2
+            if self.number_of_dimensions == 2:  # TODO this is just for radial symmetry
                 a = np.random.normal(0.0, 1.0, 3) * np.sqrt(s0 / self.dt) / particle.mass
-                particle.position[0]=np.sqrt((particle.position[0] + (0.5 * a[0] * self.dt**2))**2 + (0.5 * a[1] * self.dt**2)**2)
-                particle.position[1]=particle.position[1] + (0.5 * a[2] * self.dt**2)
-                particle.position[2]=np.sqrt((particle.position[2] + (a[0] * self.dt))**2 + (a[1] * self.dt)**2)
-                particle.position[3]=particle.position[3] + (a[2] * self.dt)
+                particle.position[0] = np.sqrt((particle.position[0] + (0.5 * a[0] * self.dt**2))**2 +
+                                               (0.5 * a[1] * self.dt**2)**2)
+                particle.position[1] = particle.position[1] + (0.5 * a[2] * self.dt**2)
+                particle.position[2] = np.sqrt((particle.position[2] + (a[0] * self.dt))**2 +
+                                               (a[1] * self.dt)**2)
+                particle.position[3] = particle.position[3] + (a[2] * self.dt)
             else:
                 a = np.random.normal(0.0, 1.0, self.number_of_dimensions) * np.sqrt(s0 / self.dt) / particle.mass                
                 position = particle.spatial_position + (0.5 * a * self.dt**2)
