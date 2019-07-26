@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from typing import Tuple, List
+from typing import Tuple, List, Dict, Union
 
 import h5sparse
 
@@ -29,10 +29,45 @@ from collections import OrderedDict
 
 gte2spaces = re.compile(r'\s{2,}')
 
-index_names = ['x', 'y', 'z']
+def _mirror_around_axis(arr, axis=0, flipsign=False):
+    """
+    Mirrors a 2D array around an axis and returns the resulting array.
+    The "middle" column in the resulting array is not duplicated,
+    i.e. the axis is considered to cut through that column.
+    :param arr: The array. Must be 2-dimensional, i.e. len(arr.shape) must be 2.
+    :param axis: The axis to flip along. Must be 0 or 1.
+    :param flipsign: Whether to flip the sign of the values in the array on the mirrored side.
+    :return: An (2m-1, n)-shaped (for axis=0) or a (m, 2n-1)-shaped array (for axis=1),
+    where the mirrored part is constructed as described in the docstring above.
+    """
+    dimensions = len(arr.shape)
+    if dimensions not in [1, 2]:
+        raise ValueError(f"Cannot mirror a {arr.shape}-shaped array with this method.")
+    elif dimensions == 2:
+        if axis not in [0, 1]:
+            raise ValueError("Can only mirror around axis 0 or 1 in a 2-D array!")
+    elif dimensions == 1 and axis != 0:
+        raise ValueError("Can only mirror around axis 0 in a 1-D array!")
+
+    # Mirror around the axis and optionally flip the sign of the values
+    mir = np.flip(arr, axis=axis)
+    if flipsign:
+        mir = -mir  # velocity in the direction of the mirrored dimension must be mirrored
+
+    if dimensions == 2:  # Case for 2D
+        m, n = arr.shape
+        stacked = np.stack([mir, arr], axis=axis).reshape((m * 2, n))  # Stack the arrays along the mirror axis
+        sliced = stacked[list(range(m)) + list(range(m + 1, 2 * m)), :]  # Cut out the twice-occurring middle column
+        return sliced
+    else:  # Case for 1D
+        m = arr.shape[0]
+        stacked = np.concatenate([mir, arr])  # Stack the arrays along the mirror axis
+        sliced = stacked[list(range(m)) + list(range(m + 1, 2 * m))]  # Cut out the twice-occurring middle value
+        return sliced
 
 
-def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3) -> None:
+def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror: bool = False,
+                attributes: Union[Dict, None] = None) -> None:
     """
     A function that reads a structured .txt file and stores a sparse specially constructed HDF5 file,
     while keeping metadata from the original file. The general structure of the .txt input file must be as follows:
@@ -72,12 +107,17 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3) -> Non
     :param infile_name: The input file name. Must be a .txt file matching the format described above, otherwise
     the behavior will be undefined.
     :param outfile_name: The output file name.
-    :param dimensions: The number of spatial dimensions in the txt file. 3 by default, will be 2 or 3 for most cases.
-    :param flip_indices: Flip the indices: Should be set to True if the flow field index (x,y,z / r,z / ...) iterates
-    the fastest in the first dimension (which is atypical from a CS point of view).
+    :param dimensions: The number of spatial dimensions the txt file is defined in.
+    3 by default, will be 2 or 3 for most cases.
+    :param mirror: A flag for symmetry around an axis: If true, the entire field will be duplicated and mirrored around
+    an axis in the first dimension that's positioned the minimal position in the first dimension.
+    :param attributes: Optionally, a dictionary of attributes to attach to the output HDF5 file (as HDF5 attributes on
+    the root node). Useful to store global properties of the field or anything else that tools or people who later read
+    this file might need.
     :return: None.
     """
     f = open(infile_name, 'r')
+    # strictly speaking we only need a set for storing indices, but there is no OrderedSet in base python3
     index = [OrderedDict() for _ in range(dimensions)]
     values = {}
 
@@ -155,16 +195,38 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3) -> Non
     for i in range(len(headers)):
         val_arr = np.array(values[headers[i][0]], dtype=np.float)
         if flip_indices:
+            index_n = reversed(index_n)
             # Transpose the whole array to match "normal" X/Y/Z/... iteration order. The order that the dimensions
             # increment in is inverted in the txt file format, so transpose it here.
-            val_arr = val_arr.reshape(tuple(reversed(index_n))).transpose().reshape((np.prod(index_n),))
+            val_arr = val_arr.reshape(tuple(index_n)).transpose().reshape((np.prod(index_n),))
+
+        if mirror:
+            # Determine if we need to flip the sign on the mirrored side (only for v_r)
+            flipsign = headers[i][0] in ['v_r', 'V_R', 0]  # TODO better conditions to check for?
+            # Mirror the value array along that axis, possibly flipping the mirrored values' signs
+            val_arr = _mirror_around_axis(val_arr.reshape(tuple(index_n)), axis=0, flipsign=flipsign).flatten()
+
+        # Construct sparse matrix and store it in values
         val_mat = csr_matrix(np.nan_to_num(val_arr))
         values[headers[i][0]] = val_mat
 
+    if mirror:
+        # Update the index array for the first dimension
+        index[0] = _mirror_around_axis(index[0], axis=0, flipsign=True)
+    print([i.shape for i in index])
+
+    _save_to_hdf5(attributes, dimensions, headers, index, metadata, outfile_name, values)
+
+
+def _save_to_hdf5(attributes, dimensions, headers, index, metadata, outfile_name, values):
     # Use h5sparse to save (lots of) space when storing (lots of) NaN or 0.0 values
     with h5sparse.File(outfile_name) as h5f:
-        # Store the metadata from the .txt file as attributes on the root of the hdf5 file
-        h5f.attrs.metadata = "\n".join(metadata)
+        # Store the metadata from the .txt file and the passed attributes as attributes on the root of the hdf5 file
+        h5f.attrs['metadata'] = "\n".join(metadata)
+        if attributes:
+            for k, v in attributes.items():
+                h5f.attrs[k] = v
+
         # Create a dataset for each column, store the np.array and the original index of the column
         for i in range(len(headers)):
             dataset = h5f.create_dataset(f'data/{headers[i][0]}', data=values[headers[i][0]])
@@ -209,7 +271,8 @@ def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
         column_values = np.vstack(column_values)[column_indices].swapaxes(0, 1)
 
         # Generate a MultiIndex from the product of the indices for each spatial dimension
-        idx = pd.MultiIndex.from_product(index, names=tuple(index_names[:dimensions]))
+        # TODO index names should be reconstructed from the file
+        idx = pd.MultiIndex.from_product(index, names=['x', 'y', 'z'] if dimensions == 2 else ['r', 'z'])
         # Construct the DataFrame from the values with the index
         df = pd.DataFrame(data=column_values, columns=column_headers, index=idx)
 

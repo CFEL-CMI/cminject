@@ -21,14 +21,29 @@ from cminject.tools.structured_txt_hdf5_tools import txt_to_hdf5
 
 
 def main():
-    parser = argparse.ArgumentParser(prog='convert_txt_to_hdf5',
-                                     formatter_class=argparse.MetavarTypeHelpFormatter)
-    parser.add_argument('-i', help='Input file (COMSOL .txt format)', type=str, required=True)
-    parser.add_argument('-o', help='Output file (.hdf5)', type=str, required=True)
-    parser.add_argument('-d', help='Number of spatial dimensions', type=int, required=False, default=3)
-    args = parser.parse_args()
+    parser = argparse.ArgumentParser(prog='convert_txt_to_hdf5')
+    parser.add_argument('-i', help='Input file (COMSOL .txt format)', type=str, required=True, metavar='infile')
+    parser.add_argument('-o', help='Output file (.hdf5)', type=str, required=True, metavar='outfile')
+    parser.add_argument('-d', help='Number of spatial dimensions', type=int, required=False, default=3, metavar='#dims')
+    parser.add_argument(
+        '-m', '--mirror',
+        help='Useful for mirror symmetry and symmetry around an axis: Mirrors the entire field around the axis '
+             'in the first dimension that is located at the minimal position in that first dimension. WARNING: '
+             'ONLY pass this if your field is symmetric around this axis but this is NOT yet reflected in the data.',
+        action='store_true'
+    )
+    parser.add_argument(
+        '-a', '--attr',
+        help='Stores an arbitrary attribute on the root node of the output HDF5 file.',
+        action='append',
+        nargs=2,
+        metavar=('key', 'value'),
+        type=str
+    )
 
-    txt_to_hdf5(infile_name=args.i, outfile_name=args.o, dimensions=args.d)
+    args = parser.parse_args()
+    txt_to_hdf5(infile_name=args.i, outfile_name=args.o, dimensions=args.d, mirror=args.mirror,
+                attributes=dict(args.attr or []))
     print("Done.")
 
 
