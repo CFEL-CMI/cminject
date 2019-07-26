@@ -41,9 +41,32 @@ def main():
         type=str
     )
 
+    parser.add_argument('-fG', '--flow-gas', choices=['N', 'He'],
+                        help='Shortcut for -fv, and -fm for common gas types. Warns if values are unknown '
+                             'for the given flow temperature.',
+                        type=str)
+    parser.add_argument('-ft', '--flow-temperature', help='Temperature of the gas in the flow field',
+                        type=float)
+    parser.add_argument('-fv', '--flow-dynamic-viscosity', help='Dynamic viscosity of the flow field',
+                        type=float)
+    parser.add_argument('-fd', '--flow-density', help='Density of the flow field',
+                        type=float)
+    parser.add_argument('-fs', '--flow-slip_scale', help='Slip scale factor of the flow field',
+                        type=float)
+    parser.add_argument('-fm', '--flow-gas-mass', help='Mass of the gas particles in the flow field',
+                        type=float)
+
     args = parser.parse_args()
+    args.attr = dict(args.attr or [])
+    # Attach args that are shorthands for attributes to args.attr, if they are present in args
+    for k in {'flow_gas', 'flow_temperature', 'flow_dynamic_viscosity',
+              'flow_density', 'flow_slip_scale', 'flow_gas_mass'} & args.__dict__.keys():
+        value = getattr(args, k)
+        if value is not None:
+            args.attr[k] = value
+
     txt_to_hdf5(infile_name=args.i, outfile_name=args.o, dimensions=args.d, mirror=args.mirror,
-                attributes=dict(args.attr or []))
+                attributes=args.attr)
     print("Done.")
 
 

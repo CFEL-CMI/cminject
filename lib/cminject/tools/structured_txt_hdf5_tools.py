@@ -213,7 +213,6 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
     if mirror:
         # Update the index array for the first dimension
         index[0] = _mirror_around_axis(index[0], axis=0, flipsign=True)
-    print([i.shape for i in index])
 
     _save_to_hdf5(attributes, dimensions, headers, index, metadata, outfile_name, values)
 
