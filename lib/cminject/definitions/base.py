@@ -80,7 +80,6 @@ class ZBounded(ABC):
     setup in the Z direction, and then allows an Experiment to make a fast preliminary calculation about whether it
     can consider a particle lost based on this.
     """
-
     @property
     @abstractmethod
     def z_boundary(self) -> Tuple[float, float]:
@@ -346,7 +345,6 @@ class Boundary(NDimensional, ZBounded, ABC):
     def is_particle_inside(self, particle: Particle, time: float) -> bool:
         """
         Tells whether the passed Particle is inside of this Boundary or not.
-
         :param particle: The Particle to tell this for.
         :param time: The time to tell this for.
         :return: True if the particle is definitely inside this Boundary,
@@ -366,7 +364,6 @@ class Field(NDimensional, ZBounded, ABC):
         """
         Calculates an acceleration for one particle based on the particle's current properties and the current time.
         This acceleration will be integrated for in each time step and thus "applied" to the particle.
-
         :param particle: The Particle to calculate this Field's acceleration for.
         :param time: The time to calculate the acceleration for.
         :return: A (n,)-shaped numpy array describing the acceleration exerted on the particle. n is the number of
@@ -383,7 +380,6 @@ class Device(NDimensional, ZBounded, ABC):
     def __init__(self, fields: List[Field], boundary: Boundary):
         """
         Constructor for Device.
-
         :param fields: The Fields that are present in this device.
         :param boundary: The Boundary this device has.
         """
@@ -396,7 +392,6 @@ class Device(NDimensional, ZBounded, ABC):
         Returns the Z boundary of this device. Defaults to returning a Z boundary encompassing both
         the device's Z boundary and the field's Z boundary, but should be overridden if a different
         Z boundary is required.
-
         :return: A (z_min, z_max) tuple as defined in ZBoundedMixin.
         """
         boundary = self.boundary.z_boundary
@@ -415,7 +410,6 @@ class Device(NDimensional, ZBounded, ABC):
         Returns whether the passed Particle is inside this Device or not.
         Defaults to returning what the Boundary's method with the same name returns, but should be overridden
         if a more complex decision is required.
-
         :param particle: A Particle instance.
         :param time: The current time.
         :return: True if the Particle inside this Device, False if it is not (or if this is unknown).
@@ -448,7 +442,6 @@ class PropertyUpdater(NDimensional, ABC):
     def update(self, particle: Particle, time: float) -> None:
         """
         Updates a property of some Particle instance in some way.
-
         :param particle: The Particle instance.
         :param time: The current time.
         :return: Nothing.
@@ -464,7 +457,6 @@ class ResultStorage(ABC):
     def store_results(self, particles: List[Particle]) -> None:
         """
         Stores the results of an experiment (which are always a list of modified Particle instances).
-
         :param particles: The list of particles, each in the state of after running a simulation.
         :return: Nothing.
         """

@@ -36,8 +36,9 @@ class VariableDistributionSource(Source):
     - uniform: A random uniform distribution with keys 'min' and 'max' (like np.random.uniform)
     - radial_gaussian: A 1D-projected 2D gaussian distribution. Useful for a radial dimension.
     - radial_linear: An approximation of a 1D-projected 2D deterministically linear distribution.
-    Useful for a radial dimension.
+      Useful for a radial dimension.
     - radial_uniform: A 1D-projected 2D random uniform distribution. Useful for a radial dimension.
+
     """
     def __init__(self,
                  number_of_particles: int,

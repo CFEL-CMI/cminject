@@ -31,7 +31,6 @@ def spatial_derivatives(time: float, position_and_velocity: np.array,
     """
     Calculates the derivatives of position and velocity, which will then be integrated over.
     "n" as used below is the number of the simulation's spatial dimensions.
-
     :param time: The current simulation time in seconds
     :param position_and_velocity: A (2n,) numpy array containing spatial position and velocity of the particle.
     :param particle: The Particle instance.
@@ -52,7 +51,6 @@ def is_particle_lost(particle: Particle, time: float,
                      number_of_dimensions: int):
     """
     Decides whether a particle should be considered lost.
-
     :param particle: The Particle instance.
     :param time: The current simulation time in seconds
     :param z_boundary: The total Z boundary to consider
@@ -89,7 +87,6 @@ def simulate_particle(particle: Particle, devices: List[Device],
     Simulates the flight path of a single particle, with a list of devices that can affect the particle,
     a list of detectors that can detect the particle, a list of property updaters that can store additional results
     on the particle, a time interval to simulate the particle for, and a Z boundary to simulate the particle within.
-
     :param particle: The particle instance.
     :param devices: The list of devices.
     :param detectors: The list of detectors.
@@ -170,7 +167,6 @@ class Experiment:
                  number_of_dimensions: int = 3, seed = None):
         """
         Construct an Experiment to run.
-
         :param devices: The list of Devices in the experimental setup.
         :param sources: The list of Sources that generate particles. Note that for both simulation and storage reasons,
         having different sources generate different types of particles for one Experiment is not allowed.
@@ -242,7 +238,6 @@ class Experiment:
     def run(self, single_threaded=False) -> List[Particle]:
         """
         Run the Experiment. A list of resulting Particle instances is returned.
-
         :param single_threaded: Whether to run this experiment on a single thread, i.e. without parallelization. False
         by default: It's mostly only useful to pass True for developers, as many debuggers, profilers, etc. are not able
         to deal well with different processes/threads. To run the experiment and get results quickly, leave this on

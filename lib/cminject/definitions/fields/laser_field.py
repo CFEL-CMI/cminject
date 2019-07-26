@@ -26,11 +26,11 @@ import cmath  # TODO can't we do this with np?
 
 from cminject.definitions.base import Field, empty_interval
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
-from cminject.definitions.fields.fluid_flow_fields import StokesFluidFlowField
+from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField
 
 
 class PhotophoreticLaserField(Field):
-    def __init__(self, fluid_flow_field: StokesFluidFlowField, power: float, radius: float, lambda_: float = 523e-9):
+    def __init__(self, fluid_flow_field: StokesDragForceField, power: float, radius: float, lambda_: float = 523e-9):
         self.fluid = fluid_flow_field
         self.power = power
         self.lambda_ = lambda_
