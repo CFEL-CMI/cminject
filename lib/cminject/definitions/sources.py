@@ -26,6 +26,19 @@ Distribution = Dict  # An appropriate type for variable distribution description
 
 
 class VariableDistributionSource(Source):
+    """
+    A Source for particles that allows variable distributions for each dimension of the initial phase space.
+    A "Distribution" is a dictionary describing a specific kind of distribution, with a 'kind' key that must match
+    one of the following distributions, and further keys describing parameters for the given distribution:
+
+    - gaussian: A gaussian distribution with keys 'mu' and 'sigma'. (like np.random.normal)
+    - linear: A deterministically linear distribution with keys 'min' and 'max' (like np.linspace)
+    - uniform: A random uniform distribution with keys 'min' and 'max' (like np.random.uniform)
+    - radial_gaussian: A 1D-projected 2D gaussian distribution. Useful for a radial dimension.
+    - radial_linear: An approximation of a 1D-projected 2D deterministically linear distribution.
+    Useful for a radial dimension.
+    - radial_uniform: A 1D-projected 2D random uniform distribution. Useful for a radial dimension.
+    """
     def __init__(self,
                  number_of_particles: int,
                  position: List[Distribution],
@@ -75,17 +88,26 @@ class VariableDistributionSource(Source):
             return np.linspace(l, r, self.number_of_particles)
         elif dist['kind'] == 'radial_gaussian':
             mu, sigma = dist['mu'], dist['sigma']
-            random_x=np.random.normal(mu, sigma, self.number_of_particles)
-            random_y=np.random.normal(0, sigma, self.number_of_particles)
+            random_x = np.random.normal(mu, sigma, self.number_of_particles)
+            random_y = np.random.normal(0, sigma, self.number_of_particles)
             return np.sqrt(random_x**2 + random_y**2)
         elif dist['kind'] == 'radial_linear':
             l, r = dist['min'], dist['max']
-            lin=np.linspace(l,r,self.number_of_particles)
-            h=1/np.abs(lin[np.where(lin!=0)])**0.5
-            c=np.cumsum(h)
-            return l+(c*(r-l)/np.sum(h))
+            lin = np.linspace(l, r, self.number_of_particles)
+            h = 1/np.sqrt(np.abs(lin[np.where(lin != 0)]))
+            c = np.cumsum(h)
+            return l + (c*(r-l) / np.sum(h))
+        elif dist['kind'] == 'uniform':
+            l, r = dist['min'], dist['max']
+            return np.random.uniform(l, r, self.number_of_particles)
+        elif dist['kind'] == 'radial_uniform':
+            l, r = dist['min'], dist['max']
+            random_x = np.random.uniform(l, r, self.number_of_particles)
+            random_y = np.random.uniform(l, r, self.number_of_particles)
+            return np.sqrt(random_x**2 + random_y**2)
 
-    def _rotate_around_z(self, positions):
+    @staticmethod
+    def _rotate_around_z(positions):
         size = positions.shape[0]
         rotated = (positions[:, 0] + positions[:, 1] * 1j) * np.exp(np.random.random(size) * 2 * np.pi * 1j)
         return np.array([rotated.real, rotated.imag, positions[:, 2]]).transpose()
