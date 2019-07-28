@@ -1,3 +1,3 @@
-#!/usr/bin/env tcsh
+#!/usr/bin/env sh
 # install CMI injector in current user's home directory
-python setup.py install --user
+python3 setup.py install --user
