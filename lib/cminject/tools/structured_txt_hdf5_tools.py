@@ -205,7 +205,7 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
 
         if mirror:
             # Determine if we need to flip the sign on the mirrored side (only for v_r)
-            flipsign = headers[i][0] in ['v_r', 'V_R', 0]  # TODO better conditions to check for?
+            flipsign = headers[i][0] in ['v_r', 'V_R', 'u', 0]  # TODO better conditions to check for?
             # Mirror the value array along that axis, possibly flipping the mirrored values' signs
             # TODO what if flip_indices *and* mirror is True? is this correct then? I think so but I'm unsure  - Simon
             val_arr = _mirror_around_axis(val_arr.reshape(index_n), axis=0, flipsign=flipsign).flatten()
