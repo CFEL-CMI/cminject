@@ -25,7 +25,6 @@ class SphericalParticle(Particle):
     """
     A simple spherical particle that has a radius and a density (rho).
     """
-
     def __init__(self, *args, radius: float, rho: float, **kwargs):
         super().__init__(*args, **kwargs)
         self.radius = radius

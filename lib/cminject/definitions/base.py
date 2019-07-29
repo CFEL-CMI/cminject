@@ -54,6 +54,7 @@ class NDimensional(ABC):
 
         What this means concretely really depends on the object type and implementation, but for example,
         after a `set_number_of_dimensions(2)` call:
+
         - A Source will now generate particles with a 2D distribution instead of a 3D distribution
         - A Field will now calculate a 2D acceleration instead of a 3D acceleration
 
@@ -85,6 +86,7 @@ class ZBounded(ABC):
     def z_boundary(self) -> Tuple[float, float]:
         """
         Returns the Z boundary of this Z-bounded object.
+
         :return: A tuple of floats, the first entry being z_min, the second being z_max.
         """
         pass
@@ -117,7 +119,7 @@ class Particle(NDimensional, ABC):
         :param identifier: The unique identifier the particle should have.
         :param start_time: The time the particle starts being simulated at.
         :param position: The phase space position (n-D position and velocity) the particle starts at.
-               A (2*n,) dimensional vector, where n is the number of spatial dimensions.
+            A (2*n,) dimensional vector, where n is the number of spatial dimensions.
         """
         self.identifier: int = identifier
         self.lost: bool = False
@@ -163,10 +165,11 @@ class Particle(NDimensional, ABC):
         A list of strings matching the .position attribute in length, describing each value in the array
         in some manner (most likely using standard physical abbreviations like x, y, z, vx, vy, vz, ...).
 
-        The default implementation returns
-         - ["x", "y", "z", "vx", "vy", "vz"] for 3D simulations
-         - ["r", "z", "vr", "vz"] for 2D simulations
-         - ["z", "vz"] for 1D simulations
+        The default implementation returns:
+
+        - ["x", "y", "z", "vx", "vy", "vz"] for 3D simulations
+        - ["r", "z", "vr", "vz"] for 2D simulations
+        - ["z", "vz"] for 1D simulations
 
         If your particle implementation deviates from this, override the property.
 
@@ -231,7 +234,7 @@ class ParticleDetectorHit(object):
         The constructor for a ParticleDetectorHit.
 
         :param hit_position: An (n,)-shaped np.array representing the hit position of the particle on the detector.
-        n is the number of dimensions and must match
+            n is the number of dimensions and must match
         :param particle:
         """
         dimpos = hit_position.size
@@ -329,7 +332,7 @@ class Detector(NDimensional, ZBounded, ABC):
 
         :param particle: A Particle instance.
         :return: An (n,)-shaped numpy array describing the hit position if there is a hit position to calculate,
-         None otherwise. n is the number of spatial dimensions in the experiment.
+            None otherwise. n is the number of spatial dimensions in the experiment.
         """
         pass
 
@@ -345,10 +348,11 @@ class Boundary(NDimensional, ZBounded, ABC):
     def is_particle_inside(self, particle: Particle, time: float) -> bool:
         """
         Tells whether the passed Particle is inside of this Boundary or not.
+
         :param particle: The Particle to tell this for.
         :param time: The time to tell this for.
         :return: True if the particle is definitely inside this Boundary,
-        False if it is not inside this Boundary or if this cannot be known.
+            False if it is not inside this Boundary or if this cannot be known.
         """
         pass
 
@@ -364,10 +368,11 @@ class Field(NDimensional, ZBounded, ABC):
         """
         Calculates an acceleration for one particle based on the particle's current properties and the current time.
         This acceleration will be integrated for in each time step and thus "applied" to the particle.
+
         :param particle: The Particle to calculate this Field's acceleration for.
         :param time: The time to calculate the acceleration for.
         :return: A (n,)-shaped numpy array describing the acceleration exerted on the particle. n is the number of
-        spatial dimensions of the experiment.
+            spatial dimensions of the experiment.
         """
         pass
 
@@ -380,6 +385,7 @@ class Device(NDimensional, ZBounded, ABC):
     def __init__(self, fields: List[Field], boundary: Boundary):
         """
         Constructor for Device.
+
         :param fields: The Fields that are present in this device.
         :param boundary: The Boundary this device has.
         """
@@ -392,6 +398,7 @@ class Device(NDimensional, ZBounded, ABC):
         Returns the Z boundary of this device. Defaults to returning a Z boundary encompassing both
         the device's Z boundary and the field's Z boundary, but should be overridden if a different
         Z boundary is required.
+
         :return: A (z_min, z_max) tuple as defined in ZBoundedMixin.
         """
         boundary = self.boundary.z_boundary
@@ -410,6 +417,7 @@ class Device(NDimensional, ZBounded, ABC):
         Returns whether the passed Particle is inside this Device or not.
         Defaults to returning what the Boundary's method with the same name returns, but should be overridden
         if a more complex decision is required.
+
         :param particle: A Particle instance.
         :param time: The current time.
         :return: True if the Particle inside this Device, False if it is not (or if this is unknown).
@@ -442,6 +450,7 @@ class PropertyUpdater(NDimensional, ABC):
     def update(self, particle: Particle, time: float) -> None:
         """
         Updates a property of some Particle instance in some way.
+
         :param particle: The Particle instance.
         :param time: The current time.
         :return: Nothing.
@@ -457,6 +466,7 @@ class ResultStorage(ABC):
     def store_results(self, particles: List[Particle]) -> None:
         """
         Stores the results of an experiment (which are always a list of modified Particle instances).
+
         :param particles: The list of particles, each in the state of after running a simulation.
         :return: Nothing.
         """

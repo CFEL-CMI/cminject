@@ -31,6 +31,7 @@ def spatial_derivatives(time: float, position_and_velocity: np.array,
     """
     Calculates the derivatives of position and velocity, which will then be integrated over.
     "n" as used below is the number of the simulation's spatial dimensions.
+
     :param time: The current simulation time in seconds
     :param position_and_velocity: A (2n,) numpy array containing spatial position and velocity of the particle.
     :param particle: The Particle instance.
@@ -51,6 +52,7 @@ def is_particle_lost(particle: Particle, time: float,
                      number_of_dimensions: int):
     """
     Decides whether a particle should be considered lost.
+
     :param particle: The Particle instance.
     :param time: The current simulation time in seconds
     :param z_boundary: The total Z boundary to consider
@@ -87,6 +89,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
     Simulates the flight path of a single particle, with a list of devices that can affect the particle,
     a list of detectors that can detect the particle, a list of property updaters that can store additional results
     on the particle, a time interval to simulate the particle for, and a Z boundary to simulate the particle within.
+
     :param particle: The particle instance.
     :param devices: The list of devices.
     :param detectors: The list of detectors.
@@ -95,7 +98,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
     :param z_boundary: The Z boundary of the simulation.
     :param number_of_dimensions: The number of dimensions of the space the particle moves in.
     :param base_seed: The "base seed", i.e. the random seed the experiment was defined with, to derive a local
-    random seed from.
+        random seed from.
     :return: A modified version of the particle instance after the simulation has ended.
     """
     t_start, t_end, dt = time_interval
@@ -167,21 +170,22 @@ class Experiment:
                  number_of_dimensions: int = 3, seed = None):
         """
         Construct an Experiment to run.
+
         :param devices: The list of Devices in the experimental setup.
         :param sources: The list of Sources that generate particles. Note that for both simulation and storage reasons,
-        having different sources generate different types of particles for one Experiment is not allowed.
+            having different sources generate different types of particles for one Experiment is not allowed.
         :param detectors: The list of Detectors in the experimental setup.
         :param property_updaters: The list of PropertyUpdaters used to update different properties on the particles
-        in each step.
+            in each step.
         :param time_interval: The time interval to run the experiment in, in the shape of (`t_start`, `t_end`, `dt`).
-        The simulation will run in the time interval [`t_start`, `t_end`] with time step `dt`.
+            The simulation will run in the time interval [`t_start`, `t_end`] with time step `dt`.
         :param z_boundary: (Optional) If passed, the Z boundary of the entire experimental setup. Particles will not
-        be simulated outside of this boundary. If not passed, the minimal interval enclosing all Devices and Detectors
-        along the Z axis will be calculated and used as the Z boundary.
+            be simulated outside of this boundary. If not passed, the minimal interval enclosing all Devices and
+            Detectors along the Z axis will be calculated and used as the Z boundary.
         :param delta_z_end: An additional amount to add on both ends of the Z boundary. Mostly sensible to use when
-        not passing an explicit `z_boundary`, and when you expect the automatically generated minimal boundary to be
-        too small, e.g. if some Source will generate particles that lie slightly outside the automatically generated
-        Z boundary.
+            not passing an explicit `z_boundary`, and when you expect the automatically generated minimal boundary to be
+            too small, e.g. if some Source will generate particles that lie slightly outside the automatically generated
+            Z boundary.
         """
         # Store references
         self.devices = devices
@@ -238,12 +242,13 @@ class Experiment:
     def run(self, single_threaded=False) -> List[Particle]:
         """
         Run the Experiment. A list of resulting Particle instances is returned.
+
         :param single_threaded: Whether to run this experiment on a single thread, i.e. without parallelization. False
-        by default: It's mostly only useful to pass True for developers, as many debuggers, profilers, etc. are not able
-        to deal well with different processes/threads. To run the experiment and get results quickly, leave this on
-        False.
+            by default: It's mostly only useful to pass True for developers, as many debuggers, profilers, etc. are not
+            able to deal well with different processes/threads. To run the experiment and get results quickly, leave
+            this on False.
         :return: A list of resulting Particle instances. Things like detector hits and trajectories should be stored on
-        them and can be read off each Particle.
+            them and can be read off each Particle.
         """
         simulate = self._get_run_function()
 

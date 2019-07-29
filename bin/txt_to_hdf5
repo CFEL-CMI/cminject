@@ -39,7 +39,7 @@ def main():
         nargs=2,
         metavar=('key', 'value'),
         type=str
-    )
+    )  # TODO type shouldn't be str for the values, it should be 'guessing' and trying in order: int -> float -> str
 
     parser.add_argument('-fG', '--flow-gas', choices=['N', 'He'],
                         help='Shortcut for -fv, and -fm for common gas types. Warns if values are unknown '

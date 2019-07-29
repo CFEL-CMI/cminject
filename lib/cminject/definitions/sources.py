@@ -36,9 +36,8 @@ class VariableDistributionSource(Source):
     - uniform: A random uniform distribution with keys 'min' and 'max' (like np.random.uniform)
     - radial_gaussian: A 1D-projected 2D gaussian distribution. Useful for a radial dimension.
     - radial_linear: An approximation of a 1D-projected 2D deterministically linear distribution.
-      Useful for a radial dimension.
+        Useful for a radial dimension.
     - radial_uniform: A 1D-projected 2D random uniform distribution. Useful for a radial dimension.
-
     """
     def __init__(self,
                  number_of_particles: int,
@@ -61,10 +60,6 @@ class VariableDistributionSource(Source):
         self.subclass_kwargs = subclass_kwargs
         self.number_of_dimensions = len(self.position)
 
-        # Check validity of distribution kinds
-        for dist in self.position + self.velocity + [self.radius]:
-            if 'kind' not in dist or dist['kind'] not in ['gaussian', 'linear']:
-                raise ValueError(f"Unknown or unspecified kind in distribution specification: {dist}")
         # Check that position and velocity descriptions are equal in length (dimensionality)
         if len(self.position) != len(self.velocity):
             raise ValueError(
@@ -106,6 +101,8 @@ class VariableDistributionSource(Source):
             random_x = np.random.uniform(l, r, self.number_of_particles)
             random_y = np.random.uniform(l, r, self.number_of_particles)
             return np.sqrt(random_x**2 + random_y**2)
+        else:
+            raise ValueError(f"Unknown or unspecified kind in distribution specification: {dist}")
 
     @staticmethod
     def _rotate_around_z(positions):

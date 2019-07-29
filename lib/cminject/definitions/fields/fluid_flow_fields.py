@@ -18,6 +18,7 @@
 from abc import abstractmethod
 from typing import Tuple
 
+import h5py
 import numpy as np
 
 from scipy.constants import pi, Boltzmann
@@ -55,6 +56,7 @@ class DragForceInterpolationField(RegularGridInterpolationField):
             -> np.array:
         """
         Calculates a drag force in some fashion.
+
         :param relative_velocity: The velocity of the field relative to the particle
         :param pressure: The pressure exerted on the particle at the point
         :param particle: A Particle
@@ -66,12 +68,13 @@ class DragForceInterpolationField(RegularGridInterpolationField):
         """
         Calculates an (interpolated) relative velocity vector and pressure for a particle.
         Does memoization based on the particle identifier and current time.
+
         :param particle: The particle.
         :param time: The current time.
         :return: A 3-tuple of:
-        - The velocity vector of the field relative to the particle,
-        - The norm of this velocity vector,
-        - The pressure exerted on the particle.
+            - The velocity vector of the field relative to the particle,
+            - The norm of this velocity vector,
+            - The pressure exerted on the particle.
         """
         # Some basic memoizing so we can call this method often but have it calculated only once per time step
         # and particle.
@@ -94,6 +97,16 @@ class DragForceInterpolationField(RegularGridInterpolationField):
             self.interpolation_results[particle.identifier] = (particle.time_of_flight, result)
         return result
 
+    def _set_cascading(self, attribute_name, passed_arg, h5f, key):
+        # TODO docstring
+        if passed_arg is not None:
+            setattr(self, attribute_name, passed_arg)
+        elif key in h5f.attrs:
+            setattr(self, attribute_name, h5f.attrs[key])
+        elif getattr(self, attribute_name, None) is None:
+            # couldn't find value and hasn't already been set
+            raise ValueError(f"Could not retrieve value for {attribute_name} from HDF5 and function arguments!")
+
 
 class StokesDragForceField(DragForceInterpolationField):
     """
@@ -101,45 +114,65 @@ class StokesDragForceField(DragForceInterpolationField):
     on a grid defined by an HDF5 file like comsol_hdf5_tools.txt_to_hdf5 outputs.
     """
     def __init__(self, filename: str,
-                 dynamic_viscosity: float, density: float, m_gas: float = None, temperature: float = 4.0,
-                 slip_correction_model: str = None, slip_correction_scale: float = 1.0,
-                 # For temperature calculations done by ParticleTemperaturePropertyUpdater
-                 pressure: float = 100.0, thermal_creep: float = 1.0,
-                 molar_mass: float = 0.004002602, molar_heat_capacity: float = 12.5,
-                 specific_gas_constant: float = 2077.0, specific_heat_capacity: float = 3116.0,
-                 speed_of_sound: float = 117.7):
+                 dynamic_viscosity: float = None, m_gas: float = None, temperature: float = None,
+                 slip_correction_model: str = None, slip_correction_scale: float = None):
         # Store all the fixed initial properties
-        self.dynamic_viscosity = dynamic_viscosity
-        self.density = density
-        self.temperature = temperature
-        self.slip_correction_scale = slip_correction_scale
-        self.m_gas = m_gas
-        self.pressure = pressure
+        self.dynamic_viscosity, self.density, self.m_gas, self.temperature, self.slip_correction_model = [None] * 5
+        with h5py.File(filename) as h5f:
+            if 'flow_gas' in h5f.attrs:
+                temp = h5f.attrs['flow_temperature']
+                self._set_properties_based_on_gas_type(h5f.attrs['flow_gas'], temp)
+                if temperature is not None and temperature != temp:
+                    print(f"WARNING: Given temperature ({temperature}) is not equal to the temperature stored on the "
+                          f"field ({temp}). Things like the assumed dynamic viscosity might be off, so "
+                          f"you might need to set them manually.")
+
+            # Set all the values that are either stored on the field file or passed explicitly, getting the value
+            # to set in a 'cascading' manner, where first the field file is looked at, and the value from there stored,
+            # and then the passed argument is looked at, which -- if it is not None -- overrides the value from the
+            # field file.
+            self._set_cascading('dynamic_viscosity', dynamic_viscosity, h5f, 'flow_dynamic_viscosity')
+            self._set_cascading('m_gas', m_gas, h5f, 'flow_gas_mass')
+            self._set_cascading('temperature', temperature, h5f, 'flow_temperature')
+            self._set_cascading('slip_correction_scale', slip_correction_scale, h5f, 'flow_slip_scale')
 
         # Set the correct slip correction model
-        self._init_slip_correction_model(slip_correction_model, temperature)
-
-        # Store additional properties needed for particle temperature calculations
-        self.thermal_creep = thermal_creep
-        self.molar_mass = molar_mass
-        self.molar_heat_capacity = molar_heat_capacity
-        self.specific_gas_constant = specific_gas_constant
-        self.specific_heat_capacity = specific_heat_capacity
-        self.speed_of_sound = speed_of_sound
+        self._init_slip_correction_model(slip_correction_model)
 
         super().__init__(filename)
 
-    def _init_slip_correction_model(self, slip_correction_model: str, temperature: float):
+    def _set_properties_based_on_gas_type(self, gas_type: str, gas_temp: float):
+        self.temperature = gas_temp
+
+        if gas_type is not None:
+            print(f"Automatically setting mu and m_gas for gas type '{gas_type}' at {gas_temp}K.")
+        if gas_type == 'He':
+            self.m_gas = 6.6e-27
+            if gas_temp == 4.0:
+                self.dynamic_viscosity = 1.02e-6
+            else:
+                self.dynamic_viscosity = 1.96e-5
+                if gas_temp != 293.15:
+                    print(f"WARNING: Unknown mu/m for gas type {gas_type} at {gas_temp}. Using "
+                          f"approximation for room temperature (293.15K).")
+        elif gas_type == 'N':
+            self.m_gas = 4.7e-26
+            self.dynamic_viscosity = 1.76e-5
+            if gas_temp != 293.15:
+                print(f"WARNING: Unknown mu/m for gas type {gas_type} at {gas_temp}. Using "
+                      f"approximation for room temperature (293.15K).")
+
+    def _init_slip_correction_model(self, slip_correction_model: str):
         # Either take the manually set slip correction model,
         if slip_correction_model is not None:
             self.slip_correction_model = slip_correction_model
         else:  # or define it automatically based on the temperature.
-            if temperature == 4.0:
+            if self.temperature == 4.0:
                 self.slip_correction_model = '4_kelvin'
-            elif temperature == 293.15:
+            elif self.temperature == 293.15:
                 self.slip_correction_model = 'room_temp'
             else:  # Use some heuristic for the model but warn the user that this has been used.
-                self.slip_correction_model = '4_kelvin' if 0.0 <= temperature <= 200.0 else 'room_temp'
+                self.slip_correction_model = '4_kelvin' if 0.0 <= self.temperature <= 200.0 else 'room_temp'
                 print(f"WARNING: Auto-picked slip correction model '{self.slip_correction_model}' based on"
                       f" a temperature here the model might not be applicable. You might need to set the model by hand,"
                       f" or even implement a new model, for optimal results.")
@@ -158,6 +191,7 @@ class StokesDragForceField(DragForceInterpolationField):
                              particle: SphericalParticle) -> np.array:
         """
         Calculates the drag force using Stokes' law for spherical particles in continuum
+
         :param relative_velocity: The velocity of the field relative to the particle
         :param pressure: The pressure exerted on the particle at the point
         :param particle: A Particle

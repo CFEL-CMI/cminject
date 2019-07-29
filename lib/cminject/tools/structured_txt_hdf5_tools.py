@@ -34,11 +34,12 @@ def _mirror_around_axis(arr, axis=0, flipsign=False):
     Mirrors a 2D array around an axis and returns the resulting array.
     The "middle" column in the resulting array is not duplicated,
     i.e. the axis is considered to cut through that column.
+
     :param arr: The array. Must be 2-dimensional, i.e. len(arr.shape) must be 2.
     :param axis: The axis to flip along. Must be 0 or 1.
     :param flipsign: Whether to flip the sign of the values in the array on the mirrored side.
     :return: An (2m-1, n)-shaped (for axis=0) or a (m, 2n-1)-shaped array (for axis=1),
-    where the mirrored part is constructed as described in the docstring above.
+        where the mirrored part is constructed as described in the docstring above.
     """
     dimensions = len(arr.shape)
     if dimensions not in [1, 2]:
@@ -70,16 +71,14 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
                 attributes: Union[Dict, None] = None) -> None:
     """
     A function that reads a structured .txt file and stores a sparse specially constructed HDF5 file,
-    while keeping metadata from the original file. The general structure of the .txt input file must be as follows:
+    while keeping metadata from the original file. The general structure of the .txt input file must be as follows::
 
-    ``
-    % <Some meta information>
-    % <Some more meta information>
-    % X  Y  Z  A (m)  B (s)  C ...
-    0.0  0.0  0.0  1.0  2.0  3.0 ...
-    0.1  0.0  0.0  4.0  5.0  6.0 ...
-    ...
-    ``
+        % <Some meta information>
+        % <Some more meta information>
+        % X  Y  Z  A (m)  B (s)  C ...
+        0.0  0.0  0.0  1.0  2.0  3.0 ...
+        0.1  0.0  0.0  4.0  5.0  6.0 ...
+        ...
 
     This matches the .txt output format of COMSOL for 3D grids.
 
@@ -94,27 +93,32 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
     The number of columns after X/Y/Z is arbitrary.
 
     The constructed HDF5 file will have the following entries:
+
     - index: Each of these is the set of indices found for each dimension, in order of occurrence
+
       - x
       - y
       - z, if present in the original file
+
     - data: Each of these is one full row of values, in X*Y*Z order (X and Z are flipped wrt. the original txt file!)
+
       - <one for each column, matching the column name from the file>
 
     The metadata (the lines starting with %) is stored as an attribute on the HDF5 root.
     Columns specifying a unit (separated by one space) have this information attached as metadata on data/<...>.
 
     :param infile_name: The input file name. Must be a .txt file matching the format described above, otherwise
-    the behavior will be undefined.
+        the behavior will be undefined.
     :param outfile_name: The output file name.
-    :param dimensions: The number of spatial dimensions the txt file is defined in.
-    3 by default, will be 2 or 3 for most cases.
+    :param dimensions: The number of spatial dimensions the txt file is defined in. 3 by default, will be 2 or 3 for
+        most cases.
     :param mirror: A flag for symmetry around an axis: If true, the entire field will be duplicated and mirrored around
-    an axis in the first dimension that's positioned the minimal position in the first dimension.
+        an axis in the first dimension that's positioned the minimal position in the first dimension.
     :param attributes: Optionally, a dictionary of attributes to attach to the output HDF5 file (as HDF5 attributes on
-    the root node). Useful to store global properties of the field or anything else that tools or people who later read
-    this file might need.
+        the root node). Useful to store global properties of the field or anything else that tools or people who later
+        read this file might need.
     :return: None.
+
     """
     f = open(infile_name, 'r')
     # strictly speaking we only need a set for storing indices, but there is no OrderedSet in base python3
@@ -195,16 +199,16 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
     for i in range(len(headers)):
         val_arr = np.array(values[headers[i][0]], dtype=np.float)
         if flip_indices:
-            index_n = reversed(index_n)
             # Transpose the whole array to match "normal" X/Y/Z/... iteration order. The order that the dimensions
             # increment in is inverted in the txt file format, so transpose it here.
-            val_arr = val_arr.reshape(tuple(index_n)).transpose().reshape((np.prod(index_n),))
+            val_arr = val_arr.reshape(tuple(reversed(index_n))).transpose().reshape((np.prod(index_n),))
 
         if mirror:
             # Determine if we need to flip the sign on the mirrored side (only for v_r)
             flipsign = headers[i][0] in ['v_r', 'V_R', 0]  # TODO better conditions to check for?
             # Mirror the value array along that axis, possibly flipping the mirrored values' signs
-            val_arr = _mirror_around_axis(val_arr.reshape(tuple(index_n)), axis=0, flipsign=flipsign).flatten()
+            # TODO what if flip_indices *and* mirror is True? is this correct then? I think so but I'm unsure  - Simon
+            val_arr = _mirror_around_axis(val_arr.reshape(index_n), axis=0, flipsign=flipsign).flatten()
 
         # Construct sparse matrix and store it in values
         val_mat = csr_matrix(np.nan_to_num(val_arr))
@@ -244,6 +248,7 @@ def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
     """
     Reads in an HDF5 file (as written by txt_to_hdf5) and returns a pandas DataFrame matching it.
     Note that not all metadata stored in the HDF5 file is also attached to the DataFrame as of now.
+
     :param filename: The HDF5 file to read in. Must be written by or adhere to the format that txt_to_hdf5 defines.
     :return: A pandas DataFrame matching the data stored in the HDF5 file.
     """
@@ -271,7 +276,7 @@ def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
 
         # Generate a MultiIndex from the product of the indices for each spatial dimension
         # TODO index names should be reconstructed from the file
-        idx = pd.MultiIndex.from_product(index, names=['x', 'y', 'z'] if dimensions == 2 else ['r', 'z'])
+        idx = pd.MultiIndex.from_product(index, names=['x', 'y', 'z'] if dimensions == 3 else ['r', 'z'])
         # Construct the DataFrame from the values with the index
         df = pd.DataFrame(data=column_values, columns=column_headers, index=idx)
 
@@ -283,9 +288,10 @@ def data_frame_to_data_grid(df: pd.DataFrame) -> Tuple[List[np.array], np.array]
     Turns a DataFrame (as constructed by hdf5_to_data_frame) into a data grid that can be used with the
     scipy.interpolate.RegularGridInterpolator.
     The result can be passed on like: RegularGridInterpolator((x,y,z), data_grid).
+
     :param df: The pandas DataFrame. Must be constructed by or adhere to the format that hdf5_to_data_frame defines.
     :return: A 2-tuple like ([x, y, ...], data_grid), where the first component is a list of all index arrays,
-    and the second component is the data grid matching this index.
+        and the second component is the data grid matching this index.
     """
     # Gather index and number of indices along each axis from the DataFrame's MultiIndex
     index = [level.values for level in df.index.levels]
@@ -303,6 +309,7 @@ def hdf5_to_data_grid(filename: str) -> Tuple[List[np.array], np.array]:
     Shortcut function to read in an HDF5 file (as written by txt_to_hdf5) and turn it into a data grid.
     Refer to hdf5_to_data_frame and data_frame_to_data_grid for further info; this function is defined purely
     in terms of the composition of the two.
+
     :param filename: The HDF5 file to read in.
     :return: A 4-tuple of numpy arrays: (x, y, z, data_grid).
     """
