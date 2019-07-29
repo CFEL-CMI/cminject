@@ -202,7 +202,7 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
 
         if mirror:
             # Determine if we need to flip the sign on the mirrored side (only for v_r)
-            flipsign = headers[i][0] in ['v_r', 'V_R', 0]  # TODO better conditions to check for?
+            flipsign = headers[i][0] in ['v_r', 'V_R', 'u', 0]  # TODO better conditions to check for?
             # Mirror the value array along that axis, possibly flipping the mirrored values' signs
             val_arr = _mirror_around_axis(val_arr.reshape(tuple(index_n)), axis=0, flipsign=flipsign).flatten()
 
@@ -271,7 +271,7 @@ def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
 
         # Generate a MultiIndex from the product of the indices for each spatial dimension
         # TODO index names should be reconstructed from the file
-        idx = pd.MultiIndex.from_product(index, names=['x', 'y', 'z'] if dimensions == 2 else ['r', 'z'])
+        idx = pd.MultiIndex.from_product(index, names=['x', 'y', 'z'] if dimensions == 3 else ['r', 'z'])
         # Construct the DataFrame from the values with the index
         df = pd.DataFrame(data=column_values, columns=column_headers, index=idx)
 

@@ -63,7 +63,7 @@ class VariableDistributionSource(Source):
 
         # Check validity of distribution kinds
         for dist in self.position + self.velocity + [self.radius]:
-            if 'kind' not in dist or dist['kind'] not in ['gaussian', 'linear']:
+            if 'kind' not in dist or dist['kind'] not in ['gaussian', 'linear', 'radial_gaussian', 'radial_linear']:
                 raise ValueError(f"Unknown or unspecified kind in distribution specification: {dist}")
         # Check that position and velocity descriptions are equal in length (dimensionality)
         if len(self.position) != len(self.velocity):
