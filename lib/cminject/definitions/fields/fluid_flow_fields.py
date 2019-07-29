@@ -242,10 +242,11 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
     A flow field that calculates a drag force exerted on a particle, based on the Epstein force for high velocities and
     interpolation on a grid defined by an HDF5 file like comsol_hdf5_tools.txt_to_hdf5 outputs.
     """
-    def __init__(self, filename: str, m_gas: float = None, temperature: float = 4.0):
-        # Store all the fixed initial properties
-        self.temperature = temperature
-        self.m_gas = m_gas
+    def __init__(self, filename: str, m_gas: float = None, temperature: float = None):
+        self.temperature, self.m_gas = None, None
+        with h5py.File(filename) as h5f:
+            self._set_cascading('m_gas', m_gas, h5f, 'flow_gas_mass')
+            self._set_cascading('temperature', temperature, h5f, 'flow_temperature')
 
         super().__init__(filename)
 
