@@ -24,7 +24,7 @@ def main():
     parser = argparse.ArgumentParser(prog='convert_txt_to_hdf5')
     parser.add_argument('-i', help='Input file (COMSOL .txt format)', type=str, required=True, metavar='infile')
     parser.add_argument('-o', help='Output file (.hdf5)', type=str, required=True, metavar='outfile')
-    parser.add_argument('-d', help='Number of spatial dimensions', type=int, required=False, default=3, metavar='#dims')
+    parser.add_argument('-d', help='Number of spatial dimensions', type=int, required=True, metavar='#dims')
     parser.add_argument(
         '-m', '--mirror',
         help='Useful for mirror symmetry and symmetry around an axis: Mirrors the entire field around the axis '
