@@ -115,10 +115,10 @@ class StokesDragForceField(DragForceInterpolationField):
     """
     def __init__(self, filename: str,
                  dynamic_viscosity: float = None, m_gas: float = None, temperature: float = None,
-                 slip_correction_model: str = None, slip_correction_scale: float = None):
+                 slip_correction_model: str = None, slip_correction_scale: float = 1.0):
         # Store all the fixed initial properties
-        self.dynamic_viscosity, self.density, self.m_gas, self.temperature, self.slip_correction_model = [None] * 5
-        with h5py.File(filename) as h5f:
+        self.dynamic_viscosity, self.density, self.m_gas, self.temperature, self.slip_correction_scale = [None] * 5
+        with h5py.File(filename, 'r') as h5f:
             if 'flow_gas' in h5f.attrs:
                 temp = h5f.attrs['flow_temperature']
                 self._set_properties_based_on_gas_type(h5f.attrs['flow_gas'], temp)
@@ -137,7 +137,10 @@ class StokesDragForceField(DragForceInterpolationField):
             self._set_cascading('slip_correction_scale', slip_correction_scale, h5f, 'flow_slip_scale')
 
         # Set the correct slip correction model
+        self.slip_correction_model = None
         self._init_slip_correction_model(slip_correction_model)
+        if self.slip_correction_model is None:
+            raise ValueError(f"{self.__class__} was unable to set a slip correction model!")
 
         super().__init__(filename)
 
@@ -174,7 +177,7 @@ class StokesDragForceField(DragForceInterpolationField):
             else:  # Use some heuristic for the model but warn the user that this has been used.
                 self.slip_correction_model = '4_kelvin' if 0.0 <= self.temperature <= 200.0 else 'room_temp'
                 print(f"WARNING: Auto-picked slip correction model '{self.slip_correction_model}' based on"
-                      f" a temperature here the model might not be applicable. You might need to set the model by hand,"
+                      f" a temperature where the model might not be applicable. You might need to set the model by hand,"
                       f" or even implement a new model, for optimal results.")
 
         # In any case, check that the model that has been set is one that is actually implemented
@@ -244,7 +247,7 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
     """
     def __init__(self, filename: str, m_gas: float = None, temperature: float = None):
         self.temperature, self.m_gas = None, None
-        with h5py.File(filename) as h5f:
+        with h5py.File(filename, 'r') as h5f:
             self._set_cascading('m_gas', m_gas, h5f, 'flow_gas_mass')
             self._set_cascading('temperature', temperature, h5f, 'flow_temperature')
 

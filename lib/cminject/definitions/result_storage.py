@@ -40,16 +40,17 @@ class HDF5ResultStorage(ResultStorage):
     the stored array in length (if the class implementations have been done according to documentation),
     and describes/identifies the value at each position in the array.
 
-    NOTE: For efficient and predictable storage, it's assumed that all detector hits on each detector return
-    exactly the same shape of data, and the same property description. This should be the case in any sensible
-    implementation of a detector anyways. If you do find you need to deviate from this, store an array of the maximum
-    necessary length for each hit and fill out values you can't have for a specific hit with `np.nan`.
+    .. note::
+        For efficient and predictable storage, it's assumed that all detector hits on each detector return
+        exactly the same shape of data, and the same property description. This should be the case in any sensible
+        implementation of a detector anyways. If you do find you need to deviate from this, store an array of the
+        maximum necessary length for each hit and fill out values you can't have for a specific hit with `np.nan`.
     """
     def __init__(self, filename: str):
         self.filename = filename
 
     def store_results(self, particles: List[Particle]) -> None:
-        with h5py.File(self.filename) as h5f:
+        with h5py.File(self.filename, 'w-') as h5f:
             dimensions = len(particles[0].spatial_position)
             h5f.attrs['dimensions'] = dimensions
             detector_hits = {}

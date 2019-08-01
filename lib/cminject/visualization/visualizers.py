@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import argparse
 from abc import abstractmethod, ABC
 from typing import List, Tuple, Any, Callable, Union
 
@@ -120,7 +119,7 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
 
         :return: A Matplotlib figure and a 2-dimensional ndarray of all axes present in the figure.
         """
-        with h5py.File(self.filename) as h5f:
+        with h5py.File(self.filename, 'r') as h5f:
             detectors = h5f['detector_hits']
             detector_count = len(detectors)
             detector_keys = list(detectors.keys())
@@ -176,7 +175,7 @@ class TrajectoryVisualizer(MatplotlibVisualizer):
     the plots can get rather chaotic and slow (especially in 3D).
     """
     def visualize(self) -> Tuple[Figure, np.ndarray]:
-        with h5py.File(self.filename) as h5f:
+        with h5py.File(self.filename, 'r') as h5f:
             dimensions = int(h5f.attrs['dimensions'])
             if dimensions not in [2, 3]:
                 raise ValueError("Can only plot 2D/3D!")

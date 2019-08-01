@@ -30,10 +30,11 @@ class TrajectoryPropertyUpdater(PropertyUpdater):
     """
     A simple property updater to append to the trajectory of the particle after each time step.
     """
-    def update(self, particle: Particle, time: float) -> None:
+    def update(self, particle: Particle, time: float) -> bool:
         particle.trajectory.append(
             np.concatenate([[time], particle.position])
         )
+        return False
 
     def set_number_of_dimensions(self, number_of_dimensions: int):
         pass
@@ -53,8 +54,7 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
         self.dt = dt
         self.number_of_dimensions = None
 
-    def update(self, particle: SphericalParticle, time: float) -> None:
-        # TODO what is this model ?
+    def update(self, particle: SphericalParticle, time: float) -> bool:
         _, _, pressure = self.field.interpolate(particle, time)
         if pressure >= 0.0:
             cunningham = self.field.calc_slip_correction(pressure, particle)
@@ -65,6 +65,8 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
             position = particle.spatial_position + (0.5 * a * self.dt**2)
             velocity = particle.velocity + (a * self.dt)
             particle.position = np.concatenate([position, velocity])
+
+        return True
 
 
 class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
@@ -80,7 +82,7 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
         self.dt = dt
         self.number_of_dimensions = None
 
-    def update(self, particle: SphericalParticle, time: float) -> None:
+    def update(self, particle: SphericalParticle, time: float) -> bool:
         # TODO what is this model ?
         _, _, pressure = self.field.interpolate(particle, time)
         if pressure >= 0.0:
@@ -102,20 +104,24 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
                 velocity = particle.velocity + (a * self.dt)
                 particle.position = np.concatenate([position, velocity])
 
+        return True
+
 
 class ParticleTemperaturePropertyUpdater(PropertyUpdater):
     """
     A property updater to calculate particle temperatures based on two models for particles
     within a StokesFluidFlowField.
 
-    WARNING: This is untested and most likely incorrect at the moment. We'll need to revisit the code in the flow field
-    that does the calculations if this code becomes necessary to use.
+    .. warning::
+        This is untested and most likely incorrect at the moment.
+        We'll need to revisit the code in the flow field that does the calculations,
+        when this code is required again.
     """
     def __init__(self, field: StokesDragForceField, dt: float):
         self.field: StokesDragForceField = field
         self.dt: float = dt
 
-    def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> None:
+    def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
         if self.field.is_particle_inside(particle):
             t = self.calc_particle_temperature(particle, time)
             n_c, t_c = self.calc_particle_collisions(particle, self.dt, time)
@@ -127,6 +133,8 @@ class ParticleTemperaturePropertyUpdater(PropertyUpdater):
                 particle.time_to_liquid_n = time
             if t_c <= 77.0 and not np.isfinite(particle.collision_time_to_liquid_n):
                 particle.collision_time_to_liquid_n = time
+
+        return False
 
     def calc_thermal_conductivity(self, particle: Particle, time: float) -> float:
         """

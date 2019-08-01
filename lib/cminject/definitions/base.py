@@ -61,10 +61,11 @@ class NDimensional(ABC):
         You can expect this method to be only called once, when the experiment is preparing to be run.
         From then on, the dimensionality of the object should be considered fixed.
 
-        NOTE: If your object can only handle certain numbers of dimensions (e.g. only 3D, or only 2D and 3D), it is
-        good practice to raise a ValueError exception when this method is called with a dimensionality value
-        your object can not work with. This will make it clear why the simulation setup does not make sense as
-        it is, and how it must be changed before it can be run.
+        .. note::
+            If your object can only handle certain numbers of dimensions (e.g. only 3D, or only 2D and 3D), it is
+            good practice to raise a ValueError exception when this method is called with a dimensionality value
+            your object can not work with. This will make it clear why the simulation setup does not make sense as
+            it is, and how it must be changed before it can be run.
 
         :param number_of_dimensions: The number of spatial dimensions of the setup this object should work within.
         :return: Nothing.
@@ -430,6 +431,11 @@ class PropertyUpdater(NDimensional, ABC):
     An object to update a Particle's properties based on its current state. Can do arbitrary calculations to determine
     the values the properties should be set to.
 
+    .. warning::
+        If the properties that a .update() call changes include the .position attribute, the update method
+        MUST return True, and it SHOULD return False otherwise. If your updater doesn't adhere to this, expect these
+        updated positions to have no effect, since the integrator will overwrite them.
+
     Should be used for all calculations of additional quantities beyond calculating an acceleration, so,
     beyond what a Field returns. For example, TrajectoryPropertyUpdater is a simple PropertyUpdater that just takes the
     position and appends it to the `trajectory` property on the particle.
@@ -440,20 +446,20 @@ class PropertyUpdater(NDimensional, ABC):
     If you need access to properties of fields, detectors, etc., override the __init__ method and store a reference
     to each relevant object at construction of the PropertyUpdater instance.
 
-    NOTE:
-    Taking care to avoid data clashes (different property updaters writing on the same property on a particle,
-    overwriting each others' results) is up to the user / implementer. This cannot be avoided in a general way.
-    If you know that another PropertyUpdater instance is writing to a specific particle property, don't write to it
-    too, unless you know the order of execution of the PropertyUpdaters and are doing this completely intentionally.
+    .. note::
+        Taking care to avoid data clashes (different property updaters writing on the same property on a particle,
+        overwriting each others' results) is up to the user / implementer. This cannot be avoided in a general way.
+        If you know that another PropertyUpdater instance is writing to a specific particle property, don't write to it
+        too, unless you know the order of execution of the PropertyUpdaters and are doing this completely intentionally.
     """
     @abstractmethod
-    def update(self, particle: Particle, time: float) -> None:
+    def update(self, particle: Particle, time: float) -> bool:
         """
         Updates a property of some Particle instance in some way.
 
         :param particle: The Particle instance.
         :param time: The current time.
-        :return: Nothing.
+        :return: True if the position of a particle was changed
         """
         pass
 

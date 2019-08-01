@@ -134,14 +134,17 @@ def simulate_particle(particle: Particle, devices: List[Device],
             particle.time_of_flight = integral.t
 
             # - Run all property updaters for the particle with the current integral time
+            changed_position = False
             for property_updater in property_updaters:
-                property_updater.update(particle, integral.t)
+                changed_position |= property_updater.update(particle, integral.t)
 
             # - Have each detector try to detect the particle
             for detector in detectors:
                 detector.try_to_detect(particle)
 
             # Propagate by integrating until the next time step
+            if changed_position:
+                integral.set_initial_value(particle.position, integral.t)
             integral.integrate(integral.t + dt)
         else:
             # If particle is lost, store this and (implicitly) break the loop
