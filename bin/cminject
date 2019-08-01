@@ -61,7 +61,7 @@ def run_example_experiment(args):
         StokesFluidFlowFieldDevice(
             filename=args.flow_field,
             temperature=args.flow_temperature,
-            slip_correction_scale=args.flow_scale_slip,
+            slip_correction_scale=args.flow_scale_slip or 1.0,
         )
     ]
 
