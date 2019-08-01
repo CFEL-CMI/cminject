@@ -53,9 +53,8 @@ class RegularGridInterpolationField(Field, ABC):
     def z_boundary(self) -> Tuple[float, float]:
         return self._z_boundary
 
-    def is_particle_inside(self, particle: Particle, time: float) -> bool:
-        return np.all(particle.spatial_position >= self.grid_boundary[:, 0]) and\
-               np.all(particle.spatial_position <= self.grid_boundary[:, 1])
+    def is_particle_inside(self, position: np.array, time: float) -> bool:
+        return np.all((position >= self.grid_boundary[:, 0]) * (position <= self.grid_boundary[:, 1]))
 
     def set_number_of_dimensions(self, number_of_dimensions: int):
         if number_of_dimensions != self.number_of_dimensions:

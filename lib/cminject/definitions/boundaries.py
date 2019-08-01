@@ -41,8 +41,8 @@ class SimpleZBoundary(Boundary):
     def z_boundary(self) -> Tuple[float, float]:
         return self._z_boundary
 
-    def is_particle_inside(self, particle: Particle, time: float):
-        return self.z_min <= particle.position[self.number_of_dimensions] <= self.z_max
+    def is_particle_inside(self, position: np.array, time: float):
+        return self.z_min <= position <= self.z_max
 
 
 class CuboidBoundary(SimpleZBoundary):
@@ -59,10 +59,9 @@ class CuboidBoundary(SimpleZBoundary):
             )
         self.number_of_dimensions = number_of_dimensions
 
-    def is_particle_inside(self, particle: Particle, time: float) -> bool:
-        pos = particle.position[:self.number_of_dimensions]
+    def is_particle_inside(self, position: np.array, time: float) -> bool:
         return np.all(
-            (self.intervals[:, 0] <= pos) * (pos <= self.intervals[:, 1])
+            (self.intervals[:, 0] <= position) * (position <= self.intervals[:, 1])
         )
 
 
@@ -74,7 +73,7 @@ class InfiniteBoundary(Boundary):
     def z_boundary(self) -> Tuple[float, float]:
         return infinite_interval
 
-    def is_particle_inside(self, particle: Particle, time: float) -> bool:
+    def is_particle_inside(self, position: float, time: float) -> bool:
         return True
 
 
@@ -92,8 +91,8 @@ class GridFieldBasedBoundary(Boundary):
     def z_boundary(self) -> Tuple[float, float]:
         return self.field.z_boundary
 
-    def is_particle_inside(self, particle: Particle, time: float) -> bool:
-        return self.field.is_particle_inside(particle, time)
+    def is_particle_inside(self, position: np.array, time: float) -> bool:
+        return self.field.is_particle_inside(position, time)
 
 
 """

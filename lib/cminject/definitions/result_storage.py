@@ -50,7 +50,7 @@ class HDF5ResultStorage(ResultStorage):
         self.filename = filename
 
     def store_results(self, particles: List[Particle]) -> None:
-        with h5py.File(self.filename, 'w-') as h5f:
+        with h5py.File(self.filename, 'w') as h5f:
             dimensions = len(particles[0].spatial_position)
             h5f.attrs['dimensions'] = dimensions
             detector_hits = {}
