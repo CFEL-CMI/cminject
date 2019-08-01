@@ -183,13 +183,6 @@ class TrajectoryVisualizer(MatplotlibVisualizer):
             particles = [h5f['particles'][k] for k in h5f['particles']]
             fig = plt.figure()
 
-            # Plot initial and final positions as 2D / 3D scatter plots
-            with np.printoptions(precision=2):
-                for pk in h5f['particles']:
-                    p = h5f['particles'][pk]
-                    if np.max(np.abs(p['final_position'][:3])) > 5.0:
-                        print(pk, p['initial_position'][:], p['final_position'][:])
-
             initial_positions = np.array([p['initial_position'][:dimensions] for p in particles])
             final_positions = np.array([p['final_position'][:dimensions] for p in particles])
 
