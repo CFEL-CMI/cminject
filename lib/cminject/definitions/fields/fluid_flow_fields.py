@@ -34,10 +34,10 @@ class DragForceInterpolationField(RegularGridInterpolationField):
     A base class for any field that calculates a drag force based on a regular interpolation grid field and
     some model. The method that needs to be implemented is `calculate_drag_force`.
     """
-    def __init__(self, filename):
+    def __init__(self, filename, *args, **kwargs):
         # Short-term memoization storage
         self.interpolation_results = {}
-        super().__init__(filename=filename)
+        super().__init__(filename=filename, *args, **kwargs)
 
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
         relative_velocity, _, pressure = self.interpolate(particle, time)
@@ -115,7 +115,8 @@ class StokesDragForceField(DragForceInterpolationField):
     """
     def __init__(self, filename: str,
                  dynamic_viscosity: float = None, m_gas: float = None, temperature: float = None,
-                 slip_correction_model: str = None, slip_correction_scale: float = 1.0):
+                 slip_correction_model: str = None, slip_correction_scale: float = 1.0,
+                 *args, **kwargs):
         # Store all the fixed initial properties
         self.dynamic_viscosity, self.density, self.m_gas, self.temperature, self.slip_correction_scale = [None] * 5
         with h5py.File(filename, 'r') as h5f:
@@ -142,7 +143,7 @@ class StokesDragForceField(DragForceInterpolationField):
         if self.slip_correction_model is None:
             raise ValueError(f"{self.__class__} was unable to set a slip correction model!")
 
-        super().__init__(filename)
+        super().__init__(filename, *args, **kwargs)
 
     def _set_properties_based_on_gas_type(self, gas_type: str, gas_temp: float):
         self.temperature = gas_temp
@@ -245,13 +246,13 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
     A flow field that calculates a drag force exerted on a particle, based on the Epstein force for high velocities and
     interpolation on a grid defined by an HDF5 file like comsol_hdf5_tools.txt_to_hdf5 outputs.
     """
-    def __init__(self, filename: str, m_gas: float = None, temperature: float = None):
+    def __init__(self, filename: str, m_gas: float = None, temperature: float = None, *args, **kwargs):
         self.temperature, self.m_gas = None, None
         with h5py.File(filename, 'r') as h5f:
             self._set_cascading('m_gas', m_gas, h5f, 'flow_gas_mass')
             self._set_cascading('temperature', temperature, h5f, 'flow_temperature')
 
-        super().__init__(filename)
+        super().__init__(filename, *args, **kwargs)
 
     def calculate_drag_force(self,
                              relative_velocity: np.array,
