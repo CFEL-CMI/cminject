@@ -19,8 +19,8 @@ Original author:    Muhamed Amin <muhamed.amin@cfel.de>
 Current maintainer: Muhamed Amin <muhamed.amin@cfel.de>
 """
 
-if sys.version_info < (3,7):
-    sys.exit('Sorry, Python < 3.7 is not supported')
+if sys.version_info < (3,6):
+    sys.exit('Sorry, Python < 3.6 is not supported')
 
 
 package_dir = {"": "lib"}
