@@ -40,62 +40,32 @@ class DragForceInterpolationField(RegularGridInterpolationField):
         super().__init__(filename=filename, *args, **kwargs)
 
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
-        relative_velocity, _, pressure = self.interpolate(particle, time)
-        f = self.calculate_drag_force(relative_velocity, pressure, particle)
+        data = self.interpolator(tuple(particle.spatial_position))
+        relative_velocity = data[:self.number_of_dimensions] - particle.velocity
+        pressure = data[self.number_of_dimensions]
+        f = self.calculate_drag_force(relative_velocity, pressure, particle.radius)
         return f / particle.mass
 
-    def is_particle_inside(self, particle: Particle, time: float) -> bool:
-        return super().is_particle_inside(particle, time) and self.interpolate(particle, time)[2] > 0.0
+    def is_particle_inside(self, position: np.array, time: float) -> bool:
+        return super().is_particle_inside(position, time) and \
+               self.interpolator(tuple(position))[self.number_of_dimensions] > 0.0
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
         return self._z_boundary
 
     @abstractmethod
-    def calculate_drag_force(self, relative_velocity: np.array, pressure: float, particle: SphericalParticle) \
+    def calculate_drag_force(self, relative_velocity: np.array, pressure: float, particle_radius: float) \
             -> np.array:
         """
         Calculates a drag force in some fashion.
 
         :param relative_velocity: The velocity of the field relative to the particle
         :param pressure: The pressure exerted on the particle at the point
-        :param particle: A Particle
+        :param particle_radius: The particle's radius
         :return: The drag force as a (n,) np.array, where n is the experiment's spatial dimensionality
         """
         pass
-
-    def interpolate(self, particle: Particle, time: float) -> Tuple[np.array, float, float]:
-        """
-        Calculates an (interpolated) relative velocity vector and pressure for a particle.
-        Does memoization based on the particle identifier and current time.
-
-        :param particle: The particle.
-        :param time: The current time.
-        :return: A 3-tuple of:
-            - The velocity vector of the field relative to the particle,
-            - The norm of this velocity vector,
-            - The pressure exerted on the particle.
-        """
-        # Some basic memoizing so we can call this method often but have it calculated only once per time step
-        # and particle.
-        if particle.identifier in self.interpolation_results:
-            stored_time, result = self.interpolation_results.get(particle.identifier)
-            if time == stored_time:
-                return result
-
-        try:
-            data = self.interpolator(tuple(particle.spatial_position, ))
-            pressure = data[self.number_of_dimensions]
-            relative_velocity = data[:self.number_of_dimensions] - particle.velocity
-            result = (relative_velocity, np.linalg.norm(relative_velocity), pressure)
-        except ValueError:
-            # Return zero velocity and zero pressure, so the particle will be considered outside
-            result = np.zeros(self.number_of_dimensions), 0.0, 0.0
-
-        # Store result for memoization and return it
-        if particle.time_of_flight == time:
-            self.interpolation_results[particle.identifier] = (particle.time_of_flight, result)
-        return result
 
     def _set_cascading(self, attribute_name, passed_arg, h5f, key):
         # TODO docstring
@@ -192,13 +162,13 @@ class StokesDragForceField(DragForceInterpolationField):
     def calculate_drag_force(self,
                              relative_velocity: np.array,
                              pressure: float,
-                             particle: SphericalParticle) -> np.array:
+                             particle_radius: float) -> np.array:
         """
         Calculates the drag force using Stokes' law for spherical particles in continuum
 
         :param relative_velocity: The velocity of the field relative to the particle
         :param pressure: The pressure exerted on the particle at the point
-        :param particle: A Particle
+        :param particle_radius: The particle's radius
         :return: The drag force as a (n,) np.array, where n is the experiment's spatial dimensionality
         """
         # Negative pressure or zero pressure is akin to the particle not being in the flow field, force is zero
@@ -206,10 +176,10 @@ class StokesDragForceField(DragForceInterpolationField):
         if pressure <= 0:
             return np.zeros(self.number_of_dimensions)
 
-        force_vector = 6 * np.pi * self.dynamic_viscosity * particle.radius * relative_velocity
-        return force_vector / self.calc_slip_correction(pressure=pressure, particle=particle)
+        force_vector = 6 * np.pi * self.dynamic_viscosity * particle_radius * relative_velocity
+        return force_vector / self.calc_slip_correction(pressure, particle_radius)
 
-    def calc_slip_correction(self, pressure: float, particle: SphericalParticle) -> float:
+    def calc_slip_correction(self, pressure: float, particle_radius: float) -> float:
         """
         Calculates the slip correction factor with temperature corrections. Works for models '4_kelvin' at 4K,
         and 'room_temp' at 293.15K.
@@ -230,12 +200,12 @@ class StokesDragForceField(DragForceInterpolationField):
             # see J. Aerosol Sci. 1976 Vol. 7. pp 381-387 by Klaus Willeke
             c_sutherland = 79.4
             ref_temp = 273.0
-            knudsen = 0.01754 * 1 / (pressure * particle.radius)\
+            knudsen = 0.01754 * 1 / (pressure * particle_radius)\
                       * self.temperature / ref_temp * (1 + c_sutherland / ref_temp)\
                       / (1 + c_sutherland / self.temperature)
             s = 1 + knudsen * (1.246 + (0.42 * np.exp(-0.87 / knudsen)))
         elif self.slip_correction_model == 'room_temp':
-            knudsen = self.dynamic_viscosity / (pressure * particle.radius) *\
+            knudsen = self.dynamic_viscosity / (pressure * particle_radius) *\
                       np.sqrt(pi * Boltzmann * self.temperature / (2 * self.m_gas))
             s = 1 + knudsen * (1.231 + 0.4695 * np.exp(-1.1783 / knudsen))
         return s * self.slip_correction_scale
@@ -257,14 +227,14 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
     def calculate_drag_force(self,
                              relative_velocity: np.array,
                              pressure: float,
-                             particle: SphericalParticle) -> np.array:
+                             particle_radius: float) -> np.array:
         """
         Calculates the drag force using Epstein's law for spherical particles
         in molecular flow with corrections for high velocities
 
         :param relative_velocity: The velocity of the field relative to the particle
         :param pressure: The pressure exerted on the particle at the point
-        :param particle: A Particle
+        :param particle_radius: The particle's radius
         :return: The drag force as a (3,) np.array.
         """
         # Negative pressure or zero pressure is akin to the particle not being in the flow field, force is zero
@@ -277,14 +247,14 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
         # 2. Epstein's formula corrected for high velocities (V>=10 m/s)
         f_spec = np.where(
             abs(relative_velocity) < 10,
-            16/3 * pressure * np.sqrt(pi*h) * particle.radius**2 * relative_velocity,
-            -pressure * np.sqrt(pi) * particle.radius**2 * (
+            16/3 * pressure * np.sqrt(pi*h) * particle_radius**2 * relative_velocity,
+            -pressure * np.sqrt(pi) * particle_radius**2 * (
                 -2*np.exp(-h*relative_velocity**2) * np.sqrt(h) * relative_velocity * (1+2*h*relative_velocity**2) +
                 np.sqrt(pi) * (1 - 4 * h * relative_velocity**2 - 4 * h**2 * relative_velocity**4) *
                 erf(np.sqrt(h) * relative_velocity)
             ) / (2 * h * relative_velocity**2)
         )
-        force_vector = f_spec + 1.8 / 3 * pressure * pi**(3/2) * np.sqrt(h) * particle.radius**2 * relative_velocity
+        force_vector = f_spec + 1.8 / 3 * pressure * pi**(3/2) * np.sqrt(h) * particle_radius**2 * relative_velocity
         return force_vector
 
 

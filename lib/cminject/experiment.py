@@ -42,32 +42,30 @@ def spatial_derivatives(time: float, position_and_velocity: np.array,
     particle.position = position_and_velocity
     total_acceleration = np.zeros(number_of_dimensions, dtype=float)
     for device in devices:
-        if device.is_particle_inside(particle, time):
+        if device.is_particle_inside(position_and_velocity[:number_of_dimensions], time):
             total_acceleration += device.calculate_acceleration(particle, time)
     return np.concatenate((position_and_velocity[number_of_dimensions:], total_acceleration))
 
 
-def is_particle_lost(particle: Particle, time: float,
-                     z_boundary: Tuple[float, float], devices: List[Device],
-                     number_of_dimensions: int):
+def is_particle_lost(particle_position: np.array, time: float,
+                     z_boundary: Tuple[float, float], devices: List[Device]):
     """
     Decides whether a particle should be considered lost.
 
-    :param particle: The Particle instance.
+    :param particle_position: The particle's position.
     :param time: The current simulation time in seconds
     :param z_boundary: The total Z boundary to consider
     :param devices: The list of devices that the particle might potentially be in
-    :param number_of_dimensions: The number of dimensions of the space the particle moves in.
     :return:
     """
-    particle_z_pos = particle.position[number_of_dimensions - 1]
+    particle_z_pos = particle_position[-1]
     if particle_z_pos < z_boundary[0] or particle_z_pos > z_boundary[1]:
         # Particles that aren't within the experiment's total Z boundary are considered lost
         return True
     else:
         for device in devices:
             device_z_boundary = device.z_boundary
-            is_inside = device.is_particle_inside(particle, time)
+            is_inside = device.is_particle_inside(particle_position, time)
             if is_inside:
                 # Particles inside devices are not considered lost
                 return False
@@ -126,7 +124,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
     """
     while integral.successful() and integral.t < t_end and not particle.lost:
         # Check conditions for having lost particle.
-        if not is_particle_lost(particle, integral.t, z_boundary, devices, number_of_dimensions):
+        if not is_particle_lost(particle.position[:number_of_dimensions], integral.t, z_boundary, devices):
             # If particle is not lost:
             # - Store the position and velocity calculated by the integrator on the particle
             integral_result = integral.y

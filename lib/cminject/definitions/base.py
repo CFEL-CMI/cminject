@@ -230,7 +230,7 @@ class ParticleDetectorHit(object):
     on the detector as a numpy array, and :attr:`full_properties_description`, which is a string list matching
     :attr:`full_properties` in size and describing each scalar stored in the array.
     """
-    def __init__(self, hit_position: np.array, particle: 'Particle'):
+    def __init__(self, hit_position: np.array, particle: Particle):
         """
         The constructor for a ParticleDetectorHit.
 
@@ -309,8 +309,8 @@ class Detector(NDimensional, ZBounded, ABC):
         :param particle: A Particle instance.
         :return: True if the particle has reached this detector, False otherwise.
         """
-        if self._has_particle_reached_detector(particle):
-            hit_position = self._hit_position(particle)
+        if self._has_particle_reached_detector(particle.identifier, particle.position):
+            hit_position = self._hit_position(particle.position)
             hit = ParticleDetectorHit(hit_position=hit_position, particle=particle)
             if self.identifier in particle.detector_hits:
                 particle.detector_hits[self.identifier].append(hit)
@@ -321,17 +321,17 @@ class Detector(NDimensional, ZBounded, ABC):
             return False
 
     @abstractmethod
-    def _has_particle_reached_detector(self, particle: Particle) -> bool:
+    def _has_particle_reached_detector(self, particle_identifier: int, position_velocity: np.array) -> bool:
         """Tells whether a Particle has reached this Detector. Must return True/False."""
         pass
 
     @abstractmethod
-    def _hit_position(self, particle: Particle) -> Optional[np.array]:
+    def _hit_position(self, position_velocity: np.array) -> Optional[np.array]:
         """
         Can return a hit position on this detector for a Particle, but might
         also return None (if the Particle isn't considered having reached this detector).
 
-        :param particle: A Particle instance.
+        :param position_velocity: Position and velocity of the particle.
         :return: An (n,)-shaped numpy array describing the hit position if there is a hit position to calculate,
             None otherwise. n is the number of spatial dimensions in the experiment.
         """
@@ -346,11 +346,11 @@ class Boundary(NDimensional, ZBounded, ABC):
     the experiment setup.
     """
     @abstractmethod
-    def is_particle_inside(self, particle: Particle, time: float) -> bool:
+    def is_particle_inside(self, position: float, time: float) -> bool:
         """
         Tells whether the passed Particle is inside of this Boundary or not.
 
-        :param particle: The Particle to tell this for.
+        :param position: The Particle's position to tell this for.
         :param time: The time to tell this for.
         :return: True if the particle is definitely inside this Boundary,
             False if it is not inside this Boundary or if this cannot be known.
@@ -413,17 +413,17 @@ class Device(NDimensional, ZBounded, ABC):
     def calculate_acceleration(self, particle: Particle, time: float) -> np.array:
         return np.sum([field.calculate_acceleration(particle, time) for field in self.fields], axis=0)
 
-    def is_particle_inside(self, particle: Particle, time: float) -> bool:
+    def is_particle_inside(self, particle_position: np.array, time: float) -> bool:
         """
         Returns whether the passed Particle is inside this Device or not.
         Defaults to returning what the Boundary's method with the same name returns, but should be overridden
         if a more complex decision is required.
 
-        :param particle: A Particle instance.
+        :param particle_position: The particle's position.
         :param time: The current time.
         :return: True if the Particle inside this Device, False if it is not (or if this is unknown).
         """
-        return self.boundary.is_particle_inside(particle, time)
+        return self.boundary.is_particle_inside(particle_position, time)
 
 
 class PropertyUpdater(NDimensional, ABC):
