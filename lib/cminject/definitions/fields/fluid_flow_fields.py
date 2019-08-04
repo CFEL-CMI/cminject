@@ -50,7 +50,7 @@ class DragForceInterpolationField(RegularGridInterpolationField):
         try:
             return self._interpolator(tuple(position))
         except ValueError:
-            return np.zeros(self.number_of_dimensions)
+            return np.zeros(self.number_of_dimensions + 1)  # vr,vz,p / vx,vy,vz,p / ...
 
     def is_particle_inside(self, position: np.array, time: float) -> bool:
         return super().is_particle_inside(position, time) and \
