@@ -55,7 +55,7 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
         self.number_of_dimensions = None
 
     def update(self, particle: SphericalParticle, time: float) -> bool:
-        data = self.field.interpolator(tuple(particle.spatial_position))
+        data = self.field.interpolate(particle.spatial_position)
         pressure = data[self.number_of_dimensions]
         if pressure >= 0.0:
             cunningham = self.field.calc_slip_correction(pressure, particle.radius)
@@ -84,8 +84,7 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
         self.number_of_dimensions = None
 
     def update(self, particle: SphericalParticle, time: float) -> bool:
-        # TODO what is this model ?
-        data = self.field.interpolator(tuple(particle.spatial_position))
+        pressure = self.field.interpolate(particle.spatial_position)[self.number_of_dimensions]
         if pressure >= 0.0:
             h = self.field.m_gas / (2 * Boltzmann * self.field.temperature)
             s0 = (16/3 + 3*pi/5) * np.sqrt(pi/h) * pressure * self.field.m_gas * particle.radius**2

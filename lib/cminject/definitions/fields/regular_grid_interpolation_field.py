@@ -30,7 +30,7 @@ class RegularGridInterpolationField(Field, ABC):
     regular grid. This class provides an `interpolate` method; the actual calculation of acceleration has to be
     defined in a subclass and should use the result of this method.
     """
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, *args, **kwargs):
         """
         The constructor for RegularGridInterpolationField.
 
@@ -40,7 +40,7 @@ class RegularGridInterpolationField(Field, ABC):
         self.filename = filename
         data_index, data_grid = hdf5_to_data_grid(self.filename)
         self.number_of_dimensions = len(data_index)
-        self.interpolator = RegularGridInterpolator(tuple(data_index), data_grid)
+        self._interpolator = RegularGridInterpolator(tuple(data_index), data_grid)
 
         # Assuming that Z is always the last dimension, construct the Z boundary from it
         minima = list(np.min(d) for d in data_index)
