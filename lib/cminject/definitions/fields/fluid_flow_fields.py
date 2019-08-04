@@ -40,15 +40,21 @@ class DragForceInterpolationField(RegularGridInterpolationField):
         super().__init__(filename=filename, *args, **kwargs)
 
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
-        data = self.interpolator(tuple(particle.spatial_position))
-        relative_velocity = data[:self.number_of_dimensions] - particle.velocity
-        pressure = data[self.number_of_dimensions]
-        f = self.calculate_drag_force(relative_velocity, pressure, particle.radius)
-        return f / particle.mass
+        try:
+            data = self.interpolator(tuple(particle.spatial_position))
+            relative_velocity = data[:self.number_of_dimensions] - particle.velocity
+            pressure = data[self.number_of_dimensions]
+            f = self.calculate_drag_force(relative_velocity, pressure, particle.radius)
+            return f / particle.mass
+        except ValueError:
+            return np.zeros(self.number_of_dimensions)  # ValueError is raised if outside of bounds
 
     def is_particle_inside(self, position: np.array, time: float) -> bool:
-        return super().is_particle_inside(position, time) and \
-               self.interpolator(tuple(position))[self.number_of_dimensions] > 0.0
+        if super().is_particle_inside(position, time):
+            try:
+                return self.interpolator(tuple(position))[self.number_of_dimensions] > 0.0
+            except ValueError:
+                return False  # ValueError is raised if outside of bounds
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
