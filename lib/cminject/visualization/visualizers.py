@@ -20,7 +20,6 @@ from typing import List, Tuple, Any, Callable, Union
 
 import h5py
 import numpy as np
-
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 
@@ -189,7 +188,7 @@ class TrajectoryVisualizer(MatplotlibVisualizer):
             initial_positions_kwargs = {}
             final_positions_kwargs = {}
             if dimensions == 3:
-                # this is not 'unused', this import is a magic import that makes all the 3D stuff below possible
+                # this import is not 'unused', it's a magic import that makes all the 3D stuff below possible
                 from mpl_toolkits.mplot3d import Axes3D
                 ax = fig.add_subplot(111, projection='3d')
                 initial_positions_kwargs['zs'] = initial_positions[:, 2]

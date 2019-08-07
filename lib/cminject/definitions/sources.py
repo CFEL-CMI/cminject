@@ -21,7 +21,6 @@ import numpy as np
 from cminject.definitions.base import Source
 from cminject.definitions.particles import SphericalParticle
 
-
 Distribution = Dict  # An appropriate type for variable distribution descriptions
 
 

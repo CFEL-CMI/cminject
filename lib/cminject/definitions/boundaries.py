@@ -16,9 +16,9 @@
 # <http://www.gnu.org/licenses/>.
 
 from typing import Tuple, List
-import numpy as np
 
-from cminject.definitions.base import Boundary, Particle, infinite_interval
+import numpy as np
+from cminject.definitions.base import Boundary, infinite_interval
 from cminject.definitions.fields.regular_grid_interpolation_field import RegularGridInterpolationField
 
 

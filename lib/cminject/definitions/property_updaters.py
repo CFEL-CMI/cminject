@@ -15,15 +15,11 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from typing import Tuple
-
 import numpy as np
-
-from scipy.constants import pi, Avogadro, Boltzmann, R
-
 from cminject.definitions.base import PropertyUpdater, Particle
-from cminject.definitions.particles import ThermallyConductiveSphericalParticle, SphericalParticle
 from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField, MolecularFlowDragForceField
+from cminject.definitions.particles import SphericalParticle
+from scipy.constants import pi, Boltzmann
 
 
 class TrajectoryPropertyUpdater(PropertyUpdater):

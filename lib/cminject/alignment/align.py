@@ -1,8 +1,10 @@
 import sys
-import numpy as np
 from math import sin, cos
+
+import numpy as np
 from numpy.linalg import inv
 from scipy.integrate import ode
+
 
 class atom:
   def __init__(self, coord, mass):

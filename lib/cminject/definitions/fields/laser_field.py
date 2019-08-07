@@ -15,18 +15,16 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+import cmath  # TODO can't we do this with np?
 from functools import partial
 from typing import Tuple
 
 import numpy as np
-from scipy.integrate import dblquad
-from scipy.constants import R, pi
-
-import cmath  # TODO can't we do this with np?
-
 from cminject.definitions.base import Field, empty_interval
-from cminject.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField
+from cminject.definitions.particles import ThermallyConductiveSphericalParticle
+from scipy.constants import R, pi
+from scipy.integrate import dblquad
 
 
 class PhotophoreticLaserField(Field):

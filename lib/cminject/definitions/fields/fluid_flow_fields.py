@@ -16,17 +16,14 @@
 # <http://www.gnu.org/licenses/>.
 import multiprocessing
 from abc import abstractmethod
-from functools import lru_cache, wraps
 from typing import Tuple
 
 import h5py
 import numpy as np
-from cminject.utils.perf import numpy_method_cache
-
-from scipy.constants import pi, Boltzmann
-
 from cminject.definitions.fields.regular_grid_interpolation_field import RegularGridInterpolationField
 from cminject.definitions.particles import SphericalParticle
+from cminject.utils.perf import numpy_method_cache
+from scipy.constants import pi, Boltzmann
 from scipy.special import erf
 
 

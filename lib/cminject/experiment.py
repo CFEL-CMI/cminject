@@ -15,15 +15,14 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from typing import List, Tuple, Optional
-from multiprocessing import Pool
 from functools import partial
+from multiprocessing import Pool
+from typing import List, Tuple, Optional
 
 import numpy as np
-from scipy.integrate import ode
-
 from cminject.definitions.base import Particle, Source, Device, Detector, ZBounded, \
     PropertyUpdater, infinite_interval
+from scipy.integrate import ode
 
 
 def spatial_derivatives(time: float, position_and_velocity: np.array,

@@ -15,17 +15,14 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+import re
+from collections import OrderedDict
 from typing import Tuple, List, Dict, Union
 
 import h5sparse
-
-from scipy.sparse import csr_matrix
 import numpy as np
 import pandas as pd
-
-import re
-
-from collections import OrderedDict
+from scipy.sparse import csr_matrix
 
 gte2spaces = re.compile(r'\s{2,}')
 
