@@ -14,16 +14,17 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
-
+import multiprocessing
 from abc import abstractmethod
+from functools import lru_cache, wraps
 from typing import Tuple
 
 import h5py
 import numpy as np
+from cminject.utils.perf import numpy_method_cache
 
 from scipy.constants import pi, Boltzmann
 
-from cminject.definitions.base import Particle
 from cminject.definitions.fields.regular_grid_interpolation_field import RegularGridInterpolationField
 from cminject.definitions.particles import SphericalParticle
 from scipy.special import erf
@@ -46,7 +47,8 @@ class DragForceInterpolationField(RegularGridInterpolationField):
         f = self.calculate_drag_force(relative_velocity, pressure, particle.radius)
         return f / particle.mass
 
-    def interpolate(self, position: np.array):
+    @numpy_method_cache(maxsize=multiprocessing.cpu_count() * 32)
+    def interpolate(self, position: np.array) -> np.array:
         try:
             return self._interpolator(tuple(position))
         except ValueError:
@@ -164,6 +166,8 @@ class StokesDragForceField(DragForceInterpolationField):
             # Require m_gas for the room_temp model
             if self.m_gas is None:
                 raise ValueError("m_gas is a required parameter for the 'room_temp' slip correction model!")
+
+        print(f"Set slip correction model to {self.slip_correction_model}.")
 
     def calculate_drag_force(self,
                              relative_velocity: np.array,

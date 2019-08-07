@@ -258,7 +258,7 @@ class Experiment:
         else:
             pool = Pool()
             try:
-                particles = list(pool.map(simulate, self.particles))
+                particles = list(pool.imap_unordered(simulate, self.particles))
             finally:
                 pool.close()
                 pool.join()
