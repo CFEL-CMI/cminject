@@ -21,8 +21,7 @@
 import argparse
 import os
 from typing import Tuple, List
-
-import numpy as np
+import logging
 
 from cminject.definitions.base import Device
 from cminject.definitions.boundaries import GridFieldBasedBoundary
@@ -52,10 +51,10 @@ def run_example_experiment(args):
     if os.path.isfile(args.output_file):
         raise ValueError("Output file already exists! Please delete or move the existing file.")
 
-    print("Setting up experiment...")
+    logging.info("Setting up experiment...")
     t_start, t_end, dt = args.time_interval
 
-    print(f"Simulating in {args.dimensions}D space from t0={t_start} to {t_end} with dt={dt}.")
+    logging.info(f"Simulating in {args.dimensions}D space from t0={t_start} to {t_end} with dt={dt}.")
 
     devices = [
         StokesFluidFlowFieldDevice(
@@ -96,12 +95,12 @@ def run_example_experiment(args):
         number_of_dimensions=args.dimensions
     )
 
-    print(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
-    print("Running experiment...")
+    logging.info(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
+    logging.info("Running experiment...")
     result_particles = experiment.run(single_threaded=args.single_threaded)
-    print("Done running experiment. Storing results...")
+    logging.info("Done running experiment. Storing results...")
     HDF5ResultStorage(args.output_file).store_results(result_particles)
-    print(f"Saved results to {args.output_file}.")
+    logging.info(f"Saved results to {args.output_file}.")
 
     return result_particles
 
@@ -180,6 +179,7 @@ if __name__ == '__main__':
     parser.add_argument('-S', '--seed', help='Seed for the random generator',
                         type=int)
     parser.add_argument('-B', '--brownian', help='Enable Brownian motion', action='store_true')
+    parser.add_argument('--loglevel', choices={'debug', 'info', 'warning', 'error', 'critical'}, type=str)
 
     parser.set_defaults(dimensions=3,
                         time_interval=[0.0, 1.8, 1e-6],
@@ -194,7 +194,8 @@ if __name__ == '__main__':
                             {'kind': 'gaussian', 'mu': 0.7, 'sigma': 0.3},
                             {'kind': 'gaussian', 'mu': -43.0, 'sigma': 2.0},
                         ],
-                        density=1050.0)
+                        density=1050.0,
+                        loglevel='warning')
     args = parser.parse_args()
 
     # Verify dimensionality match for position description and dimensions parameter
@@ -203,6 +204,8 @@ if __name__ == '__main__':
     if len(args.velocity) != args.dimensions:
         parser.error("The length of the velocity description vectors must match the simulation dimensionality!")
 
+    logging.basicConfig(format='%(levelname)s:[%(filename)s/%(funcName)s] %(message)s',
+                        level=getattr(logging, args.loglevel.upper()))
     run_example_experiment(args)
 
 

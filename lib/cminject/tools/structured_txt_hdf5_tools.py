@@ -14,8 +14,9 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
-
+import logging
 import re
+import warnings
 from collections import OrderedDict
 from typing import Tuple, List, Dict, Union
 
@@ -150,8 +151,9 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
 
         f.seek(last_pos)
     else:
-        print("WARNING: The .txt file to convert has no headers, and so we can't assign names for columns. "
-              "If you know the relevant info, it's best to add these headers by hand and run the conversion again.")
+        warnings.warn(
+            "WARNING: The .txt file to convert has no headers, and so we can't assign names for columns. "
+            "If you know the relevant info, it's best to add these headers by hand and run the conversion again.")
         metadata = []
         # Read the first line and rewind again
         first_line = f.readline()
@@ -185,8 +187,9 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
             # changed between the first and second lines or not. If it has, we need to flip the index. Otherwise not.
             flip_indices = float(first_cols[0]) != float(cols[0])
             if flip_indices:
-                print("NOTE: Recognised that conversion needs to flip the index. You can read up on what this means in "
-                      "the code, but most likely this will work exactly as intended for you.")
+                logging.info(
+                    "NOTE: Recognised that conversion needs to flip the index. You can read up on what this means in "
+                    "the code, but most likely this will work exactly as intended for you.")
             guessed_flip_indices_flag = True
 
     # Construct numpy arrays for each collected index set per dimension

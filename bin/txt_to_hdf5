@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/>.
 
 import argparse
+import logging
 
 from cminject.tools.structured_txt_hdf5_tools import txt_to_hdf5
 
@@ -64,7 +65,7 @@ def main():
 
     txt_to_hdf5(infile_name=args.i, outfile_name=args.o, dimensions=args.d, mirror=args.mirror,
                 attributes=args.attr)
-    print("Done.")
+    logging.info("Done.")
 
 
 if __name__ == '__main__':

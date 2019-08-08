@@ -14,7 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
-
+import logging
 from functools import partial
 from multiprocessing import Pool
 from typing import List, Tuple, Optional
@@ -114,7 +114,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(particle.position, t_start)
     integral.set_f_params(particle, devices, number_of_dimensions)
-    print(f"\tSimulating particle {particle.identifier}...")
+    logging.info(f"\tSimulating particle {particle.identifier}...")
 
     # TODO:
     """
@@ -157,7 +157,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
     else:
         reason = 'unknown reason'
 
-    print(f"\tDone simulating particle {particle.identifier}: {reason}.")
+    logging.info(f"\tDone simulating particle {particle.identifier}: {reason}.")
     return particle
 
 

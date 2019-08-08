@@ -16,6 +16,8 @@
 # <http://www.gnu.org/licenses/>.
 
 import argparse
+import logging
+
 import matplotlib.pyplot as plt
 
 from cminject.visualization import DetectorHistogramVisualizer, TrajectoryVisualizer
@@ -51,7 +53,8 @@ if __name__ == '__main__':
         plt.show()
         fig.show()
     else:
-        print("Unknown or missing plot type, please refer to -h.")
+        logging.error("Unknown or missing plot type, please refer to -h.")
+        exit(1)
 
 
 """

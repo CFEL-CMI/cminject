@@ -14,7 +14,9 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
+import logging
 import multiprocessing
+import warnings
 from abc import abstractmethod
 from typing import Tuple
 
@@ -99,9 +101,10 @@ class StokesDragForceField(DragForceInterpolationField):
                 temp = h5f.attrs['flow_temperature']
                 self._set_properties_based_on_gas_type(h5f.attrs['flow_gas'], temp)
                 if temperature is not None and temperature != temp:
-                    print(f"WARNING: Given temperature ({temperature}) is not equal to the temperature stored on the "
-                          f"field ({temp}). Things like the assumed dynamic viscosity might be off, so "
-                          f"you might need to set them manually.")
+                    warnings.warn(
+                        f"WARNING: Given temperature ({temperature}) is not equal to the temperature stored on the "
+                        f"field ({temp}). Things like the assumed dynamic viscosity might be off, so "
+                        f"you might need to set them manually.")
 
             # Set all the values that are either stored on the field file or passed explicitly, getting the value
             # to set in a 'cascading' manner, where first the field file is looked at, and the value from there stored,
@@ -124,7 +127,7 @@ class StokesDragForceField(DragForceInterpolationField):
         self.temperature = gas_temp
 
         if gas_type is not None:
-            print(f"Automatically setting mu and m_gas for gas type '{gas_type}' at {gas_temp}K.")
+            logging.info(f"Automatically setting mu and m_gas for gas type '{gas_type}' at {gas_temp}K.")
         if gas_type == 'He':
             self.m_gas = 6.6e-27
             if gas_temp == 4.0:
@@ -132,14 +135,16 @@ class StokesDragForceField(DragForceInterpolationField):
             else:
                 self.dynamic_viscosity = 1.96e-5
                 if gas_temp != 293.15:
-                    print(f"WARNING: Unknown mu/m for gas type {gas_type} at {gas_temp}. Using "
-                          f"approximation for room temperature (293.15K).")
+                    warnings.warn(
+                        f"WARNING: Unknown mu/m for gas type {gas_type} at {gas_temp}. Using "
+                        f"approximation for room temperature (293.15K).")
         elif gas_type == 'N':
             self.m_gas = 4.7e-26
             self.dynamic_viscosity = 1.76e-5
             if gas_temp != 293.15:
-                print(f"WARNING: Unknown mu/m for gas type {gas_type} at {gas_temp}. Using "
-                      f"approximation for room temperature (293.15K).")
+                warnings.warn(
+                    f"WARNING: Unknown mu/m for gas type {gas_type} at {gas_temp}. Using "
+                    f"approximation for room temperature (293.15K).")
 
     def _init_slip_correction_model(self, slip_correction_model: str):
         # Either take the manually set slip correction model,
@@ -152,9 +157,10 @@ class StokesDragForceField(DragForceInterpolationField):
                 self.slip_correction_model = 'room_temp'
             else:  # Use some heuristic for the model but warn the user that this has been used.
                 self.slip_correction_model = '4_kelvin' if 0.0 <= self.temperature <= 200.0 else 'room_temp'
-                print(f"WARNING: Auto-picked slip correction model '{self.slip_correction_model}' based on"
-                      f" a temperature where the model might not be applicable. You might need to set the model by hand,"
-                      f" or even implement a new model, for optimal results.")
+                warnings.warn(
+                    f"WARNING: Auto-picked slip correction model '{self.slip_correction_model}' based on"
+                    f" a temperature where the model might not be applicable. You might need to set the model by hand,"
+                    f" or even implement a new model, for optimal results.")
 
         # In any case, check that the model that has been set is one that is actually implemented
         if self.slip_correction_model not in ['4_kelvin', 'room_temp']:
@@ -164,7 +170,7 @@ class StokesDragForceField(DragForceInterpolationField):
             if self.m_gas is None:
                 raise ValueError("m_gas is a required parameter for the 'room_temp' slip correction model!")
 
-        print(f"Set slip correction model to {self.slip_correction_model}.")
+        logging.info(f"Set slip correction model to {self.slip_correction_model}.")
 
     def calculate_drag_force(self,
                              relative_velocity: np.array,
