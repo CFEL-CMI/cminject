@@ -97,7 +97,7 @@ def run_example_experiment(args):
 
     logging.info(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
     logging.info("Running experiment...")
-    result_particles = experiment.run(single_threaded=args.single_threaded)
+    result_particles = experiment.run(single_threaded=args.single_threaded, chunksize=args.chunksize)
     logging.info("Done running experiment. Storing results...")
     HDF5ResultStorage(args.output_file).store_results(result_particles)
     logging.info(f"Saved results to {args.output_file}.")
@@ -179,6 +179,7 @@ if __name__ == '__main__':
     parser.add_argument('-S', '--seed', help='Seed for the random generator',
                         type=int)
     parser.add_argument('-B', '--brownian', help='Enable Brownian motion', action='store_true')
+    parser.add_argument('-cs', '--chunksize', help='Chunksize for parallel processing. 1 by default.', type=int)
     parser.add_argument('--loglevel', choices={'debug', 'info', 'warning', 'error', 'critical'}, type=str)
 
     parser.set_defaults(dimensions=3,
@@ -195,7 +196,9 @@ if __name__ == '__main__':
                             {'kind': 'gaussian', 'mu': -43.0, 'sigma': 2.0},
                         ],
                         density=1050.0,
-                        loglevel='warning')
+                        loglevel='warning',
+                        chunksize=1  # same as None according to multiprocessing docs
+                        )
     args = parser.parse_args()
 
     # Verify dimensionality match for position description and dimensions parameter

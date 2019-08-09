@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 import logging
-from functools import partial
-from multiprocessing import Pool
+import multiprocessing
 from typing import List, Tuple, Optional
 
 import numpy as np
@@ -254,7 +253,7 @@ class Experiment:
             exit(f"ERROR: The Z boundary {self.z_boundary} of the experiment is not sensible! The 'left' boundary "
                  f"has to be smaller than the 'right' boundary.")
 
-    def run(self, single_threaded=False) -> List[Particle]:
+    def run(self, single_threaded=False, chunksize=None) -> List[Particle]:
         """
         Run the Experiment. A list of resulting Particle instances is returned.
 
@@ -262,17 +261,21 @@ class Experiment:
             by default: It's mostly only useful to pass True for developers, as many debuggers, profilers, etc. are not
             able to deal well with different processes/threads. To run the experiment and get results quickly, leave
             this on False.
+        :param chunksize: The chunk size for pool.imap_unordered. None by default, which equates to 1. This parameter
+            has no effect if single_threaded is True.
         :return: A list of resulting Particle instances. Things like detector hits and trajectories should be stored on
             them and can be read off each Particle.
         """
 
         if single_threaded:
+            logging.info("Running single-threaded.")
             self._initialize_globals()
             particles = list(map(simulate_particle, self.particles))
         else:
-            pool = Pool(initializer=self._initialize_globals, initargs=())
+            logging.info(f"Running in parallel on {multiprocessing.cpu_count()} cores with chunksize {chunksize}.")
+            pool = multiprocessing.Pool(initializer=self._initialize_globals, initargs=())
             try:
-                particles = list(pool.imap_unordered(simulate_particle, self.particles))
+                particles = list(pool.imap_unordered(simulate_particle, self.particles, chunksize=chunksize))
             finally:
                 pool.close()
                 pool.join()
