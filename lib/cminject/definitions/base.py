@@ -113,7 +113,7 @@ class Particle(NDimensional, ABC):
     - trajectory (a list describing points in the particle's path)
     """
     def __init__(self, identifier: Any, start_time: float,
-                 position: np.array):
+                 position: np.array, *args, **kwargs):
         """
         The constructor for Particle.
 

@@ -15,154 +15,90 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import cmath  # TODO can't we do this with np?
-from functools import partial
-from typing import Tuple
+from abc import ABC
+from functools import lru_cache
 
 import numpy as np
 from cminject.definitions.base import Field, empty_interval
 from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
-from scipy.constants import R, pi
-from scipy.integrate import dblquad
+from scipy.constants import pi
 
 
-class PhotophoreticLaserField(Field):
-    def __init__(self, fluid_flow_field: StokesDragForceField, power: float, radius: float, lambda_: float = 523e-9):
-        self.fluid = fluid_flow_field
-        self.power = power
-        self.lambda_ = lambda_
-        self.radius = radius
+class VortexBeamPhotophoreticForceField(Field, ABC):
+    z_boundary = empty_interval
+
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        if number_of_dimensions != 2:
+            raise ValueError("Photophoretic force fields can currently only handle a 2D simulation setup.")
+
+    def __init__(self, beam_power: float, beam_waist_radius: float, beam_lambda: float = 523e-9):
+        self.beam_power = beam_power
+        self.beam_lambda = beam_lambda
+        self.beam_waist_radius = beam_waist_radius
+
+    def calculate_vortex_irradiance(self, r: float, z: float):
+        """
+        Vortex irradiance distribution for a vortex beam propagating from (0,0) along the z axis towards the positive.
+        The beam is radially symmetric around the Z axis, so only r and z are passed.
+
+        :param r: The polar radius in the plane transverse to the optical Z axis
+        :param z: The position on the optical Z axis
+        """
+        z_0 = pi * self.beam_waist_radius ** 2 / self.beam_lambda
+        # Note in Niko's thesis: "Change in waist over spherical surface may not be necessary"
+        w = self.beam_waist_radius * np.sqrt(1 + (z / z_0) ** 2)
+        intensity = (4 * self.beam_power / pi) * r**2 / w**4 * np.exp(-2 * r**2 / w**2)
+        return intensity
+
+
+class ShvedovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
+    def __init__(self,
+                 fluid_field: StokesDragForceField,
+                 gas_thermal_conductivity: float, gas_density: float,
+                 beam_power: float, beam_waist_radius: float, beam_lambda: float = 523e-9):
+        super().__init__(beam_power, beam_waist_radius, beam_lambda)
+        self.gas_thermal_conductivity = gas_thermal_conductivity
+        self.gas_density = gas_density
+        self.fluid_field = fluid_field
+
+        self.gas_viscosity = fluid_field.dynamic_viscosity
+        self.gas_temperature = fluid_field.temperature
+        self.j1 = -0.5  # TODO assumed
+        self.z0 = 2 * np.pi * self.beam_waist_radius ** 2 / self.beam_lambda  # see Shvedov 2009
+
+    @lru_cache(maxsize=32)
+    def kappa(self, particle_radius: float, particle_thermal_conductivity: float):
+        return -self.j1 * 9*self.gas_viscosity**2 / \
+               (2*particle_radius * self.gas_density * self.gas_temperature *
+                (particle_thermal_conductivity + 2*self.gas_thermal_conductivity))
 
     def calculate_acceleration(self,
                                particle: ThermallyConductiveSphericalParticle,
                                time: float) -> np.array:
-        transverse, axial = self.calculate_photophoretic_force(particle)
-        y_over_x = particle.position[1] / particle.position[0]
+        a, r, z, m = particle.radius, particle.position[0], particle.position[1], particle.mass
+        mu_a = particle.thermal_conductivity
+        return self.pp_force(a, r, z, mu_a) / m
+
+    @lru_cache(maxsize=32)
+    def pp_force(self, a: float, r: float, z: float, mu_a: float) -> np.array:
+        """
+        Calculates the axial component of the photophoretic force, based on an approximation by Shvedov, 2009,
+        for small particles with a << w.
+        :param a: The particle radius.
+        :param r: The particle's radial offset relative to the beam axis.
+        :param z: The particle's axial offset relative to the beam origin.
+        :param mu_a: The particle's thermal conductivity.
+        :return: A tuple containing the transverse (first element) and axial (second element)
+         components of the photophoretic force.
+        """
+        P = self.beam_power
+        kappa = self.kappa(a, mu_a)
+        w = self.beam_waist_radius * np.sqrt(1 + (z / self.z0)**4)
         return np.array([
-            transverse * np.cos(np.arctan(y_over_x)),
-            transverse * np.sin(np.arctan(y_over_x)),
-            axial
-        ]) / particle.mass
-
-    def calculate_vortex_intensity(self, x, y, z):
-        """Vortex intensity distribution propagating along the z axis"""
-        z_0 = pi * self.radius ** 2 / self.lambda_
-        w = self.radius * np.sqrt(1 + (z / z_0))
-        r2 = x ** 2 + y ** 2
-        intensity = (4 * self.power / pi) * r2 / w ** 4 * np.exp(-2 * r2 / w ** 2)
-        return intensity
-
-    @staticmethod
-    def calculate_sp_split(x, y, z, phi):
-        """Returns the percentages of the S and P component in the beam."""
-        r2 = x**2 + y**2 + z**2  # FIXME really z too? it's not like this in Niko's MATLAB code
-        s = ((x * np.sin(phi) - y * np.cos(phi))**2) / r2
-        p = ((x * np.cos(phi) - y * np.sin(phi))**2) / r2
-        return s, p
-
-    @staticmethod
-    def calculate_absorption_coefficient(x: float, y: float, refraction_index: float = 1.0) \
-            -> Tuple[float, float, float]:
-        """
-        Calculates the absorption coefficients for S and P polarisation components according to the Fresnel equations.
-
-        :param x: The x position.
-        :param y: The y position.
-        :param refraction_index: The refraction index of the sphere.
-        :return: A 3-tuple of the s and p absorption coefficients and the cos of the incident angle
-        """
-        incident_angle = np.arcsin(np.sqrt(x**2 + y**2))
-        if incident_angle != 0.0:
-            transmit_angle = cmath.asin(np.sin(incident_angle) / refraction_index)
-            delta_angle = incident_angle - transmit_angle
-            total_angle = incident_angle + transmit_angle
-            p = 1 - abs(cmath.tan(delta_angle) / cmath.tan(total_angle))**2
-            s = 1 - abs(cmath.sin(delta_angle) / cmath.sin(total_angle))**2
-            return s, p, np.cos(incident_angle)
-        else:
-            p = 1 - abs((refraction_index - 1) / (refraction_index + 1))**2
-            s = p
-            return s, p, 1.0
-
-    def calculate_power_absorption(self, particle: ThermallyConductiveSphericalParticle, x, y, z):
-        """
-        The absorption is calculated for each component s and p.
-        """
-        p_abs, s_abs, cos_theta = self.calculate_absorption_coefficient(x, y, particle.refractive_index)
-
-        p, s = self.calculate_sp_split(x, y, z, phi=0)
-        p_abs *= p
-        s_abs *= s
-
-        offset_position = particle.spatial_position + np.array([x, y, z])
-        intensity = self.calculate_vortex_intensity(*offset_position) / self.radius**2
-        absorbed_power = intensity * (p_abs + s_abs)
-        return absorbed_power
-
-    def absorption_integrator_fn(self, particle: ThermallyConductiveSphericalParticle, theta, phi, comp):
-        """Integrate the absorption over a sphere"""
-        x = np.sin(theta) * np.cos(phi) * particle.radius
-        y = np.sin(theta) * np.sin(phi) * particle.radius
-        z = np.cos(theta) * particle.radius
-        power = self.calculate_power_absorption(particle, x, y, z)
-
-        if comp == 'x':
-            return abs(power * x) * np.sin(phi)
-        elif comp == 'z':
-            return abs(power * z) * np.sin(phi)
-        else:
-            raise ValueError("comp needs to be 'x' or 'z'!")
-
-    def intensity_integrator_fn(self, particle: ThermallyConductiveSphericalParticle, theta, phi):
-        """
-        The function to be integrated to calculate the total intensity across a sphere section.
-
-        :param particle: The spherical particle to integrate over.
-        :param theta: Theta in spherical coordinates.
-        :param phi: Phi in spherical coordinates.
-        :return: The local intensity.
-        """
-        x = np.sin(theta) * np.cos(phi) * particle.radius
-        y = np.sin(theta) * np.sin(phi) * particle.radius
-        z = np.cos(theta)
-        return np.sin(phi) * self.calculate_vortex_intensity(
-            *(particle.position + np.array([x, y, z]))
-        )
-
-    def calculate_photophoretic_force(self, particle: ThermallyConductiveSphericalParticle) -> Tuple[float, float]:
-        """
-        Calculates the photophoretic force exerted on a particle based on a simple model,
-        based amongst other things on the fluid flow force field this field was constructed with.
-
-        :param particle: The particle instance.
-        :return: The photophoretic forces in transverse and axial direction.
-        """
-        fl = self.fluid
-        d = pi/2 * np.sqrt(pi/3) * fl.thermal_creep * (fl.dynamic_viscosity / fl.density) \
-            * np.sqrt(fl.temperature * 8 * R / (pi * fl.molar_mass)) / fl.temperature
-        char_p = (3/pi) * d * fl.temperature * particle.radius
-
-        integrator_fn_ax = partial(self.absorption_integrator_fn, particle, comp='z')
-        integrator_fn_tr = partial(self.absorption_integrator_fn, particle, comp='x')
-        first_half_sphere = dblquad(integrator_fn_tr,     0,     pi,    0,   pi)[0]
-        first_half_sphere_ax = dblquad(integrator_fn_ax,  0,     pi/2,  0,   2*pi)[0]
-        second_half_sphere = dblquad(integrator_fn_tr,    0,     pi,    pi,  2*pi)[0]
-        second_half_sphere_ax = dblquad(integrator_fn_ax, pi/2,  pi,    0,   2*pi)[0]
-
-        diff_transverse = second_half_sphere - first_half_sphere
-        diff_axial = second_half_sphere_ax - first_half_sphere_ax
-
-        factor = d * particle.radius**2 * fl.pressure / (2 * particle.thermal_conductivity * char_p)
-        return diff_transverse * factor, diff_axial * factor
-
-    @property
-    def z_boundary(self) -> Tuple[float, float]:
-        return empty_interval  # TODO this ain't great
-
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        if number_of_dimensions != 3:
-            raise ValueError("PhotophoreticLaserField can currently only handle a 3D simulation setup.")
+            (-kappa * P * 4/3 * r * a**3) / w**4,
+            kappa * P/2 * (a / w)**4
+        ])
 
 
 """
