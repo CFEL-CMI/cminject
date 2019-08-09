@@ -76,44 +76,58 @@ def is_particle_lost(particle_position: np.array, time: float,
         return False
 
 
-def simulate_particle(particle: Particle, devices: List[Device],
-                      detectors: List[Detector], property_updaters: List[PropertyUpdater],
-                      time_interval: Tuple[float, float, float],
-                      z_boundary: Tuple[float, float],
-                      number_of_dimensions: int,
-                      base_seed: int) -> Particle:
+DEVICES, DETECTORS, PROPERTY_UPDATERS, TIME_INTERVAL, Z_BOUNDARY, NUMBER_OF_DIMENSIONS, BASE_SEED = [None] * 7
+
+
+def simulate_particle(particle: Particle) -> Particle:
     """
     Simulates the flight path of a single particle, with a list of devices that can affect the particle,
     a list of detectors that can detect the particle, a list of property updaters that can store additional results
     on the particle, a time interval to simulate the particle for, and a Z boundary to simulate the particle within.
 
     :param particle: The particle instance.
-    :param devices: The list of devices.
-    :param detectors: The list of detectors.
-    :param property_updaters: The list of property_updaters.
-    :param time_interval: The time interval of the simulation.
-    :param z_boundary: The Z boundary of the simulation.
-    :param number_of_dimensions: The number of dimensions of the space the particle moves in.
-    :param base_seed: The "base seed", i.e. the random seed the experiment was defined with, to derive a local
-        random seed from.
     :return: A modified version of the particle instance after the simulation has ended.
+
+    .. note::
+        There are implicit parameters, as global variables. This is done to avoid these (unchanging) objects being
+        serialized and deserialized for each particle that is being simulated, see this blog post:
+        https://confluence.desy.de/display/PARTI/2019/08/08/CMInject%3A+Performance+considerations
+
+        For more detailed info on this issue in general, see:
+        https://thelaziestprogrammer.com/python/a-multiprocessing-pool-pickle
+
+        For the way this is worked around using global variables and a Pool initializer, see:
+        https://stackoverflow.com/a/10118250/3090225
+
+        This greatly improves performance, as we're not doing unnecessary I/O during which we can't do any actual
+        calculations. Below is the list of global variables that used to be parameters bound via functools.partial,
+        but are now global variables that are used within the function:
+
+        - DEVICES: The list of devices.
+        - DETECTORS: The list of detectors.
+        - PROPERTY_UPDATERS: The list of property_updaters.
+        - TIME_INTERVAL: The time interval of the simulation.
+        - Z_BOUNDARY: The Z boundary of the simulation.
+        - NUMBER_OF_DIMENSIONS: The number of dimensions of the space the particle moves in.
+        - BASE_SEED: The "base seed", i.e. the random seed the experiment was defined with, to derive a local
+          random seed from.
     """
-    t_start, t_end, dt = time_interval
-    np.random.seed(base_seed + int(particle.identifier))  # reseed RandomState from the base seed and particle ID
+    t_start, t_end, dt = TIME_INTERVAL
+    np.random.seed(BASE_SEED + int(particle.identifier))  # reseed RandomState from the base seed and particle ID
 
     # Run all property updaters once with the start time
-    for property_updater in property_updaters:
+    for property_updater in PROPERTY_UPDATERS:
         property_updater.update(particle, t_start)
 
     # Run all detectors once
-    for detector in detectors:
+    for detector in DETECTORS:
         detector.try_to_detect(particle)
 
     # Construct integrals
     integral = ode(spatial_derivatives)
     integral.set_integrator('lsoda')  # TODO maybe use other integrators?
     integral.set_initial_value(particle.position, t_start)
-    integral.set_f_params(particle, devices, number_of_dimensions)
+    integral.set_f_params(particle, DEVICES, NUMBER_OF_DIMENSIONS)
     logging.info(f"\tSimulating particle {particle.identifier}...")
 
     # TODO:
@@ -123,7 +137,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
     """
     while integral.successful() and integral.t < t_end and not particle.lost:
         # Check conditions for having lost particle.
-        if not is_particle_lost(particle.position[:number_of_dimensions], integral.t, z_boundary, devices):
+        if not is_particle_lost(particle.position[:NUMBER_OF_DIMENSIONS], integral.t, Z_BOUNDARY, DEVICES):
             # If particle is not lost:
             # - Store the position and velocity calculated by the integrator on the particle
             integral_result = integral.y
@@ -132,11 +146,11 @@ def simulate_particle(particle: Particle, devices: List[Device],
 
             # - Run all property updaters for the particle with the current integral time
             changed_position = False
-            for property_updater in property_updaters:
+            for property_updater in PROPERTY_UPDATERS:
                 changed_position |= property_updater.update(particle, integral.t)
 
             # - Have each detector try to detect the particle
-            for detector in detectors:
+            for detector in DETECTORS:
                 detector.try_to_detect(particle)
 
             # Propagate by integrating until the next time step
@@ -148,7 +162,7 @@ def simulate_particle(particle: Particle, devices: List[Device],
             particle.lost = True
 
     if particle.lost:
-        if z_boundary[0] <= particle.spatial_position[number_of_dimensions - 1] <= z_boundary[1]:
+        if Z_BOUNDARY[0] <= particle.spatial_position[NUMBER_OF_DIMENSIONS - 1] <= Z_BOUNDARY[1]:
             reason = 'hit boundary within the experiment'
         else:
             reason = 'left experiment Z boundary'
@@ -163,11 +177,12 @@ def simulate_particle(particle: Particle, devices: List[Device],
 
 class Experiment:
     """"""
+
     def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
                  property_updaters: List[PropertyUpdater] = None,
                  time_interval: Tuple[float, float, float] = (0.0, 1.8, 1.0e-6),
                  z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0,
-                 number_of_dimensions: int = 3, seed = None):
+                 number_of_dimensions: int = 3, seed=None):
         """
         Construct an Experiment to run.
 
@@ -201,7 +216,7 @@ class Experiment:
         # Store the time interval and the seed, use the seed to seed numpy's RandomState
         self.time_interval = time_interval
         if seed is None:
-            seed = np.random.randint(2**31)
+            seed = np.random.randint(2 ** 31)
         self.seed = seed
         np.random.seed(self.seed)
 
@@ -232,7 +247,7 @@ class Experiment:
             self.z_boundary = z_boundary
         else:
             # Otherwise, use the global min/max from all devices and detectors, -/+ the end Z delta
-            self.z_boundary = min(self.detectors_z_boundary[0], self.devices_z_boundary[0]) - delta_z_end,\
+            self.z_boundary = min(self.detectors_z_boundary[0], self.devices_z_boundary[0]) - delta_z_end, \
                               max(self.detectors_z_boundary[1], self.devices_z_boundary[1]) + delta_z_end
 
         if self.z_boundary[0] > self.z_boundary[1]:
@@ -250,14 +265,14 @@ class Experiment:
         :return: A list of resulting Particle instances. Things like detector hits and trajectories should be stored on
             them and can be read off each Particle.
         """
-        simulate = self._get_run_function()
 
         if single_threaded:
-            particles = list(map(simulate, self.particles))
+            self._initialize_globals()
+            particles = list(map(simulate_particle, self.particles))
         else:
-            pool = Pool()
+            pool = Pool(initializer=self._initialize_globals, initargs=())
             try:
-                particles = list(pool.imap_unordered(simulate, self.particles))
+                particles = list(pool.imap_unordered(simulate_particle, self.particles))
             finally:
                 pool.close()
                 pool.join()
@@ -279,17 +294,15 @@ class Experiment:
             max_z = max(max_z, obj_max_z)
         return min_z, max_z
 
-    def _get_run_function(self):
-        return partial(
-            simulate_particle,
-            devices=self.devices,
-            time_interval=self.time_interval,
-            detectors=self.detectors,
-            z_boundary=self.z_boundary,
-            property_updaters=self.property_updaters,
-            number_of_dimensions=self.number_of_dimensions,
-            base_seed=self.seed
-        )
+    def _initialize_globals(self):
+        global DEVICES, DETECTORS, PROPERTY_UPDATERS, TIME_INTERVAL, Z_BOUNDARY, NUMBER_OF_DIMENSIONS, BASE_SEED
+        DEVICES = self.devices
+        DETECTORS = self.detectors
+        PROPERTY_UPDATERS = self.property_updaters
+        TIME_INTERVAL = self.time_interval
+        Z_BOUNDARY = self.z_boundary
+        NUMBER_OF_DIMENSIONS = self.number_of_dimensions
+        BASE_SEED = self.seed
 
 
 """
