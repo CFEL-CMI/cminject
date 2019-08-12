@@ -28,16 +28,7 @@ from cminject.setups.base import Setup
 from cminject.utils.args import natural_number
 
 
-def modify_parser(parser):
-    pass
-
-
-def construct_experiment(args):
-    pass
-
-
-# Everything below is just argument parsing even if it looks like a lot of code :)
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(prog='cminject',
                                      formatter_class=argparse.MetavarTypeHelpFormatter)
     parser.add_argument('-setup', help='A python import path to a Setup subclass that defines the experiment.',
@@ -92,13 +83,16 @@ if __name__ == '__main__':
     if args.store_trajectories:
         experiment.property_updaters += [TrajectoryPropertyUpdater()]
 
-    t_start, t_end, dt = args.time_interval
     experiment.run_with_output(
         args.output_file,
         single_threaded=args.single_threaded,
         chunksize=args.chunksize,
         loglevel=args.loglevel
     )
+
+
+if __name__ == '__main__':
+    main()
 
 
 """
