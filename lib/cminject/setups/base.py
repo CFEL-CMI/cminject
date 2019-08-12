@@ -20,9 +20,9 @@
 
 import argparse
 from abc import ABC, abstractmethod
-from typing import List
 
 from cminject.experiment import Experiment
+from cminject.utils.args import SetupArgumentParser
 
 
 class Setup(ABC):
@@ -32,14 +32,24 @@ class Setup(ABC):
     """
     @staticmethod
     @abstractmethod
-    def parse_args(argarr: List[str]) -> argparse.Namespace:
+    def get_parser() -> SetupArgumentParser:
         """
-        Parse the arguments relevant to this specific setup. Will receive only the arguments that the main program
-        (bin/cminject) did not recognise.
-        :param argarr: The list of argument strings that were not recognised by the main program and so should be
-            parsed by this setup class.
-        :return: An argparse.Namespace, i.e. a result of calling parse.parse_args(argarr) for an appropriately
-            constructed ArgumentParser instance.
+        Returns a parser for the arguments relevant to this specific setup.
+        This parser will receive only the arguments that the main program (bin/cminject) did not recognise.
+        :return: An argparse.ArgumentParser (or subclass) instance that can parse all the args relevant to this setup.
+        """
+        pass
+
+    @staticmethod
+    def validate_args(args: argparse.Namespace):
+        """
+        Validates the arguments. Useful for validation that needs to check multiple args at once, and not just one
+        specific arg. Overriding this method is optional and only needs to be done if such validation is desired.
+
+        Should raise argparse.ArgumentError if validation failed, and have no effect if validation succeeded.
+        :param args: The argparse.Namespace object that the parser constructed by get_parser() returned after being
+            given all arguments that the main program did not recognise.
+        :raises: argparse.ArgumentError
         """
         pass
 

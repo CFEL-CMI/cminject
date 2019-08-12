@@ -66,7 +66,6 @@ class ShvedovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
         self.j1 = -0.5  # TODO assumed
         self.z0 = 2 * np.pi * self.beam_waist_radius ** 2 / self.beam_lambda  # see Shvedov 2009
 
-    @lru_cache(maxsize=32)
     def kappa(self, particle_radius: float, particle_thermal_conductivity: float):
         return -self.j1 * 9*self.gas_viscosity**2 / \
                (2*particle_radius * self.gas_density * self.gas_temperature *
@@ -79,7 +78,6 @@ class ShvedovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
         mu_a = particle.thermal_conductivity
         return self.pp_force(a, r, z, mu_a) / m
 
-    @lru_cache(maxsize=32)
     def pp_force(self, a: float, r: float, z: float, mu_a: float) -> np.array:
         """
         Calculates the axial component of the photophoretic force, based on an approximation by Shvedov, 2009,

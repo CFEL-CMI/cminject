@@ -32,7 +32,7 @@ from cminject.definitions.property_updaters import BrownianMotionPropertyUpdater
 from cminject.definitions.sources import VariableDistributionSource
 from cminject.experiment import Experiment
 from cminject.setups.base import Setup
-from cminject.utils.args import dist_description
+from cminject.utils.args import dist_description, SetupArgumentParser
 
 
 class FluidFlowFieldDevice(Device):
@@ -70,8 +70,10 @@ class OneFlowFieldSetup(Setup):
         property_updaters = []
         if args.brownian:
             if args.flow_type == 'stokes':
+                # noinspection PyTypeChecker
                 property_updaters += [BrownianMotionPropertyUpdater(field=devices[0].fields[0], dt=dt)]
             elif args.flow_type == 'molecular_flow':
+                # noinspection PyTypeChecker
                 property_updaters += [BrownianMotionMolecularFlowPropertyUpdater(field=devices[0].fields[0], dt=dt)]
 
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
@@ -83,9 +85,8 @@ class OneFlowFieldSetup(Setup):
                           number_of_dimensions=args.dimensions)
 
     @staticmethod
-    def parse_args(argarr: List[str]) -> argparse.Namespace:
-        parser = argparse.ArgumentParser(prog='cminject-one-flow-field',
-                                         formatter_class=argparse.MetavarTypeHelpFormatter)
+    def get_parser() -> SetupArgumentParser:
+        parser = SetupArgumentParser()
         parser.add_argument('-f', '--flow-field', help='Flow field filename (hdf5 format)',
                             type=str, required=True)
         parser.add_argument('-F', '--flow-type', help='The type of flow model to use.',
@@ -131,15 +132,19 @@ class OneFlowFieldSetup(Setup):
             density=1050.0,
         )
 
-        args = parser.parse_args(argarr)
+        return parser
 
+    @staticmethod
+    def validate_args(args: argparse.Namespace):
         # Verify dimensionality match for position description and dimensions parameter
         if len(args.position) != args.dimensions:
-            parser.error("The length of the position description vectors must match the simulation dimensionality!")
+            raise argparse.ArgumentError(
+                "The length of the position description vectors must match the simulation dimensionality!"
+            )
         if len(args.velocity) != args.dimensions:
-            parser.error("The length of the velocity description vectors must match the simulation dimensionality!")
-
-        return args
+            raise argparse.ArgumentError(
+                "The length of the velocity description vectors must match the simulation dimensionality!"
+            )
 
 
 """

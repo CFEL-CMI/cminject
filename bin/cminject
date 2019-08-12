@@ -19,18 +19,57 @@
 # <http://www.gnu.org/licenses/>.
 
 import argparse
+from gettext import gettext as _
 import logging
 import os
 import importlib
+from typing import Type
 
 from cminject.definitions.property_updaters import TrajectoryPropertyUpdater
 from cminject.setups.base import Setup
 from cminject.utils.args import natural_number
 
 
+def get_setup_class(class_path) -> Type[Setup]:
+    if '.' not in class_path:
+        raise ValueError(f"Invalid import path for setup class: {class_path}")
+    setup_modulename, setup_classname = class_path.rsplit('.', 1)
+    setup_module = importlib.import_module(setup_modulename)
+    setup_cls = getattr(setup_module, setup_classname, None)
+    if setup_cls is None:
+        raise ValueError(f"Could not import class {setup_classname} from module {setup_modulename}!")
+    if not issubclass(setup_cls, Setup):
+        raise ValueError(f"Imported setup class {setup_classname} is not a subclass of Setup!")
+
+    return setup_cls
+
+
+class HelpWithSetupHelpAction(argparse._HelpAction):
+    def __call__(self, parser, namespace, values, option_string=None):
+        setup_parser = None
+        try:
+            setup_parser = get_setup_class(namespace.setup).get_parser()
+        except ValueError:
+            pass
+
+        parser.print_help()
+
+        print("\n\n" + "-" * 21 + ' Help for the setup specific parser: ' + '-' * 22 + '\n')
+        if setup_parser is not None:
+            setup_parser.print_help()
+        else:
+            print(f"ERROR: Could not find setup class {namespace.setup}!")
+
+        parser.exit()
+
+
 def main():
     parser = argparse.ArgumentParser(prog='cminject',
-                                     formatter_class=argparse.MetavarTypeHelpFormatter)
+                                     formatter_class=argparse.MetavarTypeHelpFormatter,
+                                     add_help=False)
+    parser.add_argument('-h', '--help', action=HelpWithSetupHelpAction, default=argparse.SUPPRESS,
+                        help=_('show this help message and exit'))
+
     parser.add_argument('-setup', help='A python import path to a Setup subclass that defines the experiment.',
                         type=str)
     parser.add_argument('-n', '--nof-particles', help='The number of particles to simulate',
@@ -54,7 +93,7 @@ def main():
         loglevel='warning',
         chunksize=1  # same as None according to multiprocessing docs
     )
-    args, setup_argarr = parser.parse_known_args()  # Parse the args and leave the rest for the setup class parser
+    args, unknown_args = parser.parse_known_args()  # Parse the args and leave the rest for the setup class parser
 
     # Set up logging
     logging.basicConfig(format='%(levelname)s:[%(filename)s/%(funcName)s] %(message)s',
@@ -64,17 +103,12 @@ def main():
     if os.path.isfile(args.output_file):
         raise ValueError("Output file already exists! Please delete or move the existing file.")
 
-    # Try retrieving the setup class via importlib
-    if '.' not in args.setup:
-        raise ValueError(f"Invalid import path for setup class: {args.setup}")
-    setup_modulename, setup_classname = args.setup.rsplit('.', 1)
-    setup_module = importlib.import_module(setup_modulename)
-    setup_cls = getattr(setup_module, setup_classname, None)
-    if setup_cls is None:
-        raise ValueError(f"Could not import class {setup_classname} from module {setup_modulename}!")
-    if not issubclass(setup_cls, Setup):
-        raise ValueError(f"Imported setup class {setup_classname} is not a subclass of Setup!")
-    setup_args = setup_cls.parse_args(setup_argarr)
+    # Try retrieving the setup class via importlib, then use it to parse the args the setup needs, and do (optional)
+    # validation on them.
+    setup_cls = get_setup_class(args.setup)
+    setup_parser = setup_cls.get_parser()
+    setup_args = setup_parser.parse_args(unknown_args)
+    setup_cls.validate_args(setup_args)
     # Set up the experiment and run it
     logging.info("Setting up experiment...")
     experiment = setup_cls.construct_experiment(args, setup_args)

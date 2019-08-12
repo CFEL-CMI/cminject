@@ -22,6 +22,29 @@ Utility functions for handling commandline arguments.
 import argparse
 
 
+class SetupHelpFormatter(argparse.MetavarTypeHelpFormatter):
+    """
+    A help formatter for argparse.ArgumentParsers that are returned by a Setup subclass's get_parser() method.
+    Omits the "usage: <progname> arg1 [arg2] ..." line at the start.
+    """
+    def _format_usage(self, usage, actions, groups, prefix):
+        return ""
+
+
+class SetupArgumentParser(argparse.ArgumentParser):
+    """
+    An argparse.ArgumentParser subclass specifically suited to be returned by a Setup subclass's get_parser() method.
+    Doesn't print that it has its own -h option (since that's never exposed), and uses the SetupHelpFormatter to
+    avoid printing the usage.
+    """
+    def __init__(self, *args, **kwargs):
+        if 'add_help' not in kwargs:
+            kwargs['add_help'] = False
+        if 'formatter_class' not in kwargs:
+            kwargs['formatter_class'] = SetupHelpFormatter
+        super().__init__(*args, **kwargs)
+
+
 def dist_description(x):
     """
     Defines a custom argparse type for a distribution description.

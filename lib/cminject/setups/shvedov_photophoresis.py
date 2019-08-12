@@ -29,7 +29,7 @@ from cminject.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.definitions.sources import VariableDistributionSource
 from cminject.experiment import Experiment
 from cminject.setups.base import Setup
-from cminject.utils.args import dist_description
+from cminject.utils.args import dist_description, SetupArgumentParser
 
 
 class ShvedovVortexLaserDevice(Device):
@@ -67,9 +67,8 @@ class ShvedovPhotophoresisSetup(Setup):
                           number_of_dimensions=2)
 
     @staticmethod
-    def parse_args(argarr: List[str]) -> argparse.Namespace:
-        parser = argparse.ArgumentParser(prog='cminject',
-                                         formatter_class=argparse.MetavarTypeHelpFormatter)
+    def get_parser() -> SetupArgumentParser:
+        parser = SetupArgumentParser()
         parser.add_argument('-d', '--detectors', help='The Z positions of the detectors', nargs='+',
                             type=float, required=True)
         parser.add_argument('-p', '--position',
@@ -93,15 +92,15 @@ class ShvedovPhotophoresisSetup(Setup):
             loglevel='warning',
             chunksize=1,  # same as None according to multiprocessing docs
         )
-        args = parser.parse_args(argarr)
+        return parser
 
+    @staticmethod
+    def validate_args(args: argparse.Namespace):
         # Verify dimensionality match for position description and dimensions parameter
         if len(args.position) != 2:
-            parser.error("The length of the position description must be 2!")
+            raise argparse.ArgumentError("The length of the position description must be 2!")
         if len(args.velocity) != 2:
-            parser.error("The length of the velocity description must be 2!")
-
-        return args
+            raise argparse.ArgumentError("The length of the velocity description must be 2!")
 
 
 """
