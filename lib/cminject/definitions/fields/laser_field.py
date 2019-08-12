@@ -54,16 +54,15 @@ class VortexBeamPhotophoreticForceField(Field, ABC):
 
 class ShvedovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
     def __init__(self,
-                 fluid_field: StokesDragForceField,
+                 gas_viscosity: float, gas_temperature: float,
                  gas_thermal_conductivity: float, gas_density: float,
                  beam_power: float, beam_waist_radius: float, beam_lambda: float = 523e-9):
         super().__init__(beam_power, beam_waist_radius, beam_lambda)
         self.gas_thermal_conductivity = gas_thermal_conductivity
         self.gas_density = gas_density
-        self.fluid_field = fluid_field
+        self.gas_viscosity = gas_viscosity
+        self.gas_temperature = gas_temperature
 
-        self.gas_viscosity = fluid_field.dynamic_viscosity
-        self.gas_temperature = fluid_field.temperature
         self.j1 = -0.5  # TODO assumed
         self.z0 = 2 * np.pi * self.beam_waist_radius ** 2 / self.beam_lambda  # see Shvedov 2009
 
