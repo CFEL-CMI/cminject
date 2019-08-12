@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Utility functions for improving performance.
+"""
+
 from functools import wraps, lru_cache
 
 import numpy as np

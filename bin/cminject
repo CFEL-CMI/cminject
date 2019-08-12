@@ -19,197 +19,86 @@
 # <http://www.gnu.org/licenses/>.
 
 import argparse
-import os
-from typing import Tuple, List
 import logging
+import os
+import importlib
 
-from cminject.definitions.base import Device
-from cminject.definitions.boundaries import GridFieldBasedBoundary
-from cminject.definitions.detectors import SimpleZDetector
-from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField
-from cminject.definitions.particles import ThermallyConductiveSphericalParticle
-from cminject.definitions.property_updaters import TrajectoryPropertyUpdater, \
-    BrownianMotionPropertyUpdater
-from cminject.definitions.result_storage import HDF5ResultStorage
-from cminject.definitions.sources import VariableDistributionSource
-from cminject.experiment import Experiment
+from cminject.definitions.property_updaters import TrajectoryPropertyUpdater
+from cminject.setups.base import Setup
+from cminject.utils.args import natural_number
 
 
-class StokesFluidFlowFieldDevice(Device):
-    @property
-    def z_boundary(self) -> Tuple[float, float]:
-        return self.boundary.z_boundary
-
-    def __init__(self, *args, **kwargs):
-        field = StokesDragForceField(*args, **kwargs)
-        self.fields: List[StokesDragForceField] = [field]
-        self.boundary: GridFieldBasedBoundary = GridFieldBasedBoundary(field)
-        super().__init__(fields=self.fields, boundary=self.boundary)
+def modify_parser(parser):
+    pass
 
 
-def run_example_experiment(args):
-    if os.path.isfile(args.output_file):
-        raise ValueError("Output file already exists! Please delete or move the existing file.")
-
-    logging.info("Setting up experiment...")
-    t_start, t_end, dt = args.time_interval
-
-    logging.info(f"Simulating in {args.dimensions}D space from t0={t_start} to {t_end} with dt={dt}.")
-
-    devices = [
-        StokesFluidFlowFieldDevice(
-            filename=args.flow_field,
-            temperature=args.flow_temperature,
-            slip_correction_scale=args.flow_scale_slip or 1.0,
-        )
-    ]
-
-    detectors = [
-        SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)
-    ]
-
-    sources = [
-        VariableDistributionSource(
-            args.nof_particles,
-            position=args.position,
-            velocity=args.velocity,
-            radius=args.radius,
-            rho=args.density,
-            subclass=ThermallyConductiveSphericalParticle
-        ),
-    ]
-
-    property_updaters = []
-    if args.brownian:
-        property_updaters += [BrownianMotionPropertyUpdater(field=devices[0].fields[0], dt=dt)]
-    property_updaters += [TrajectoryPropertyUpdater()] if args.store_trajectories else []
-
-    experiment = Experiment(
-        devices=devices,
-        detectors=detectors,
-        sources=sources,
-        property_updaters=property_updaters,
-        time_interval=(t_start, t_end, dt),
-        delta_z_end=0.001,
-        seed=args.seed,
-        number_of_dimensions=args.dimensions
-    )
-
-    logging.info(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
-    logging.info("Running experiment...")
-    result_particles = experiment.run(single_threaded=args.single_threaded, chunksize=args.chunksize)
-    logging.info("Done running experiment. Storing results...")
-    HDF5ResultStorage(args.output_file).store_results(result_particles)
-    logging.info(f"Saved results to {args.output_file}.")
-
-    return result_particles
+def construct_experiment(args):
+    pass
 
 
 # Everything below is just argument parsing even if it looks like a lot of code :)
 if __name__ == '__main__':
-    def dist_description(x):
-        shorthand_mapping = {
-            'G': 'gaussian', 'RG': 'radial_gaussian',
-            'L': 'linear', 'RL': 'radial_linear',
-            'U': 'uniform', 'RU': 'radial_uniform'
-        }
-        values = x.split()
-        kind = values[0]
-        if kind in ['G', 'RG']:
-            if len(values) != 3:
-                parser.error("Need a mu and sigma for a gaussian distribution description!")
-            return {'kind': shorthand_mapping[kind],
-                    'mu': float(values[1]),
-                    'sigma': float(values[2])}
-        elif kind in ['L', 'RL', 'U', 'RU']:
-            if len(values) != 3:
-                parser.error("Need a min and max for a uniform distribution description!")
-            return {'kind': shorthand_mapping[kind],
-                    'min': float(values[1]),
-                    'max': float(values[2])}
-        else:
-            parser.error(f"Unknown distribution kind: {kind}!")
-
-    def natural_number(x):
-        x = int(x)
-        if x < 1:
-            raise argparse.ArgumentTypeError("Minimum is 1")
-        return x
-
     parser = argparse.ArgumentParser(prog='cminject',
                                      formatter_class=argparse.MetavarTypeHelpFormatter)
+    parser.add_argument('-setup', help='A python import path to a Setup subclass that defines the experiment.',
+                        type=str)
     parser.add_argument('-n', '--nof-particles', help='The number of particles to simulate',
                         type=natural_number, required=True)
     parser.add_argument('-t', '--time-interval',
                         help='The time interval to run the simulation within, as a 3-list (t_start, t_end, dt)',
                         type=float, nargs=3)
-    parser.add_argument('-d', '--detectors', help='The Z positions of the detectors', nargs='+',
-                        type=float, required=True)
-    parser.add_argument('-f', '--flow-field', help='Flow field filename (hdf5 format)',
-                        type=str, required=True)
     parser.add_argument('-o', '--output-file', help='Output filename for phase space (hdf5 format)',
                         type=str, required=True)
-
-    parser.add_argument('-p', '--position',
-                        help='Distribution description for the position.',
-                        nargs='*', type=dist_description)
-    parser.add_argument('-v', '--velocity',
-                        help='Distribution description for the velocity.',
-                        nargs='*', type=dist_description)
-    parser.add_argument('-r', '--radius', help='Distribution description for the radius.',
-                        type=dist_description)
-    parser.add_argument('-rho', '--density', help='Density of the particles.',
-                        type=float)
-
-    parser.add_argument('-ft', '--flow-temperature',
-                        help='Temperature of the gas in the flow field. NOTE: This should be close or equal to the '
-                             'temperature the flow field file was created with, unless you are sure that the used '
-                             'model and assumed parameters work across a large range of temperatures',
-                        type=float)
-    parser.add_argument('-fs', '--flow-scale-slip', help='Slip scale factor of the flow field',
-                        type=float)
-
-    parser.add_argument('-T', '--store-trajectories', help='Store trajectories?',
-                        action='store_true')
+    parser.add_argument('-T', '--store-trajectories', help='Store trajectories?', action='store_true')
+    parser.add_argument('-S', '--seed', help='Seed for the random generator', type=int)
     parser.add_argument('-s', '--single-threaded',
                         help='Run single threaded? CAUTION: Very slow, only for debugging purposes',
                         action='store_true')
-    parser.add_argument('-D', '--dimensions', help='# of spatial dimensions',
-                        type=int)
-    parser.add_argument('-S', '--seed', help='Seed for the random generator',
-                        type=int)
-    parser.add_argument('-B', '--brownian', help='Enable Brownian motion', action='store_true')
     parser.add_argument('-cs', '--chunksize', help='Chunksize for parallel processing. 1 by default.', type=int)
-    parser.add_argument('--loglevel', choices={'debug', 'info', 'warning', 'error', 'critical'}, type=str)
+    parser.add_argument('-l', '--loglevel', choices={'debug', 'info', 'warning', 'error', 'critical'}, type=str)
 
-    parser.set_defaults(dimensions=3,
-                        time_interval=[0.0, 1.8, 1e-6],
-                        radius={'kind': 'gaussian', 'mu': 2.45e-7, 'sigma': 7.5e-9},
-                        position=[
-                            {'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.0002},
-                            {'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.0002},
-                            {'kind': 'gaussian', 'mu': 0.0048, 'sigma': 0.00001}
-                        ],
-                        velocity=[
-                            {'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.1},
-                            {'kind': 'gaussian', 'mu': 0.7, 'sigma': 0.3},
-                            {'kind': 'gaussian', 'mu': -43.0, 'sigma': 2.0},
-                        ],
-                        density=1050.0,
-                        loglevel='warning',
-                        chunksize=1  # same as None according to multiprocessing docs
-                        )
-    args = parser.parse_args()
+    parser.set_defaults(
+        setup='cminject.setups.one_flow_field.OneFlowFieldSetup',
+        time_interval=[0.0, 1.8, 1e-6],
+        loglevel='warning',
+        chunksize=1  # same as None according to multiprocessing docs
+    )
+    args, setup_argarr = parser.parse_known_args()  # Parse the args and leave the rest for the setup class parser
 
-    # Verify dimensionality match for position description and dimensions parameter
-    if len(args.position) != args.dimensions:
-        parser.error("The length of the position description vectors must match the simulation dimensionality!")
-    if len(args.velocity) != args.dimensions:
-        parser.error("The length of the velocity description vectors must match the simulation dimensionality!")
-
+    # Set up logging
     logging.basicConfig(format='%(levelname)s:[%(filename)s/%(funcName)s] %(message)s',
                         level=getattr(logging, args.loglevel.upper()))
-    run_example_experiment(args)
+
+    # Verify that output file doesn't already exist, let's avoid overwriting existing data
+    if os.path.isfile(args.output_file):
+        raise ValueError("Output file already exists! Please delete or move the existing file.")
+
+    # Try retrieving the setup class via importlib
+    if '.' not in args.setup:
+        raise ValueError(f"Invalid import path for setup class: {args.setup}")
+    setup_modulename, setup_classname = args.setup.rsplit('.', 1)
+    setup_module = importlib.import_module(setup_modulename)
+    setup_cls = getattr(setup_module, setup_classname, None)
+    if setup_cls is None:
+        raise ValueError(f"Could not import class {setup_classname} from module {setup_modulename}!")
+    if not issubclass(setup_cls, Setup):
+        raise ValueError(f"Imported setup class {setup_classname} is not a subclass of Setup!")
+    setup_args = setup_cls.parse_args(setup_argarr)
+    # Set up the experiment and run it
+    logging.info("Setting up experiment...")
+    experiment = setup_cls.construct_experiment(args, setup_args)
+
+    # This is a bit of a special case that should be allowed to be enabled/disabled independent of the setup
+    if args.store_trajectories:
+        experiment.property_updaters += [TrajectoryPropertyUpdater()]
+
+    t_start, t_end, dt = args.time_interval
+    experiment.run_with_output(
+        args.output_file,
+        single_threaded=args.single_threaded,
+        chunksize=args.chunksize,
+        loglevel=args.loglevel
+    )
 
 
 """

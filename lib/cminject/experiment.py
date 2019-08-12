@@ -16,11 +16,13 @@
 # <http://www.gnu.org/licenses/>.
 import logging
 import multiprocessing
+import os
 from typing import List, Tuple, Optional
 
 import numpy as np
 from cminject.definitions.base import Particle, Source, Device, Detector, ZBounded, \
     PropertyUpdater, infinite_interval
+from cminject.definitions.result_storage import HDF5ResultStorage
 from scipy.integrate import ode
 
 
@@ -253,7 +255,7 @@ class Experiment:
             exit(f"ERROR: The Z boundary {self.z_boundary} of the experiment is not sensible! The 'left' boundary "
                  f"has to be smaller than the 'right' boundary.")
 
-    def run(self, single_threaded=False, chunksize=None) -> List[Particle]:
+    def run(self, single_threaded: bool = False, chunksize: int = None, loglevel: str = "warning") -> List[Particle]:
         """
         Run the Experiment. A list of resulting Particle instances is returned.
 
@@ -263,9 +265,13 @@ class Experiment:
             this on False.
         :param chunksize: The chunk size for pool.imap_unordered. None by default, which equates to 1. This parameter
             has no effect if single_threaded is True.
+        :param loglevel: The loglevel to run the program with. One of {DEBUG, INFO, WARNING, ERROR, CRITICAL} --
+            see Python's builtin logging module for more explanation regarding these levels.
         :return: A list of resulting Particle instances. Things like detector hits and trajectories should be stored on
             them and can be read off each Particle.
         """
+        logging.basicConfig(format='%(levelname)s:[%(filename)s/%(funcName)s] %(message)s',
+                            level=getattr(logging, loglevel.upper()))
 
         if single_threaded:
             logging.info("Running single-threaded.")
@@ -281,6 +287,30 @@ class Experiment:
                 pool.join()
 
         return particles
+
+    def run_with_output(self, outfile: str, *args, **kwargs) -> List[Particle]:
+        """
+        Like .run(), but stores the resulting particle list in an HDF5 file. Also does additional logging.
+        :param outfile: The path of the output file to create and write to.
+        :param args: The positional arguments that are passed on to run(). See docs there for what's needed.
+        :param kwargs: The keyword arguments that are passed on to run(). See docs there for what's needed.
+        :return: See docs for run().
+        """
+        if os.path.isfile(outfile):
+            raise ValueError("Output file already exists! Please delete or move the existing file.")
+
+        t_start, t_end, dt = self.time_interval
+        logging.info(f"Simulating in {self.number_of_dimensions}D space, "
+                     f"from t0={t_start} to {t_end} with dt={dt}.")
+
+        logging.info(f"The total Z boundary of the experiment is {self.z_boundary}.")
+        logging.info("Running experiment...")
+        result_particles = self.run(*args, **kwargs)
+        logging.info("Done running experiment. Storing results...")
+        HDF5ResultStorage(outfile).store_results(result_particles)
+        logging.info(f"Saved results to {outfile}.")
+
+        return result_particles
 
     @staticmethod
     def _gather_z_boundary(z_bounded_objects: List[ZBounded]) -> Tuple[float, float]:
