@@ -16,11 +16,9 @@
 # <http://www.gnu.org/licenses/>.
 
 from abc import ABC
-from functools import lru_cache
 
 import numpy as np
 from cminject.definitions.base import Field, empty_interval
-from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
 from scipy.constants import pi
 
@@ -52,7 +50,7 @@ class VortexBeamPhotophoreticForceField(Field, ABC):
         return intensity
 
 
-class ShvedovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
+class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
     def __init__(self,
                  gas_viscosity: float, gas_temperature: float,
                  gas_thermal_conductivity: float, gas_density: float,
@@ -64,7 +62,7 @@ class ShvedovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
         self.gas_temperature = gas_temperature
 
         self.j1 = -0.5  # TODO assumed
-        self.z0 = 2 * np.pi * self.beam_waist_radius ** 2 / self.beam_lambda  # see Shvedov 2009
+        self.z0 = 2 * np.pi * self.beam_waist_radius ** 2 / self.beam_lambda  # see Desyatnikov 2009
 
     def kappa(self, particle_radius: float, particle_thermal_conductivity: float):
         return -self.j1 * 9*self.gas_viscosity**2 / \
@@ -80,14 +78,15 @@ class ShvedovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
 
     def pp_force(self, a: float, r: float, z: float, mu_a: float) -> np.array:
         """
-        Calculates the axial component of the photophoretic force, based on an approximation by Shvedov, 2009,
+        Calculates the axial component of the photophoretic force, based on an approximation by Desyatnikov, 2009,
         for small particles with a << w.
+
         :param a: The particle radius.
         :param r: The particle's radial offset relative to the beam axis.
         :param z: The particle's axial offset relative to the beam origin.
         :param mu_a: The particle's thermal conductivity.
-        :return: A tuple containing the transverse (first element) and axial (second element)
-         components of the photophoretic force.
+        :return: A tuple containing the transverse (first element) and axial (second element) components of
+            the photophoretic force.
         """
         P = self.beam_power
         kappa = self.kappa(a, mu_a)

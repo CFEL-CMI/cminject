@@ -291,6 +291,7 @@ class Experiment:
     def run_with_output(self, outfile: str, *args, **kwargs) -> List[Particle]:
         """
         Like .run(), but stores the resulting particle list in an HDF5 file. Also does additional logging.
+
         :param outfile: The path of the output file to create and write to.
         :param args: The positional arguments that are passed on to run(). See docs there for what's needed.
         :param kwargs: The keyword arguments that are passed on to run(). See docs there for what's needed.

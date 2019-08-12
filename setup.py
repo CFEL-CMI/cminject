@@ -44,8 +44,8 @@ install_requires = [
 ]
 
 setup(name="cminject",
-      author="Muhamed Amin, Simon Welker and the CFEL-CMI group",
-      author_email="muhamed.amin@cfel.de",
+      author="Simon Welker, Muhamed Amin and the CFEL-CMI group",
+      author_email="simon.welker@cfel.de",
       maintainer="Muhamed Amin and the CFEL-CMI group",
       maintainer_email="muhamed.amin@cfel.de",
       url="https://stash.desy.de/projects/CMIFLY/repos/cmi-injector/browse",

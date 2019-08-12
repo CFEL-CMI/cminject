@@ -12,10 +12,10 @@ cminject.definitions.fields.fluid\_flow\_fields module
     :undoc-members:
     :show-inheritance:
 
-cminject.definitions.fields.laser\_field module
------------------------------------------------
+cminject.definitions.fields.laser\_fields module
+------------------------------------------------
 
-.. automodule:: cminject.definitions.fields.laser_field
+.. automodule:: cminject.definitions.fields.laser_fields
     :members:
     :undoc-members:
     :show-inheritance:

@@ -14,7 +14,7 @@ It is meant to be used by different groups of people and match different needs, 
    :maxdepth: 2
    :caption: Contents:
 
-   _modules/cminject
+   _modules/modules
 
 
 Indices and tables

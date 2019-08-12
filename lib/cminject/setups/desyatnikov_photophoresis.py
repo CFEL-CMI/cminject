@@ -24,7 +24,7 @@ from typing import Tuple, List
 from cminject.definitions import Device, Field
 from cminject.definitions.boundaries import CuboidBoundary
 from cminject.definitions.detectors import SimpleZDetector
-from cminject.definitions.fields.laser_field import ShvedovPhotophoreticLaserField
+from cminject.definitions.fields.laser_fields import DesyatnikovPhotophoreticLaserField
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.definitions.sources import VariableDistributionSource
 from cminject.experiment import Experiment
@@ -32,13 +32,13 @@ from cminject.setups.base import Setup
 from cminject.utils.args import dist_description, SetupArgumentParser
 
 
-class ShvedovVortexLaserDevice(Device):
+class DesyatnikovVortexLaserDevice(Device):
     @property
     def z_boundary(self) -> Tuple[float, float]:
         return self.boundary.z_boundary
 
     def __init__(self):
-        pp_field = ShvedovPhotophoreticLaserField(
+        pp_field = DesyatnikovPhotophoreticLaserField(
             gas_temperature=293.15,
             gas_viscosity=1.76e-5,
             gas_thermal_conductivity=0.02546,  # W/(m*K) for nitrogen
@@ -53,10 +53,10 @@ class ShvedovVortexLaserDevice(Device):
         super().__init__(fields=self.fields, boundary=self.boundary)
 
 
-class ShvedovPhotophoresisSetup(Setup):
+class DesyatnikovPhotophoresisSetup(Setup):
     @staticmethod
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
-        devices = [ShvedovVortexLaserDevice()]
+        devices = [DesyatnikovVortexLaserDevice()]
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
         sources = [VariableDistributionSource(main_args.nof_particles, position=args.position, velocity=args.velocity,
                                               radius=args.radius, rho=args.density,
