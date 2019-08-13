@@ -48,3 +48,11 @@ def get_interpolator(c, v):
         return Interp2D(c, v)
     else:
         return RegularGridInterpolator(c, v)
+
+
+
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:
