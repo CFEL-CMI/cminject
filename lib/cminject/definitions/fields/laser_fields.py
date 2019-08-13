@@ -17,10 +17,12 @@
 
 from abc import ABC
 
+import numba
 import numpy as np
 from cminject.definitions.base import Field, empty_interval
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
 from scipy.constants import pi
+from scipy.integrate import dblquad
 
 
 class VortexBeamPhotophoreticForceField(Field, ABC):
@@ -76,7 +78,32 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
         mu_a = particle.thermal_conductivity
         return self.pp_force(a, r, z, mu_a) / m
 
-    def pp_force(self, a: float, r: float, z: float, mu_a: float) -> np.array:
+    @staticmethod
+    @numba.jit("float64(float64,float64,float64,float64,float64)", nopython=True)
+    def _transverse_integrand(y: float, x: float, a: float, r: float, w: float):
+        return y / a * ((x**2 + (y + r)**2) / w**4) *\
+               np.exp(-(x**2 + (y + r)**2) / w**2) *\
+               a / np.sqrt(a**2 - x**2 - y**2)
+
+    @staticmethod
+    def _transverse(a: float, r: float, w: float):
+        result, err = dblquad(
+            DesyatnikovPhotophoreticLaserField._transverse_integrand,
+            0, a,  # 0 to a since the integrand is even in x
+            lambda x: -np.sqrt(a**2 - x**2), lambda x: np.sqrt(a**2 - x**2),
+            args=(a, r, w)
+        )
+        return -1/np.pi * 2 * result  # 2*result since the integrand is even in x
+
+    @staticmethod
+    def _axial(a: float, w: float):
+        faw = 1 - (1 + (a/w)**2) * np.exp(-(a/w)**2)  # = f(a**2/w**2), f taken from Desyatnikov's paper
+        return faw
+
+    def w(self, z: float):
+        return self.beam_waist_radius * np.sqrt(1 + (z / self.z0) ** 2)
+
+    def pp_force(self, a: float, r: float, z: float, k_f: float) -> np.array:
         """
         Calculates the axial component of the photophoretic force, based on an approximation by Desyatnikov, 2009,
         for small particles with a << w.
@@ -84,17 +111,17 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
         :param a: The particle radius.
         :param r: The particle's radial offset relative to the beam axis.
         :param z: The particle's axial offset relative to the beam origin.
-        :param mu_a: The particle's thermal conductivity.
+        :param k_f: The particle's thermal conductivity.
         :return: A tuple containing the transverse (first element) and axial (second element) components of
             the photophoretic force.
         """
         P = self.beam_power
-        kappa = self.kappa(a, mu_a)
-        w = self.beam_waist_radius * np.sqrt(1 + (z / self.z0)**4)
-        return np.array([
-            (-kappa * P * 4/3 * r * a**3) / w**4,
-            kappa * P/2 * (a / w)**4
-        ])
+        kappa = self.kappa(a, k_f)
+        w = self.w(z)
+
+        tr = self._transverse(a, r, w)
+        ax = self._axial(a, w)
+        return kappa * P * np.array([tr, ax])
 
 
 """
