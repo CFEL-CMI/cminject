@@ -21,7 +21,7 @@ from typing import Tuple
 import numpy as np
 from cminject.definitions.base import Field
 from cminject.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
-from scipy.interpolate import RegularGridInterpolator
+from cminject.utils.interpolation import get_interpolator
 
 
 class RegularGridInterpolationField(Field, ABC):
@@ -40,7 +40,7 @@ class RegularGridInterpolationField(Field, ABC):
         self.filename = filename
         data_index, data_grid = hdf5_to_data_grid(self.filename)
         self.number_of_dimensions = len(data_index)
-        self._interpolator = RegularGridInterpolator(tuple(data_index), data_grid)
+        self._interpolator = get_interpolator(tuple(data_index), data_grid)
 
         # Assuming that Z is always the last dimension, construct the Z boundary from it
         minima = list(np.min(d) for d in data_index)

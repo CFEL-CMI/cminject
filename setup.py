@@ -4,10 +4,13 @@
 # Copyright (C) 2008,2017 Jochen Küpper <jochen.kuepper@cfel.de>
 
 
-import os
-from setuptools import setup
-from setuptools import setup, find_packages
 import sys
+
+from setuptools import setup, Extension
+from Cython.Build import cythonize
+import numpy
+
+from setuptools import find_packages
 
 long_description = """CMI Injector -- Simulating particles' trajectories in different forcefields
 
@@ -24,7 +27,6 @@ if sys.version_info < (3,6):
 
 
 package_dir = {"": "lib"}
-
 packages = find_packages(where="lib")
 
 provides = [
@@ -43,19 +45,28 @@ install_requires = [
     'sphinx_rtd_theme~=0.4.3'
 ]
 
-setup(name="cminject",
-      author="Simon Welker, Muhamed Amin and the CFEL-CMI group",
-      author_email="simon.welker@cfel.de",
-      maintainer="Muhamed Amin and the CFEL-CMI group",
-      maintainer_email="muhamed.amin@cfel.de",
-      url="https://stash.desy.de/projects/CMIFLY/repos/cmi-injector/browse",
-      description="A framework for particle injection trajectory simulations in different force fields",
-      version="0.1.0",
-      long_description=long_description,
-      license="GPL",
-      package_dir=package_dir,
-      packages=packages,
-      scripts=None,
-      provides=provides,
-      python_requires='>=3.7',
-      install_requires=install_requires)
+extensions = [
+    Extension("cminject.utils.cython_interpolation",
+              ["lib/cminject/utils/cython_interpolation.pyx"],
+              include_dirs=[numpy.get_include(), "."])
+]
+
+setup(
+    name="cminject",
+    author="Simon Welker, Muhamed Amin and the CFEL-CMI group",
+    author_email="simon.welker@cfel.de",
+    maintainer="Muhamed Amin and the CFEL-CMI group",
+    maintainer_email="muhamed.amin@cfel.de",
+    url="https://stash.desy.de/projects/CMIFLY/repos/cmi-injector/browse",
+    description="A framework for particle injection trajectory simulations in different force fields",
+    version="0.1.0",
+    long_description=long_description,
+    license="GPL",
+    package_dir=package_dir,
+    packages=packages,
+    scripts=None,
+    provides=provides,
+    python_requires='>=3.7',
+    install_requires=install_requires,
+    ext_modules=cythonize(extensions)
+)
