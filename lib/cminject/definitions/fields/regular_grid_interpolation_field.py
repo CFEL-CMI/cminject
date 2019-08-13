@@ -35,6 +35,10 @@ class RegularGridInterpolationField(Field, ABC):
         The constructor for RegularGridInterpolationField.
 
         :param filename: The filename of an HDF5 file in the format as constructed by `tools/txt_to_hdf5`.
+
+        .. todo:: Provide a "formal" definition of the Field-file format in documentaiton, not only through an implementation
+           And then refer to this file format by its name, not by its "implemented somewhere" specification...
+
         """
         # Construct the interpolator from the HDF5 file passed by file name
         self.filename = filename
