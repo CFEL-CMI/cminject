@@ -75,3 +75,11 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp3D(np.float_t[:,:,:,::1] v, np.floa
 
             result[ci] = c0*(1-zd) + c1*zd
     return result
+
+
+
+### Local Variables:
+### mode: Python
+### fill-column: 100
+### truncate-lines: t
+### End:
