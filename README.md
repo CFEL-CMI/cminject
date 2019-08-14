@@ -2,7 +2,7 @@
 
 CMInject is a Python3 framework that can be used to define and run particle trajectory simulations
 for sample injection. It can run 1D, 2D and 3D simulations, given that all parts in a simulation setup allow
-the given dimensionality.
+the given dimensionality. The minimum required Python version to use it is 3.6.
 
 It is meant to be used by different groups of people and match different needs, and so it is meant to be both:
 
@@ -10,9 +10,20 @@ It is meant to be used by different groups of people and match different needs, 
 - a collection of such setups (coming soon).
 
 
+## Dependencies and Installation
+The software can be installed by running `./user_install.sh`, which does everything necessary.
+
+If you'd prefer not to run this script (e.g. if you want a system-wide installation or need to change the way the
+Cython extensions are built), here is additional info regarding the dependencies and `setup.py`:
+
+Dependencies are automatically installed by `python3 setup.py install` except for `Cython` and `numpy`,
+which `setup.py` itself depends on. Please install these two packages via `pip` and then run `python3 setup.py install`
+to install the software along with its other dependencies.
+
 ## Generating docs
-Generate the docs in HTML format by running `make html` inside the `doc` folder. The generated HTML can then be
-viewed by opening `doc/_build/html/index.html`.
+After installing the dependencies as described in the *Dependencies and Installation* section above, you can 
+generate the docs in HTML format by running `python3 setup.py build_sphinx` from the project root folder.
+The generated HTML can then be viewed by opening `build/sphinx/html/index.html`.
 
 
 ## Overview of an Experiment setup
