@@ -17,6 +17,7 @@
 import logging
 import multiprocessing
 import os
+import random
 from typing import List, Tuple, Optional
 
 import numpy as np
@@ -237,6 +238,9 @@ class Experiment:
             self.particles += source_particles
         if len(particle_types) > 1:
             raise TypeError("Cannot simulate particles of multiple types at the same time!")
+
+        # Shuffle the particles list to avoid particles that take long to simulate neighbouring each other in the list
+        random.shuffle(self.particles)
 
         # Initialise the min/max Z values amongst all detectors, and amongst all devices
         self.detectors_z_boundary = self._gather_z_boundary(self.detectors)
