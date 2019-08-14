@@ -16,7 +16,7 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp2D(np.float_t[:,:,::1] v, np.float_
         np.float_t xd, yd, a0, a1
         np.float_t *v_a
 
-    cdef np.ndarray[np.float64_t, ndim=1] result = np.zeros(V, dtype=np.float64) / 0.0
+    cdef np.ndarray[np.float64_t, ndim=1] result = np.full(V, np.nan, dtype=np.float64)
 
     x0 = <int>floor(x)
     x1 = x0 + 1
@@ -50,7 +50,7 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp3D(np.float_t[:,:,:,::1] v, np.floa
         np.float_t xd, yd, zd, c00, c01, c10, c11, c0, c1, c
         np.float_t *v_c
 
-    cdef np.ndarray[np.float64_t, ndim=1] result = np.zeros(V, dtype=np.float64) / 0.0
+    cdef np.ndarray[np.float64_t, ndim=1] result = np.full(V, np.nan, dtype=np.float64)
 
     x0 = <int>floor(x)
     x1 = x0 + 1
