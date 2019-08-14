@@ -37,7 +37,7 @@ class DesyatnikovVortexLaserDevice(Device):
     def z_boundary(self) -> Tuple[float, float]:
         return self.boundary.z_boundary
 
-    def __init__(self):
+    def __init__(self, rmin, rmax, zmin, zmax):
         pp_field = DesyatnikovPhotophoreticLaserField(
             gas_temperature=293.15,
             gas_viscosity=1.76e-5,
@@ -48,7 +48,7 @@ class DesyatnikovVortexLaserDevice(Device):
         )
         self.fields: List[Field] = [pp_field]
         self.boundary: CuboidBoundary = CuboidBoundary(
-            intervals=[(-1e5, 1e5), (0, 0.02)]
+            intervals=[(rmin, rmax), (zmin, zmax)]
         )
         super().__init__(fields=self.fields, boundary=self.boundary)
 
@@ -56,10 +56,10 @@ class DesyatnikovVortexLaserDevice(Device):
 class DesyatnikovPhotophoresisSetup(Setup):
     @staticmethod
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
-        devices = [DesyatnikovVortexLaserDevice()]
+        devices = [DesyatnikovVortexLaserDevice(*args.boundary)]
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
         sources = [VariableDistributionSource(main_args.nof_particles, position=args.position, velocity=args.velocity,
-                                              radius=args.radius, rho=args.density,
+                                              radius=args.radius, rho=args.rho,
                                               subclass=ThermallyConductiveSphericalParticle,
                                               thermal_conductivity=args.thermal_conductivity)]
         return Experiment(devices=devices, detectors=detectors, sources=sources, property_updaters=[],
@@ -84,11 +84,14 @@ class DesyatnikovPhotophoresisSetup(Setup):
         parser.add_argument('-mu', '--thermal-conductivity', help='Thermal conductivity of the particles.',
                             type=float)
 
+        parser.add_argument('-b', '--boundary', help='Boundary (rmin, rmax, zmin, zmax) of the experiment.',
+                            type=float, nargs=4)
+
         parser.set_defaults(
             time_interval=[0.0, 1.0, 1e-5],
+            boundary=[-1e-5, 1e-5, -0.01, 0.05],
             thermal_conductivity=0.0266,
             rho=1775.0,
-            density=1050.0,
             loglevel='warning',
             chunksize=1,  # same as None according to multiprocessing docs
         )
