@@ -1,60 +1,137 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# This file is part of CMInject
+# This file is part of CMInject.
+# It is a reference implementation of a subset of possible experimental setups, together with command line argument
+# parsing. Its purpose is to allow those simulations to be run without additional code needing to be written, and to
+# showcase how the setup is created so people can extend it or write more complex setups.
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# If you use this program for scientific work, you should correctly reference it; see LICENSE file for details.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program. If not, see
+# <http://www.gnu.org/licenses/>.
+
+import argparse
+from gettext import gettext as _
+import logging
+import os
+import importlib
+from typing import Type
+
+from cminject.definitions.property_updaters import TrajectoryPropertyUpdater
+from cminject.setups.base import Setup
+from cminject.utils.args import natural_number
 
 
-"""Time-dependent wave-packet propagation
+def get_setup_class(class_path) -> Type[Setup]:
+    if '.' not in class_path:
+        raise ValueError(f"Invalid import path for setup class: {class_path}")
+    setup_modulename, setup_classname = class_path.rsplit('.', 1)
+    setup_module = importlib.import_module(setup_modulename)
+    setup_cls = getattr(setup_module, setup_classname, None)
+    if setup_cls is None:
+        raise ValueError(f"Could not import class {setup_classname} from module {setup_modulename}!")
+    if not issubclass(setup_cls, Setup):
+        raise ValueError(f"Imported setup class {setup_classname} is not a subclass of Setup!")
 
-Provide some details...
-"""
-
-__author__ = "Jochen Küpper <jochen.kuepper@cfel.de>"
-
-import numpy as num
-import getopt, sys
-
-
-def usage():
-    # ToDo implement a useful usage description -- use argparse instead of getopt to auto-create it
-    print("""
-           --help:      help
-""")
+    return setup_cls
 
 
+class HelpWithSetupHelpAction(argparse._HelpAction):
+    def __call__(self, parser, namespace, values, option_string=None):
+        setup_parser = None
+        try:
+            setup_parser = get_setup_class(namespace.setup).get_parser()
+        except ValueError:
+            pass
 
-def main(args):
-    try:
-        opts, args = getopt.getopt(args[1:], "h", ["help", "debug"])
-    except getopt.GetoptError as err:
-        # print help information and exit:
-        print(str(err)) # will print something like "option -a not recognized"
-        usage()
-        sys.exit(2)
-    # default values
-    pass
-    # scan commandline
-    for o, a in opts:
-        if o in ("-h", "--help"):
-            usage()
-            sys.exit()
-        elif o == "--debug":
-            param.debug = True
+        parser.print_help()
+
+        print("\n\n" + "-" * 21 + ' Help for the setup specific parser: ' + '-' * 22 + '\n')
+        if setup_parser is not None:
+            setup_parser.print_help()
         else:
-            assert False, "unhandled commandline option"
-    # finalize initialization
-    pass
-    # perform calculation
-    pass
+            print(f"ERROR: Could not find setup class {namespace.setup}!")
 
-if __name__ == "__main__":
-    main(sys.argv)
+        parser.exit()
 
 
+def main():
+    parser = argparse.ArgumentParser(prog='cminject',
+                                     formatter_class=argparse.MetavarTypeHelpFormatter,
+                                     add_help=False)
+    parser.add_argument('-h', '--help', action=HelpWithSetupHelpAction, default=argparse.SUPPRESS,
+                        help=_('show this help message and exit'))
+
+    parser.add_argument('-setup', help='A python import path to a Setup subclass that defines the experiment.',
+                        type=str)
+    parser.add_argument('-n', '--nof-particles', help='The number of particles to simulate',
+                        type=natural_number, required=True)
+    parser.add_argument('-t', '--time-interval',
+                        help='The time interval to run the simulation within, as a 3-list (t_start, t_end, dt)',
+                        type=float, nargs=3)
+    parser.add_argument('-o', '--output-file', help='Output filename for phase space (hdf5 format)',
+                        type=str, required=True)
+    parser.add_argument('-T', '--store-trajectories', help='Store trajectories?', action='store_true')
+    parser.add_argument('-S', '--seed', help='Seed for the random generator', type=int)
+    parser.add_argument('-s', '--single-threaded',
+                        help='Run single threaded? CAUTION: Very slow, only for debugging purposes',
+                        action='store_true')
+    parser.add_argument('-cs', '--chunksize', help='Chunksize for parallel processing. 1 by default.', type=int)
+    parser.add_argument('-l', '--loglevel', choices={'debug', 'info', 'warning', 'error', 'critical'}, type=str)
+
+    parser.set_defaults(
+        setup='cminject.setups.one_flow_field.OneFlowFieldSetup',
+        time_interval=[0.0, 1.8, 1e-6],
+        loglevel='warning',
+        chunksize=1  # same as None according to multiprocessing docs
+    )
+    args, unknown_args = parser.parse_known_args()  # Parse the args and leave the rest for the setup class parser
+
+    # Set up logging
+    logging.basicConfig(format='%(levelname)s:[%(filename)s/%(funcName)s] %(message)s',
+                        level=getattr(logging, args.loglevel.upper()))
+
+    # Verify that output file doesn't already exist, let's avoid overwriting existing data
+    if os.path.isfile(args.output_file):
+        raise ValueError("Output file already exists! Please delete or move the existing file.")
+
+    # Try retrieving the setup class via importlib, then use it to parse the args the setup needs, and do (optional)
+    # validation on them.
+    setup_cls = get_setup_class(args.setup)
+    setup_parser = setup_cls.get_parser()
+    setup_args = setup_parser.parse_args(unknown_args)
+    setup_cls.validate_args(setup_args)
+    # Set up the experiment and run it
+    logging.info("Setting up experiment...")
+    experiment = setup_cls.construct_experiment(args, setup_args)
+
+    # This is a bit of a special case that should be allowed to be enabled/disabled independent of the setup
+    if args.store_trajectories:
+        experiment.property_updaters += [TrajectoryPropertyUpdater()]
+
+    experiment.run_with_output(
+        args.output_file,
+        single_threaded=args.single_threaded,
+        chunksize=args.chunksize,
+        loglevel=args.loglevel
+    )
 
 
+if __name__ == '__main__':
+    main()
+
+
+"""
 ### Local Variables:
-### mode: python
-### fill-column: 80
+### fill-column: 100
 ### truncate-lines: t
 ### End:
+"""
