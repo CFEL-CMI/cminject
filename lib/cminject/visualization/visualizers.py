@@ -22,6 +22,7 @@ import h5py
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
+from matplotlib.ticker import ScalarFormatter
 
 
 class Visualizer(ABC):
@@ -110,6 +111,42 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
             for dim in dims
         ]
 
+    def _vis1d(self, ax, y, label) -> None:
+        ax.hist(y, bins=self.bins_1d)
+        ax.set_xlabel(label)
+        ax.set_ylabel('# occurrences')
+
+        mu, median, sigma = y.mean(), np.median(y), y.std()
+        textstr = '\n'.join((r'$\mu=%.2e$' % (mu,),
+                             r'$\mathrm{\overline{' + label + '}}=%.2E$' % (median,),
+                             r'$\sigma=%.2E$' % (sigma,)))
+
+        xfmt = ScalarFormatter()
+        xfmt.set_powerlimits((-2, 2))
+        ax.xaxis.set_major_formatter(xfmt)
+        props = dict(facecolor='wheat', alpha=0.5)
+        ax.text(0.05, 0.95, textstr, transform=ax.transAxes, verticalalignment='top', bbox=props)
+
+    def _vis2d(self, ax, x, y, xlabel, ylabel, cmap='viridis'):
+        ax.hist2d(x, y, bins=self.bins, cmap=cmap)
+        ax.set_xlabel(xlabel)  # set the labels for the 'x'/'y' axis as passed in the dimension pair
+        ax.set_ylabel(ylabel)
+
+        mu_x, median_x, sigma_x = x.mean(), np.median(x), x.std()
+        mu_y, median_y, sigma_y = y.mean(), np.median(y), y.std()
+        textstr = '\n'.join((
+            (r'$\mu_{' + xlabel + r'}=%.2e, \mu_{' + ylabel + r'}=%.2e$') % (mu_x, mu_y),
+            (r'$\mathrm{\overline{' + xlabel + r'}}=%.2E, \mathrm{\overline{' + ylabel + r'}}=%.2E$') % (median_x, median_y),
+            (r'$\sigma_{' + xlabel + '}=%.2E, \sigma_{' + ylabel + '}=%.2E$') % (sigma_x, sigma_y)
+        ))
+
+        fmt = ScalarFormatter()
+        fmt.set_powerlimits((-2, 2))
+        ax.xaxis.set_major_formatter(fmt)
+        ax.yaxis.set_major_formatter(fmt)
+        props = dict(facecolor='wheat', alpha=0.5)
+        ax.text(0.05, 0.95, textstr, transform=ax.transAxes, verticalalignment='top', bbox=props)
+
     def visualize(self) -> Tuple[Figure, np.ndarray]:
         """
         Visualize the results as a plot of (potentially multiple) 1D/2D histograms.
@@ -143,18 +180,12 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
                     one_dimensional = False
                     if (x == x[0]).all():  # X values are all equal, plot 1D histogram of Y
                         one_dimensional = True
-                        ax.hist(y, bins=self.bins_1d)
-                        ax.set_xlabel(dim_b)
-                        ax.set_ylabel('Frequency')
+                        self._vis1d(ax, y, dim_b)
                     elif (y == y[0]).all():  # Y values are all equal, plot 1D histogram of X
                         one_dimensional = True
-                        ax.hist(x, bins=self.bins_1d)
-                        ax.set_xlabel(dim_a)
-                        ax.set_ylabel('Frequency')
+                        self._vis1d(ax, x, dim_a)
                     else:
-                        ax.hist2d(x, y, bins=self.bins, cmap='viridis')
-                        ax.set_xlabel(dim_a)  # set the labels for the 'x'/'y' axis as passed in the dimension pair
-                        ax.set_ylabel(dim_b)
+                        self._vis2d(ax, x, y, dim_a, dim_b)
 
                     if self.highlight_origin and not one_dimensional:
                         # Disable auto-scaling here: If 0.0,0.0 is outside the existing bounds, that's fine, we don't
