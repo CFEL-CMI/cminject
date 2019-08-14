@@ -11,14 +11,17 @@ It is meant to be used by different groups of people and match different needs, 
 
 
 ## Dependencies and Installation
-The software can be installed by running `./user_install.sh`, which does everything necessary.
+The software can be installed by running `./user_install.sh`, which does everything necessary by installing the
+dependencies for `setup.py`, building the Cython extensions contained in the software, and installing the software
+with its dependencies.
 
-If you'd prefer not to run this script (e.g. if you want a system-wide installation or need to change the way the
-Cython extensions are built), here is additional info regarding the dependencies and `setup.py`:
+If you'd prefer not to run this script for whatever reason (e.g. if you have dependencies installed in a different way
+or need to change the way the Cython extensions are built), the more general way to install is:
 
-Dependencies are automatically installed by `python3 setup.py install` except for `Cython` and `numpy`,
-which `setup.py` itself depends on. Please install these two packages via `pip` and then run `python3 setup.py install`
-to install the software along with its other dependencies.
+- Installing `Cython` and `numpy`, via pip/pipenv/macports/..., to be available for `setup.py`
+- Building the Cython extensions via `python3 setup.py build_ext --inplace` (refer to setuptools/Cython docs)
+- Installing the software and its other dependencies via `python3 setup.py install` (refer to setuptools docs)
+
 
 ## Generating docs
 After installing the dependencies as described in the *Dependencies and Installation* section above, you can 
