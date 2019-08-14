@@ -1,10 +1,11 @@
 # CMInject: A framework for particle injection trajectory simulations
 
-CMInject is a Python3 framework that can be used to define and run particle trajectory simulations
-for sample injection. It can run 1D, 2D and 3D simulations, given that all parts in a simulation setup allow
-the given dimensionality. The minimum required Python version to use it is 3.6.
+CMInject is a Python 3 framework that can be used to define and run particle trajectory simulations
+for sample injection. It can run 1D, 2D and 3D simulations, given that all parts in a simulation
+setup allow the given dimensionality. The minimum required Python version to use it is 3.6.
 
-It is meant to be used by different groups of people and match different needs, and so it is meant to be both:
+It is meant to be used by different groups of people and match different needs, and so it is meant
+to be both:
 
 - a library that provides a generic way to define and run whole simulation setups, and
 - a collection of such setups (coming soon).
@@ -13,17 +14,18 @@ It is meant to be used by different groups of people and match different needs, 
 ## Dependencies and Installation
 The software can be installed by running `./user_install.sh`, which does everything necessary.
 
-If you'd prefer not to run this script (e.g. if you want a system-wide installation or need to change the way the
-Cython extensions are built), here is additional info regarding the dependencies and `setup.py`:
+If you'd prefer not to run this script (e.g. if you want a system-wide installation or need to
+change the way the Cython extensions are built), here is additional info regarding the dependencies
+and `setup.py`: Dependencies are automatically installed by `python setup.py install` except for
+`Cython` and `numpy`, which `setup.py` itself depends on. Please install these two packages, e.g.,
+via `pip`, and then run `python setup.py install` to install the software along with its other
+dependencies.
 
-Dependencies are automatically installed by `python3 setup.py install` except for `Cython` and `numpy`,
-which `setup.py` itself depends on. Please install these two packages via `pip` and then run `python3 setup.py install`
-to install the software along with its other dependencies.
 
 ## Generating docs
-After installing the dependencies as described in the *Dependencies and Installation* section above, you can 
-generate the docs in HTML format by running `python3 setup.py build_sphinx` from the project root folder.
-The generated HTML can then be viewed by opening `build/sphinx/html/index.html`.
+After installing the dependencies as described in the *Dependencies and Installation* section above,
+you can generate the docs in HTML format by running `python setup.py build_sphinx` from the project
+root folder. The generated HTML can then be viewed by opening `build/sphinx/html/index.html`.
 
 
 ## Overview of an Experiment setup
@@ -34,17 +36,18 @@ A user creates an `Experiment` instance and passes the constructor lists of (i.e
 - `Detector`s
 - `PropertyUpdater`s
 
-which are all described in more detail below. They can then call the Experiment's `.run()` method
-to actually run the simulation and get back a list of all Particle objects that were initially generated,
-modified as they were during the course of the simulated experiment.
+which are all described in more detail below. They can then call the Experiment's `.run()` method to
+actually run the simulation and get back a list of all Particle objects that were initially
+generated, modified as they were during the course of the simulated experiment.
 
-See also the file `test_impl.py`, where exactly this is done for a specific kind of setup
-and a console-based interface is added around it.
+See also the file `test_impl.py`, where exactly this is done for a specific kind of setup and a
+console-based interface is added around it.
+
 
 ## Overview of abstract base definitions
 
-These definitions are all abstract, i.e. the classes mentioned lack concrete implementations
-for the tasks they're supposed to perform. There are also some concrete implementations for these classes
+These definitions are all abstract, i.e. the classes mentioned lack concrete implementations for the
+tasks they're supposed to perform. There are also some concrete implementations for these classes
 included in the framework; a user can either extend from there, or write their own implementations
 from scratch.
 
@@ -54,21 +57,22 @@ Given below each abstract definition is a short list of example implementations 
 A Particle is some physical entity that's able to move in space, and whose movement will be simulated
 and possibly tracked.
 
-It is an extensible data container and should be used to store all relevant simulated properties. On a
-most basic level, the particles only store a phase space position (a 2n vector, where n is the number of
-spatial dimensions of the simulated experiment) and a mass. This can easily be extended to any number
-of properties by deriving a subclass.
+It is an extensible data container and should be used to store all relevant simulated properties. On
+a most basic level, the particles only store a phase space position (a 2n vector, where n is the
+number of spatial dimensions of the simulated experiment) and a mass. This can easily be extended to
+any number of properties by deriving a subclass.
 
 > - `SphericalParticle`: A generic particle with a radius and density (rho) to calculate the mass with
 > - `ThermallyConductiveSphericalParticle`: Derived from SphericalParticle, with additional thermal properties.
 
 ### Source
-A Source is something capable of generating an initial distribution of Particles to run a simulation with.
-There can be multiple Sources within an Experiment setup, but they must all generate the same type
-(instances of the same subclass) of Particles.
+A Source is something capable of generating an initial distribution of Particles to run a simulation
+with. There can be multiple Sources within an Experiment setup, but they must all generate the same
+type (instances of the same subclass) of Particles.
 
-> - `GaussianDistributedSphericalSource`: A source generating a gaussian distribution of `SphericalParticle` instances or instances
-of its subclasses; x/y/z, vx/vy/vz and r are randomly distributed according to a gaussian distribution with given μ and σ.
+> - `GaussianDistributedSphericalSource`: A source generating a gaussian distribution of
+`SphericalParticle` instances or instances of its subclasses; x/y/z, vx/vy/vz and r are randomly
+distributed according to a gaussian distribution with given μ and σ. 
 
 ### Device
 A Device is a combination of Fields and a Boundary, and is supposed to model a real-world
@@ -104,6 +108,7 @@ Particle-Detector hit happens.
 
 > - `SimpleZDetector`: A detector located at some Z position, detecting along the full X/Y plane.
 
+
 ### PropertyUpdater
 A PropertyUpdater is something that can update any properties of a Particle instance handed to the
 PropertyUpdater's `update` method.
@@ -120,6 +125,7 @@ and appends them to a trajectory list).
 > - `BrownianMotionPropertyUpater`: Adds Brownian motion to the particle flight path based on some fluid flow field's
 macroscopic properties and the time step size of the integrator.
 
+
 ### ZBounded
 A ZBounded object is something that is bounded in the Z direction (which is usually considered the last
 dimension in the position vector, so it's X/Y/Z in 3D, and R/Z in 2D). Users don't need to use this
@@ -129,3 +135,13 @@ class directly, as it is just a "Mixin class". All of the following classes are 
 > - `Boundary`
 > - `Field`
 > - `Detector`
+
+
+
+
+[//]: # Local Variables:
+[//]: # mode: text
+[//]: # coding: utf-8
+[//]: # fill-column: 100
+[//]: # truncate-lines: t
+[//]: # End:
