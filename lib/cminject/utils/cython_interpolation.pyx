@@ -16,7 +16,7 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp2D(np.float_t[:,:,::1] v, np.float_
         np.float_t xd, yd, a0, a1
         np.float_t *v_a
 
-    cdef np.ndarray[np.float64_t, ndim=1] result = np.zeros(V, dtype=np.float64)
+    cdef np.ndarray[np.float64_t, ndim=1] result = np.zeros(V, dtype=np.float64) / 0.0
 
     x0 = <int>floor(x)
     x1 = x0 + 1
@@ -26,7 +26,7 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp2D(np.float_t[:,:,::1] v, np.float_
     xd = (x1-x)/(x1-x0)
     yd = (y1-y)/(y1-y0)
 
-    if x0 >= 0 and y0 >= 0 and x1 < X and y1 < Y:
+    if x0 >= 0 and y0 >= 0 and x1 <= X and y1 <= Y:
         for ai in range(V):
             v_a = &v[ai,0,0]
 
@@ -34,6 +34,8 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp2D(np.float_t[:,:,::1] v, np.float_
             a1 = xd*v_a[Y*x0+y1] + (1-xd)*v_a[Y*x1+y1]
 
             result[ai] = yd*a0 + (1-yd)*a1
+    else:
+        raise ValueError("At least one of the coordinate components is outside of the grid!")
     return result
 
 
@@ -48,7 +50,7 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp3D(np.float_t[:,:,:,::1] v, np.floa
         np.float_t xd, yd, zd, c00, c01, c10, c11, c0, c1, c
         np.float_t *v_c
 
-    cdef np.ndarray[np.float64_t, ndim=1] result = np.zeros(V, dtype=np.float64)
+    cdef np.ndarray[np.float64_t, ndim=1] result = np.zeros(V, dtype=np.float64) / 0.0
 
     x0 = <int>floor(x)
     x1 = x0 + 1
@@ -61,7 +63,7 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp3D(np.float_t[:,:,:,::1] v, np.floa
     yd = (y-y0)/(y1-y0)
     zd = (z-z0)/(z1-z0)
 
-    if x0 >= 0 and y0 >= 0 and z0 >= 0 and x1 < X and y1 < Y and z1 < Z:
+    if x0 >= 0 and y0 >= 0 and z0 >= 0 and x1 <= X and y1 <= Y and z1 <= Z:
         for ci in range(V):
             v_c = &v[ci,0,0,0]
 
@@ -74,6 +76,8 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp3D(np.float_t[:,:,:,::1] v, np.floa
             c1 = c01*(1-yd) + c11*yd
 
             result[ci] = c0*(1-zd) + c1*zd
+    else:
+        raise ValueError("At least one of the coordinate components is outside of the grid!")
     return result
 
 
