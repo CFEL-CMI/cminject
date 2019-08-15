@@ -166,6 +166,7 @@ def simulate_particle(particle: Particle) -> Particle:
     if particle.lost:
         if Z_BOUNDARY[0] <= particle.spatial_position[NUMBER_OF_DIMENSIONS - 1] <= Z_BOUNDARY[1]:
             reason = 'hit boundary within the experiment'
+            logging.debug(f"Particle hit boundary at position: {particle.spatial_position}")
         else:
             reason = 'left experiment Z boundary'
     elif integral.t >= t_end:
