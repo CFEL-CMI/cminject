@@ -44,34 +44,40 @@ def get_setup_class(class_path) -> Type[Setup]:
     return setup_cls
 
 
-class HelpWithSetupHelpAction(argparse._HelpAction):
-    def __call__(self, parser, namespace, values, option_string=None):
-        setup_parser = None
-        try:
-            setup_parser = get_setup_class(namespace.setup).get_parser()
-        except ValueError:
-            pass
+def get_setup_help_action(setup_name):
+    class HelpWithSetupHelpAction(argparse._HelpAction):
+        def __call__(self, parser, namespace, values, option_string=None):
+            setup_parser = None
+            try:
+                setup_parser = get_setup_class(setup_name).get_parser()
+            except ValueError:
+                pass
 
-        parser.print_help()
+            parser.print_help()
 
-        print("\n\n" + "-" * 21 + ' Help for the setup specific parser: ' + '-' * 22 + '\n')
-        if setup_parser is not None:
-            setup_parser.print_help()
-        else:
-            print(f"ERROR: Could not find setup class {namespace.setup}!")
+            print("\n\n" + "-" * 21 + ' Help for the setup specific parser: ' + '-' * 22 + '\n')
+            if setup_parser is not None:
+                setup_parser.print_help()
+            else:
+                print(f"ERROR: Could not find setup class {namespace.setup}!")
 
-        parser.exit()
+            parser.exit()
+    return HelpWithSetupHelpAction
 
 
 def main():
+    base_parser = argparse.ArgumentParser(add_help=False)
+    base_parser.add_argument('-setup', help='A python import path to a Setup subclass that defines the experiment.',
+                             type=str)
+    base_args, __ = base_parser.parse_known_args()
+
     parser = argparse.ArgumentParser(prog='cminject',
                                      formatter_class=argparse.MetavarTypeHelpFormatter,
                                      add_help=False)
-    parser.add_argument('-h', '--help', action=HelpWithSetupHelpAction, default=argparse.SUPPRESS,
-                        help=_('show this help message and exit'))
-
     parser.add_argument('-setup', help='A python import path to a Setup subclass that defines the experiment.',
                         type=str)
+    parser.add_argument('-h', '--help', action=get_setup_help_action(base_args.setup), default=argparse.SUPPRESS,
+                        help=_('show this help message and exit'))
     parser.add_argument('-n', '--nof-particles', help='The number of particles to simulate',
                         type=natural_number, required=True)
     parser.add_argument('-t', '--time-interval',
