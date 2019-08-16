@@ -18,9 +18,7 @@
 from .base import Boundary, Detector, Device, Field, NDimensional, Particle, ParticleDetectorHit, \
     PropertyUpdater, ResultStorage, Source, ZBounded
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

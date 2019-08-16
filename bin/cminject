@@ -169,9 +169,7 @@ if __name__ == '__main__':
     main()
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

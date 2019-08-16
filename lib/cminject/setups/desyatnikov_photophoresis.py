@@ -106,9 +106,7 @@ class DesyatnikovPhotophoresisSetup(Setup):
             raise argparse.ArgumentError("The length of the velocity description must be 2!")
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

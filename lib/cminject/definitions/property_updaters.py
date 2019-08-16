@@ -103,9 +103,7 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
         return True
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

@@ -57,9 +57,7 @@ if __name__ == '__main__':
         exit(1)
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

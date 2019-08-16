@@ -88,9 +88,7 @@ def natural_number(x):
     return x
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

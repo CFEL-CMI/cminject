@@ -95,9 +95,7 @@ class GridFieldBasedBoundary(Boundary):
         return self.field.is_particle_inside(position, time)
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

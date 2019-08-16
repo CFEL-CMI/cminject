@@ -124,9 +124,7 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
         return kappa * P * np.array([tr, ax])
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

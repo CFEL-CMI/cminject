@@ -67,9 +67,7 @@ class Setup(ABC):
         pass
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

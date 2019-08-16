@@ -271,9 +271,7 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
         return force_vector
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

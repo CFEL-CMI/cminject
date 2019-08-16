@@ -131,9 +131,7 @@ class VariableDistributionSource(Source):
         return particles
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

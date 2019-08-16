@@ -91,9 +91,7 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
         ]
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

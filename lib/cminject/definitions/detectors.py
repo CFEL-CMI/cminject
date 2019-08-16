@@ -73,9 +73,7 @@ class SimpleZDetector(Detector):
         return self._z_boundary
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

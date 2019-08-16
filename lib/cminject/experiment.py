@@ -348,9 +348,7 @@ class Experiment:
         BASE_SEED = self.seed
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

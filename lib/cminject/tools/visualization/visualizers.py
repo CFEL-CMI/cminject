@@ -366,9 +366,7 @@ class TrajectoryVisualizer(MatplotlibVisualizer):
         return fig, np.array([ax]).reshape((1, 1))  # reshape to adhere to 2D axes ndarray
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

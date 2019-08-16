@@ -316,9 +316,7 @@ def hdf5_to_data_grid(filename: str) -> Tuple[List[np.array], np.array]:
     return data_frame_to_data_grid(hdf5_to_data_frame(filename))
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""

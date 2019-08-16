@@ -1,6 +1,13 @@
 cminject.tools: Code for helpful command-line tools
 ===================================================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    cminject.tools.visualization
+
 Submodules
 ----------
 

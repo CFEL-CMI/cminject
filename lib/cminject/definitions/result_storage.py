@@ -75,9 +75,7 @@ class HDF5ResultStorage(ResultStorage):
                     h5f[f'detector_hits/{detector_id}'].attrs['description'] = hits[0].full_properties_description
 
 
-"""
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
 ### End:
-"""
