@@ -7,14 +7,15 @@ Subpackages
 .. toctree::
 
     cminject.definitions
+    cminject.setups
     cminject.tools
-    cminject.visualization
+    cminject.utils
 
 Submodules
 ----------
 
-cminject.experiment module
---------------------------
+cminject.experiment: The runner code for experiments
+----------------------------------------------------
 
 .. automodule:: cminject.experiment
     :members:

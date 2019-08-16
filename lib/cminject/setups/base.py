@@ -36,6 +36,7 @@ class Setup(ABC):
         """
         Returns a parser for the arguments relevant to this specific setup.
         This parser will receive only the arguments that the main program (bin/cminject) did not recognise.
+
         :return: An argparse.ArgumentParser (or subclass) instance that can parse all the args relevant to this setup.
         """
         pass
@@ -46,10 +47,9 @@ class Setup(ABC):
         Validates the arguments. Useful for validation that needs to check multiple args at once, and not just one
         specific arg. Overriding this method is optional and only needs to be done if such validation is desired.
 
-        Should raise argparse.ArgumentError if validation failed, and have no effect if validation succeeded.
         :param args: The argparse.Namespace object that the parser constructed by get_parser() returned after being
             given all arguments that the main program did not recognise.
-        :raises: argparse.ArgumentError
+        :raises: argparse.ArgumentError if validation failed
         """
         pass
 
@@ -58,6 +58,7 @@ class Setup(ABC):
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
         """
         Constructs an Experiment instance from the arguments to the main program and this specific setup.
+
         :param main_args: The argparse.Namespace parsed by the main program. Contains args that are common
             to all setups, like the number of particles and timespan.
         :param args: The argparse.Namespace parsed by this class's parse_args method.

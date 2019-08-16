@@ -1,11 +1,11 @@
-cminject.tools package
-======================
+cminject.tools: Code for helpful command-line tools
+===================================================
 
 Submodules
 ----------
 
-cminject.tools.structured\_txt\_hdf5\_tools module
---------------------------------------------------
+cminject.tools.structured\_txt\_hdf5\_tools: Converting structured TXT fields to HDF5
+-------------------------------------------------------------------------------------
 
 .. automodule:: cminject.tools.structured_txt_hdf5_tools
     :members:
