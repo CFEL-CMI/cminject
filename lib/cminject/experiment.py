@@ -260,7 +260,9 @@ class Experiment:
             exit(f"ERROR: The Z boundary {self.z_boundary} of the experiment is not sensible! The 'left' boundary "
                  f"has to be smaller than the 'right' boundary.")
 
-    def run(self, single_threaded: bool = False, chunksize: int = None, loglevel: str = "warning") -> List[Particle]:
+    def run(self,
+            single_threaded: bool = False, chunksize: int = None, processes: int = os.cpu_count(),
+            loglevel: str = "warning") -> List[Particle]:
         """
         Run the Experiment. A list of resulting Particle instances is returned.
 
@@ -270,6 +272,8 @@ class Experiment:
             this on False.
         :param chunksize: The chunk size for pool.imap_unordered. None by default, which equates to 1. This parameter
             has no effect if single_threaded is True.
+        :param processes: The number of processes to use for multiprocessing. Handed directly to multiprocessing.Pool(),
+            so check the documentation there for any further info. Equal to the number of CPU cores by default.
         :param loglevel: The loglevel to run the program with. One of {DEBUG, INFO, WARNING, ERROR, CRITICAL} --
             see Python's builtin logging module for more explanation regarding these levels.
         :return: A list of resulting Particle instances. Things like detector hits and trajectories should be stored on
@@ -283,8 +287,8 @@ class Experiment:
             self._initialize_globals()
             particles = list(map(simulate_particle, self.particles))
         else:
-            logging.info(f"Running in parallel on {multiprocessing.cpu_count()} cores with chunksize {chunksize}.")
-            pool = multiprocessing.Pool(initializer=self._initialize_globals, initargs=())
+            logging.info(f"Running in parallel using {processes} processes with chunksize {chunksize}.")
+            pool = multiprocessing.Pool(processes=processes, initializer=self._initialize_globals, initargs=())
             try:
                 particles = list(pool.imap_unordered(simulate_particle, self.particles, chunksize=chunksize))
             finally:
