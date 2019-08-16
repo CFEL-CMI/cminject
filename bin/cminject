@@ -66,9 +66,10 @@ def get_setup_help_action(setup_name):
 
 
 def main():
+    DEFAULT_SETUP = 'cminject.setups.OneFlowFieldSetup'
     base_parser = argparse.ArgumentParser(add_help=False)
     base_parser.add_argument('-setup', help='A python import path to a Setup subclass that defines the experiment.',
-                             type=str)
+                             type=str, default=DEFAULT_SETUP)
     base_args, __ = base_parser.parse_known_args()
 
     parser = argparse.ArgumentParser(prog='cminject',
@@ -94,7 +95,7 @@ def main():
     parser.add_argument('-l', '--loglevel', choices={'debug', 'info', 'warning', 'error', 'critical'}, type=str)
 
     parser.set_defaults(
-        setup='cminject.setups.one_flow_field.OneFlowFieldSetup',
+        setup=DEFAULT_SETUP,
         time_interval=[0.0, 1.8, 1e-6],
         loglevel='warning',
         chunksize=1  # same as None according to multiprocessing docs
