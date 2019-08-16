@@ -1,7 +1,7 @@
 #!/usr/bin/env python3.4
 # -*- coding: utf-8; fill-column: 100 -*-
 #
-# Copyright (C) 2008,2017 Jochen Küpper <jochen.kuepper@cfel.de>
+# Copyright (C) 2008,2017,2019 Jochen Küpper <jochen.kuepper@cfel.de>
 
 
 import sys
@@ -26,13 +26,13 @@ if sys.version_info < (3,6):
     sys.exit('Sorry, Python < 3.6 is not supported')
 
 
-package_dir = {"": "lib"}
-packages = find_packages(where="lib")
+package_dir = {'': 'lib'}
+packages = find_packages(where='lib')
 
-provides = [
-    'cminject',
-    'txt_to_hdf5',
-    'visualize'
+scripts = [
+    'bin/cminject',
+    'bin/cminject_txt-to-hdf5',
+    'bin/cminject_visualize'
 ]
 
 install_requires = [
@@ -46,27 +46,36 @@ install_requires = [
 ]
 
 extensions = [
-    Extension("cminject.utils.cython_interpolation",
-              ["lib/cminject/utils/cython_interpolation.pyx"],
-              include_dirs=[numpy.get_include(), "."])
+    Extension('cminject.utils.cython_interpolation',
+              ['lib/cminject/utils/cython_interpolation.pyx'],
+              include_dirs = [numpy.get_include(), '.'])
 ]
 
 setup(
-    name="cminject",
-    author="Simon Welker, Muhamed Amin and the CFEL-CMI group",
-    author_email="simon.welker@cfel.de",
-    maintainer="Muhamed Amin and the CFEL-CMI group",
-    maintainer_email="muhamed.amin@cfel.de",
-    url="https://stash.desy.de/projects/CMIFLY/repos/cmi-injector/browse",
-    description="A framework for particle injection trajectory simulations in different force fields",
-    version="0.1.0",
-    long_description=long_description,
-    license="GPL",
-    package_dir=package_dir,
-    packages=packages,
-    scripts=None,
-    provides=provides,
-    python_requires='>=3.7',
-    install_requires=install_requires,
-    ext_modules=cythonize(extensions)
+    name = 'cminject',
+    version = '0.1.0',
+    description = 'A framework for particle injection trajectory simulations in different force fields',
+    long_description = long_description,
+    author = 'Simon Welker, Muhamed Amin, and the CFEL-CMI group',
+    author_email = 'simon.welker@cfel.de',
+    maintainer = 'CFEL-CMI group',
+    maintainer_email = 'cminject@cfel.de', # need to set up an email list with that name ;-)
+    url = 'https://stash.desy.de/projects/CMIFLY/repos/cmi-injector/browse',
+    package_dir = package_dir,
+    packages = packages,
+    scripts = scripts,
+    python_requires = '>=3.7',
+    install_requires = install_requires,
+    ext_modules = cythonize(extensions),
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Microsoft :: Windows',
+        'Operating System :: POSIX',
+        'Operating System :: Unix',
+        'Programming Language :: Python',
+    ],
 )
