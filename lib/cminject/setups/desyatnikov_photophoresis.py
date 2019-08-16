@@ -37,13 +37,13 @@ class DesyatnikovVortexLaserDevice(Device):
     def z_boundary(self) -> Tuple[float, float]:
         return self.boundary.z_boundary
 
-    def __init__(self, rmin, rmax, zmin, zmax):
+    def __init__(self, rmin, rmax, zmin, zmax, beam_power):
         pp_field = DesyatnikovPhotophoreticLaserField(
             gas_temperature=293.15,
             gas_viscosity=1.76e-5,
             gas_thermal_conductivity=0.02546,  # W/(m*K) for nitrogen
             gas_density=1.161,  # mg/(cm^3) for nitrogen
-            beam_power=0.01,  # W
+            beam_power=beam_power,  # W
             beam_waist_radius=8.4e-6,  # m
         )
         self.fields: List[Field] = [pp_field]
@@ -56,7 +56,7 @@ class DesyatnikovVortexLaserDevice(Device):
 class DesyatnikovPhotophoresisSetup(Setup):
     @staticmethod
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
-        devices = [DesyatnikovVortexLaserDevice(*args.boundary)]
+        devices = [DesyatnikovVortexLaserDevice(*args.boundary, beam_power=args.beam_power)]
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
         sources = [VariableDistributionSource(main_args.nof_particles, position=args.position, velocity=args.velocity,
                                               radius=args.radius, rho=args.rho,
@@ -83,15 +83,17 @@ class DesyatnikovPhotophoresisSetup(Setup):
                             type=float)
         parser.add_argument('-mu', '--thermal-conductivity', help='Thermal conductivity of the particles.',
                             type=float)
+        parser.add_argument('-bp', '--beam-power', help='Power of the laser beam in watts',
+                            type=float)
 
         parser.add_argument('-b', '--boundary', help='Boundary (rmin, rmax, zmin, zmax) of the experiment.',
                             type=float, nargs=4)
 
         parser.set_defaults(
-            time_interval=[0.0, 1.0, 1e-5],
-            boundary=[-1e-5, 1e-5, -0.01, 0.05],
+            boundary=[-1e-3, 1e-3, -0.01, 0.05],
             thermal_conductivity=0.0266,
             rho=1775.0,
+            beam_power=0.01,
             loglevel='warning',
             chunksize=1,  # same as None according to multiprocessing docs
         )
