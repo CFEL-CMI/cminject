@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# This file is part of CMInject.
+# It is a reference implementation of a subset of possible experimental setups, together with command line argument
+# parsing. Its purpose is to allow those simulations to be run without additional code needing to be written, and to
+# showcase how the setup is created so people can extend it or write more complex setups.
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# If you use this program for scientific work, you should correctly reference it; see LICENSE file for details.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program. If not, see
+# <http://www.gnu.org/licenses/>.
+
+"""
+All the library code for CMInject lives in this module.
+"""
+
+__all__ = ['definitions', 'setups', 'tools', 'utils', 'experiment']
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:
