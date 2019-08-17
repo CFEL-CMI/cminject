@@ -45,10 +45,10 @@ class VortexBeamPhotophoreticForceField(Field, ABC):
         :param r: The polar radius in the plane transverse to the optical Z axis
         :param z: The position on the optical Z axis
         """
-        z_0 = pi * self.beam_waist_radius ** 2 / self.beam_lambda
+        z_0 = 2 * pi * self.beam_waist_radius**2 / self.beam_lambda
         # Note in Niko's thesis: "Change in waist over spherical surface may not be necessary"
-        w = self.beam_waist_radius * np.sqrt(1 + (z / z_0) ** 2)
-        intensity = (4 * self.beam_power / pi) * r**2 / w**4 * np.exp(-2 * r**2 / w**2)
+        w = self.beam_waist_radius * np.sqrt(1 + (z / z_0)**2)
+        intensity = (self.beam_power / pi) * (r**2 / w**4) * np.exp(-r**2 / w**2)
         return intensity
 
 
