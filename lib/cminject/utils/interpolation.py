@@ -86,34 +86,41 @@ def split_at_inflections(a: np.array) -> Tuple[List[np.array], np.array]:
     """
     Splits a np.array into multiple pieces based on where the pairwise differences of the elements change sign,
     i.e. the inflection points of a curve going through the points. The resulting pieces are either monotonically
-    increasing or decreasing, but not strictly (i.e. there are no splits at the same value occurring twice).
+    increasing or decreasing, but not necessarily strictly (i.e. there are no splits at the same value occurring twice).
 
-    Useful for interpolating through a curve since multiple interpolating functions can be generated from the result.
+    Useful for interpolating through a curve since multiple interpolating functions for one curve can be generated
+    from the result.
 
     :param a: The array to split as described.
     :return: A 2-tuple of:
-        - A list of arrays, each being monotonically increasing or decreasing (but not strictly).
+        - A list of arrays, each being monotonically increasing or decreasing (not necessarily strictly).
         - The indices where the splits occurred.
     """
+    # Get the pairwise differences
     diffs = np.sign(np.diff(a))
+    # Find the positions of where the sign of those differences, also compared pairwise, changed
     changes = ((np.roll(diffs, 1) - diffs) != 0)
     changes[0] = False  # don't compare first to last
+    # Get the indices of where the changes occurred
     idxs = np.where(changes)[0]  # [0] since there is only one dimension
+    # Split the input array at those indices, and return the split array along with the indices
     return np.split(a, idxs), idxs
 
 
-def reconstruct_detector_hits(trajectories: np.array, z: float, interpolation_kind: str = 'linear') \
-        -> List[float]:
+def reconstruct_detector_hits(trajectories: np.array, z: float, interpolation_kind: str = 'linear') -> np.array:
     """
-    Reconstructs x/y/... positions at a given z position along a list of trajectories, based on interpolating on each
-    function piece of all trajectory curves.
+    Reconstructs measured quantities (e.g. x/y positions) at a given z position from list of trajectories,
+    based on interpolating on each function piece of all trajectory curves.
 
     :param trajectories: The set of trajectories, which should be a (d, n)-shaped np.array, where d is the number
-        of dimensions and n is the number of recorded positions along the trajectory.
-    :param z: The z position to reconstruct x/y/... positions at.
+        of interpolated quantities and n is the number of recorded points in the trajectory.
+    :param z: The z position to reconstruct the quantities at.
     :param interpolation_kind: The kind of interpolation to use. 'linear' by default.
         Refer to scipy.interpolate.interp1d for more information, as this is the interpolator used.
-    :return: A list of all x/y/... positions as arrays, interpolated at the given z position.
+    :return: A (d, N)-shaped array of all interpolated quantities at the given Z position, where d is the number
+        of interpolated quantities and 0 <= N is the number of points that could be reconstructed. N will be smaller
+        than n if at least one trajectory did not pass through the given z position, and it can be larger than n if
+        some trajectories passed through the given z position multiple times.
     """
     hit_xys = []
 
@@ -140,7 +147,7 @@ def reconstruct_detector_hits(trajectories: np.array, z: float, interpolation_ki
             except ValueError:
                 pass  # z was not in the function piece we're looking at
 
-    return hit_xys
+    return np.array(hit_xys).transpose()
 
 
 ### Local Variables:
