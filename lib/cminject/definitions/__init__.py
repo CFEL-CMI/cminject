@@ -16,7 +16,10 @@
 # <http://www.gnu.org/licenses/>.
 
 __all__ = ['base', 'boundaries', 'detectors', 'devices', 'fields',
-           'particles', 'property_updaters', 'result_storage', 'sources']
+           'particles', 'property_updaters', 'result_storage', 'sources',
+
+           'Boundary', 'Detector', 'Device', 'Field', 'NDimensional', 'Particle', 'ParticleDetectorHit',
+           'PropertyUpdater', 'ResultStorage', 'Source', 'ZBounded']
 from .base import Boundary, Detector, Device, Field, NDimensional, Particle, ParticleDetectorHit, \
     PropertyUpdater, ResultStorage, Source, ZBounded
 
