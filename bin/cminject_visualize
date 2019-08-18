@@ -20,7 +20,7 @@ import logging
 
 import matplotlib.pyplot as plt
 
-from cminject.tools.visualization import DetectorHistogramVisualizer, TrajectoryVisualizer
+from cminject.tools.visualization.visualizers import DetectorHistogramVisualizer, TrajectoryVisualizer
 
 if __name__ == '__main__':
     def comma_tuple(x):
