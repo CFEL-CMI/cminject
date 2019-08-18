@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 import os
-from typing import List
+from typing import List, Union, Tuple
 
 import h5py
 import numpy as np
@@ -89,6 +89,37 @@ class HDF5ResultStorage(ResultStorage):
                 if hits:
                     h5f[f'detector_hits/{detector_id}'] = np.array([hit.full_properties for hit in hits])
                     h5f[f'detector_hits/{detector_id}'].attrs['description'] = hits[0].full_properties_description
+
+    def get_trajectories(self, return_velocities: bool = False)\
+            -> Union[List[np.array], Tuple[List[np.array], List[np.array]]]:
+        """
+        Returns all trajectories, which will be either one list of np.arrays (if `return_velocities` is False)
+        containing each trajectory as an np.array of recorded positions, or a tuple of two such lists, the first
+        containing each trajectory's positions and the second containing each trajectory's velocities (if
+        `return_velocities` is True). If two lists are returned, they will match each other in length.
+
+        :param return_velocities: Whether to also return the velocities in a separate list of np.arrays.
+        :return: Either one list of np.arrays or a tuple of two such lists, as described in more detail above.
+        """
+        trajectories = []
+        velocities = []
+
+        with h5py.File(self.filename, self.mode) as h5f:
+            dims = h5f.attrs['dimensions']
+            for particle_id in h5f['particles']:
+                if 'trajectory' in h5f[f'particles/{particle_id}'].keys():
+                    trajectory = h5f[f'particles/{particle_id}/trajectory'][:]
+                    trajectory_positions = trajectory[:, 1:dims + 1].transpose()
+                    trajectory_velocities = trajectory[:, dims + 1:dims * 2 + 1].transpose()
+                    trajectories.append(trajectory_positions)
+                    if return_velocities:
+                        velocities.append(trajectory_velocities)
+                    # ax.plot(*trajectory_positions, color='grey')
+
+        if return_velocities:
+            return trajectories, velocities
+        else:
+            return trajectories
 
 
 ### Local Variables:
