@@ -26,6 +26,7 @@ import importlib
 from typing import Type
 
 from cminject.definitions.property_updaters import TrajectoryPropertyUpdater
+from cminject.definitions.result_storage import HDF5ResultStorage
 from cminject.setups.base import Setup
 from cminject.utils.args import natural_number
 
@@ -136,10 +137,6 @@ def main():
     logging.basicConfig(format='%(levelname)s:[%(filename)s/%(funcName)s] %(message)s',
                         level=getattr(logging, args.loglevel.upper()))
 
-    # Verify that the output file doesn't already exist, let's avoid overwriting existing data
-    if os.path.isfile(args.output_file):
-        raise ValueError("Output file already exists! Please delete or move the existing file.")
-
     # Try retrieving the setup class via importlib, then use it to parse the args the setup needs, and do (optional)
     # validation on them.
     setup_cls = get_setup_class(args.setup)
@@ -151,18 +148,28 @@ def main():
     logging.info("Setting up experiment...")
     experiment = setup_cls.construct_experiment(args, setup_args)
 
+    # Let's use HDF5ResultStorage if there was no ResultStorage set by the setup's construct_experiment method
+    if not experiment.result_storage:
+        experiment.result_storage = HDF5ResultStorage(args.output_file, mode='w')
+
     # This is a bit of a special case that should be allowed to be enabled/disabled independent of the setup,
-    # and it makes sense to always have this property updater run _after_ all others
+    # and it makes sense to always have this property updater run _after_ all others, so it's handled separately
     if args.store_trajectories:
         experiment.property_updaters += [TrajectoryPropertyUpdater()]
 
-    experiment.run_with_output(
-        args.output_file,
+    # Log some basic info and start running.
+    t_start, t_end, dt = experiment.time_interval
+    logging.info(f"Simulating in {experiment.number_of_dimensions}D space, "
+                 f"from t0={t_start} to {t_end} with dt={dt}.")
+    logging.info(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
+    logging.info("Running experiment...")
+    experiment.run(
         single_threaded=args.single_threaded,
         chunksize=args.chunksize,
         processes=args.processes,
         loglevel=args.loglevel
     )
+    logging.info("Done running experiment. Storing results...")
 
 
 if __name__ == '__main__':
