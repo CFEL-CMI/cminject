@@ -14,7 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
-
+import os
 from typing import List
 
 import h5py
@@ -25,20 +25,24 @@ from .base import ResultStorage, Particle
 
 class HDF5ResultStorage(ResultStorage):
     """
-    Stores the results of an Experiment in an HDF5 file, with the following stored:
+    Stores the results of an Experiment in an HDF5 file. The following keys will be available:
 
-    - trajectories:
+    - particles/{i}:
 
-      - {i_0, i_1, ..., i_n}: The trajectory of the particle with identifier i.
+      - initial_position: The initial phase space position of the particle.
+      - final_position: The final phase space position of the particle.
+      - trajectory: The trajectory of the particle, which is an (n, d)-shaped array with an attached `description`
+          string attribute containing names/descriptions for each column delimited by commas. n is the number of points
+          along the trajectory, and d is the number of physical quantities (position, velocity, temperature, etc.)
+          stored at each point.
 
-    - detector_hits:
+    - detector_hits/{j}: All hits on the detector j. What's actually stored here is based on the array of the
+        `full_properties` field of each `ParticleDetectorHit`, so depends on the implementation used. The default
+        implementation for `ParticleDetectorHit` stores the concatenated array of [position, properties] of the particle
+        at each hit. A `description` field should be attached similar to the one in `particles/i/trajectory`.
 
-      - {j_0, j_1, ..., j_m}: All hits on the detector j. What's actually stored here is an
-        array of the `full_properties` field of each `ParticleDetectorHit`.
-
-    Each entry as mentioned above also has an attached `description` attribute which matches
-    the stored array in length (if the class implementations have been done according to documentation),
-    and describes/identifies the value at each position in the array.
+    The root node will also have a `dimensions` attribute attached, which is an integer denoting the number of spatial
+    dimensions used in the simulation.
 
     .. note::
         For efficient and predictable storage, it's assumed that all detector hits on each detector return
@@ -46,11 +50,23 @@ class HDF5ResultStorage(ResultStorage):
         implementation of a detector anyways. If you do find you need to deviate from this, store an array of the
         maximum necessary length for each hit and fill out values you can't have for a specific hit with `np.nan`.
     """
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, mode: str = 'r'):
+        """
+        Constructs a HDF5ResultStorage object.
+
+        :param filename: The filename to store in/read from.
+        :param mode: The mode to open the file with. 'r' by default to avoid overwriting data when using the convenience
+            methods to read data from a written file, so if an instance should be used to actually store data,
+            'w' or similar must be passed explicitly (refer to `h5py.File` docs for available modes).
+        """
         self.filename = filename
+        self.mode = mode
+        # Verify that the output file doesn't already exist, let's avoid overwriting existing data
+        if self.mode != 'r' and os.path.isfile(filename):
+            raise ValueError("Output file already exists! Please delete or move the existing file.")
 
     def store_results(self, particles: List[Particle]) -> None:
-        with h5py.File(self.filename, 'w') as h5f:
+        with h5py.File(self.filename, self.mode) as h5f:
             dimensions = len(particles[0].spatial_position)
             h5f.attrs['dimensions'] = dimensions
             detector_hits = {}

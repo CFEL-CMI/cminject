@@ -22,7 +22,7 @@ from typing import List, Tuple, Optional
 
 import numpy as np
 from cminject.definitions.base import Particle, Source, Device, Detector, ZBounded, \
-    PropertyUpdater, infinite_interval
+    PropertyUpdater, infinite_interval, ResultStorage
 from cminject.definitions.result_storage import HDF5ResultStorage
 from scipy.integrate import ode
 
@@ -182,7 +182,7 @@ class Experiment:
     """"""
 
     def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
-                 property_updaters: List[PropertyUpdater] = None,
+                 property_updaters: List[PropertyUpdater] = None, result_storage: ResultStorage = None,
                  time_interval: Tuple[float, float, float] = (0.0, 1.8, 1.0e-6),
                  z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0,
                  number_of_dimensions: int = 3, seed=None):
@@ -195,6 +195,8 @@ class Experiment:
         :param detectors: The list of Detectors in the experimental setup.
         :param property_updaters: The list of PropertyUpdaters used to update different properties on the particles
             in each step.
+        :param result_storage: The ResultStorage to use for the experiment's results. Can be None, in which case
+            the results will not be stored and only returned.
         :param time_interval: The time interval to run the experiment in, in the shape of (`t_start`, `t_end`, `dt`).
             The simulation will run in the time interval [`t_start`, `t_end`] with time step `dt`.
         :param z_boundary: (Optional) If passed, the Z boundary of the entire experimental setup. Particles will not
@@ -210,6 +212,7 @@ class Experiment:
         self.sources = sources
         self.detectors = detectors
         self.property_updaters = property_updaters
+        self.result_storage = result_storage
 
         # Store the number of dimensions and set it on all relevant objects
         self.number_of_dimensions = number_of_dimensions
@@ -295,32 +298,10 @@ class Experiment:
                 pool.close()
                 pool.join()
 
+        if self.result_storage is not None:
+            self.result_storage.store_results(particles)
+
         return particles
-
-    def run_with_output(self, outfile: str, *args, **kwargs) -> List[Particle]:
-        """
-        Like .run(), but stores the resulting particle list in an HDF5 file. Also does additional logging.
-
-        :param outfile: The path of the output file to create and write to.
-        :param args: The positional arguments that are passed on to run(). See docs there for what's needed.
-        :param kwargs: The keyword arguments that are passed on to run(). See docs there for what's needed.
-        :return: See docs for run().
-        """
-        if os.path.isfile(outfile):
-            raise ValueError("Output file already exists! Please delete or move the existing file.")
-
-        t_start, t_end, dt = self.time_interval
-        logging.info(f"Simulating in {self.number_of_dimensions}D space, "
-                     f"from t0={t_start} to {t_end} with dt={dt}.")
-
-        logging.info(f"The total Z boundary of the experiment is {self.z_boundary}.")
-        logging.info("Running experiment...")
-        result_particles = self.run(*args, **kwargs)
-        logging.info("Done running experiment. Storing results...")
-        HDF5ResultStorage(outfile).store_results(result_particles)
-        logging.info(f"Saved results to {outfile}.")
-
-        return result_particles
 
     @staticmethod
     def _gather_z_boundary(z_bounded_objects: List[ZBounded]) -> Tuple[float, float]:
