@@ -229,7 +229,8 @@ class TrajectoryVisualizer(Visualizer):
 
         # Plot all trajectories that are present
         trajectories = storage.get_trajectories()
-        self._plot_traj_colored(trajectories, ax, dimensions, cmap='viridis')
+        if trajectories:
+            self._plot_traj_colored(trajectories, ax, dimensions, cmap='viridis')
 
         # Plot all particle initial and final positions
         initial, final = storage.get_initial_and_final_positions()
@@ -240,14 +241,15 @@ class TrajectoryVisualizer(Visualizer):
         self._plot_detector_hits(detectors, ax, dimensions)
 
         # Set the x/y/(z) limits to contain all trajectories
-        all_positions = np.concatenate(trajectories, axis=1)[1:dimensions + 1]
-        X = all_positions[0]
-        Y = all_positions[1]
-        ax.set_xlim((np.min(X), np.max(X)))
-        ax.set_ylim((np.min(Y), np.max(Y)))
-        if dimensions == 3:
-            Z = all_positions[2]
-            ax.set_zlim((np.min(Z), np.max(Z)))
+        if trajectories:
+            all_positions = np.concatenate(trajectories, axis=1)[1:dimensions + 1]
+            X = all_positions[0]
+            Y = all_positions[1]
+            ax.set_xlim((np.min(X), np.max(X)))
+            ax.set_ylim((np.min(Y), np.max(Y)))
+            if dimensions == 3:
+                Z = all_positions[2]
+                ax.set_zlim((np.min(Z), np.max(Z)))
 
         fig.tight_layout()
         return fig, ax
