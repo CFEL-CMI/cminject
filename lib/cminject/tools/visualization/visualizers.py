@@ -79,7 +79,6 @@ class DetectorHistogramVisualizer(Visualizer):
     # describes a dimension as either a string or a callable that takes a list of np.arrays and returns one np.array
     # (a function that works on a list of hits and returns an array of values, one per hit)
 
-
     def __init__(self, filename: str, dimension_pairs: List[Tuple[DimensionType, DimensionType]],
                  colormap: str = 'viridis', highlight_origin: bool = True,
                  bins: int = 100, bins_1d: int = 30):
@@ -272,10 +271,13 @@ class TrajectoryVisualizer(Visualizer):
         SEGMENTS = None
 
         for i in range(len(trajectories)):
-            t = trajectories[i]
-            p = t[1:dimensions+1]
-            v = t[dimensions+1:dimensions*2+1]
-            vmag = np.linalg.norm(v.transpose(), axis=1)
+            traj = trajectories[i]
+            t = traj[0]
+            p = traj[1:dimensions+1]
+
+            diff = np.diff(p)
+            dt = np.diff(t)
+            vmag = np.where(dt == 0, 0, np.divide(np.linalg.norm(diff, axis=0), dt))
 
             if dimensions == 2:
                 points = p.T.reshape(-1, 1, 2)
