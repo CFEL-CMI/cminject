@@ -18,6 +18,7 @@ import logging
 import multiprocessing
 import os
 import random
+import warnings
 from typing import List, Tuple, Optional
 
 import numpy as np
@@ -117,17 +118,9 @@ def simulate_particle(particle: Particle) -> Particle:
     t_start, t_end, dt = TIME_INTERVAL
     np.random.seed(BASE_SEED + int(particle.identifier))  # reseed RandomState from the base seed and particle ID
 
-    # Run all property updaters once with the start time
-    for property_updater in PROPERTY_UPDATERS:
-        property_updater.update(particle, t_start)
-
-    # Run all detectors once
-    for detector in DETECTORS:
-        detector.try_to_detect(particle)
-
     # Construct integrals
     integral = ode(spatial_derivatives)
-    integral.set_integrator('lsoda')  # TODO maybe use other integrators?
+    integral.set_integrator('lsoda')
     integral.set_initial_value(particle.position, t_start)
     integral.set_f_params(particle, DEVICES, NUMBER_OF_DIMENSIONS)
     logging.info(f"\tSimulating particle {particle.identifier}...")
@@ -183,7 +176,7 @@ class Experiment:
 
     def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
                  property_updaters: List[PropertyUpdater] = None, result_storage: ResultStorage = None,
-                 time_interval: Tuple[float, float, float] = (0.0, 1.8, 1.0e-6),
+                 time_interval: Tuple[float, float] = (0.0, 1.8), time_step: float = None,
                  z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0,
                  number_of_dimensions: int = 3, seed=None):
         """
@@ -197,8 +190,9 @@ class Experiment:
             in each step.
         :param result_storage: The ResultStorage to use for the experiment's results. Can be None, in which case
             the results will not be stored and only returned.
-        :param time_interval: The time interval to run the experiment in, in the shape of (`t_start`, `t_end`, `dt`).
-            The simulation will run in the time interval [`t_start`, `t_end`] with time step `dt`.
+        :param time_interval: The time interval to run the experiment in, as a 2-tuple of (`t_start`, `t_end`).
+        :param time_step: The time step to use. If None is passed, a time step is picked based on the initial particle
+            velocities.
         :param z_boundary: (Optional) If passed, the Z boundary of the entire experimental setup. Particles will not
             be simulated outside of this boundary. If not passed, the minimal interval enclosing all Devices and
             Detectors along the Z axis will be calculated and used as the Z boundary.
@@ -219,8 +213,7 @@ class Experiment:
         for dimensional_object in (self.devices + self.sources + self.detectors + self.property_updaters):
             dimensional_object.set_number_of_dimensions(self.number_of_dimensions)
 
-        # Store the time interval and the seed, use the seed to seed numpy's RandomState
-        self.time_interval = time_interval
+        # Use the seed value to seed numpy's RandomState
         if seed is None:
             seed = np.random.randint(2 ** 31)
         self.seed = seed
@@ -230,7 +223,7 @@ class Experiment:
         particle_types = set()  # Remember a set of particle types to raise an error if there are multiple
         self.particles = []
         for source in self.sources:
-            source_particles = source.generate_particles(self.time_interval[0])  # 0 is t_start
+            source_particles = source.generate_particles(time_interval[0])  # initialize with t_0
             if source_particles:
                 # FIXME assuming a source only generates one particle type
                 particle_types.add(type(source_particles[0]))
@@ -245,6 +238,14 @@ class Experiment:
 
         # Shuffle the particles list to avoid particles that take long to simulate neighbouring each other in the list
         random.shuffle(self.particles)
+
+        # Store the time interval with the time step, determining an appropriate time step if none was passed explicitly
+        if time_step is None:
+            # This is a crude empirical approximation, better to pass a time step explicitly
+            time_step = 10e-6/np.mean([np.linalg.norm(p.velocity) for p in self.particles])
+            warnings.warn(f"Determining time step automatically, set to {time_step}. This might be inappropriate "
+                          f"for your experiment conditions, it's better to set one explicitly.")
+        self.time_interval = time_interval[0], time_interval[1], time_step
 
         # Initialise the min/max Z values amongst all detectors, and amongst all devices
         self.detectors_z_boundary = self._gather_z_boundary(self.detectors)

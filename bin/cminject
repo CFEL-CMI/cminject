@@ -108,8 +108,10 @@ def main():
     parser.add_argument('-n', '--nof-particles', help='The number of particles to simulate',
                         type=natural_number, required=True)
     parser.add_argument('-t', '--time-interval',
-                        help='The time interval to run the simulation within, as a 3-list (t_start, t_end, dt)',
-                        type=float, nargs=3)
+                        help='The time interval to run the simulation within, as a 2-list (t_start, t_end)',
+                        type=float, nargs=2)
+    parser.add_argument('-ts', '--time-step',
+                        help='The macro time step to run the simulation with.', type=float)
     parser.add_argument('-o', '--output-file', help='Output filename for phase space (hdf5 format)',
                         type=str, required=True)
     parser.add_argument('-T', '--store-trajectories', help='Store trajectories?', action='store_true')
@@ -125,7 +127,8 @@ def main():
 
     parser.set_defaults(
         setup=DEFAULT_SETUP,
-        time_interval=[0.0, 1.8, 1e-6],
+        time_interval=[0.0, 1.0],
+        time_step=None,
         chunksize=1,  # same as None according to multiprocessing docs
         loglevel='warning',
         processes=os.cpu_count()
