@@ -23,7 +23,7 @@ from typing import Tuple, List
 
 import numpy as np
 
-from cminject.definitions import Device, Field
+from cminject.definitions import Device, Field, PropertyUpdater, Particle
 from cminject.definitions.boundaries import CuboidBoundary
 from cminject.definitions.detectors import SimpleZDetector
 from cminject.definitions.fields.function_field import FunctionField
@@ -40,36 +40,50 @@ class DesyatnikovVortexLaserDevice(Device):
     def z_boundary(self) -> Tuple[float, float]:
         return self.boundary.z_boundary
 
-    def __init__(self, rmin, rmax, zmin, zmax, beam_power):
-        pp_field = DesyatnikovPhotophoreticLaserField(
-            gas_temperature=293.15,
-            gas_viscosity=1.76e-5,
-            gas_thermal_conductivity=0.02546,  # W/(m*K) for nitrogen
-            gas_density=1.161,  # kg/(m^3) for nitrogen
-            beam_power=beam_power,  # W
-            beam_waist_radius=8.4e-6,  # m
-        )
+    def __init__(self, r_boundary, z_boundary,  **pp_field_args):
+        pp_field = DesyatnikovPhotophoreticLaserField(**pp_field_args)
         gravity_field = FunctionField(lambda p, t: np.array([0.0, -9.81]))
 
         self.fields: List[Field] = [pp_field, gravity_field]
         self.boundary: CuboidBoundary = CuboidBoundary(
-            intervals=[(rmin, rmax), (zmin, zmax)]
+            intervals=[r_boundary, z_boundary]
         )
         super().__init__(fields=self.fields, boundary=self.boundary)
+
+
+class MarkAsLostWhenVZIsPositivePropertyUpdater(PropertyUpdater):
+    """
+    Marks particles as lost when their z coordinate and v_z are both positive.
+    Since the beam only drives particles away from the source position in this area, we can consider the particles lost.
+    """
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        pass
+
+    def update(self, particle: Particle, time: float) -> bool:
+        if particle.spatial_position[-1] > 0.0 and particle.velocity[-1] > 0.0:
+            particle.lost = True
+        return False
 
 
 class DesyatnikovPhotophoresisSetup(Setup):
     @staticmethod
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
-        devices = [DesyatnikovVortexLaserDevice(*args.boundary, beam_power=args.beam_power)]
+        devices = [DesyatnikovVortexLaserDevice(
+            r_boundary=args.boundary[:2], z_boundary=args.boundary[2:],
+            gas_temperature=args.gas_temperature, gas_viscosity=args.gas_viscosity,
+            gas_thermal_conductivity=args.gas_thermal_conductivity, gas_density=args.gas_density,
+            beam_power=args.beam_power, beam_waist_radius=args.beam_waist_radius
+        )]
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
-        sources = [VariableDistributionSource(main_args.nof_particles, position=args.position, velocity=args.velocity,
-                                              radius=args.radius, rho=args.rho,
-                                              subclass=ThermallyConductiveSphericalParticle,
-                                              thermal_conductivity=args.thermal_conductivity)]
-        return Experiment(devices=devices, detectors=detectors, sources=sources, property_updaters=[],
-                          time_interval=main_args.time_interval, delta_z_end=0.0, seed=main_args.seed,
-                          number_of_dimensions=2)
+        sources = [VariableDistributionSource(
+            main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius, rho=args.rho,
+            subclass=ThermallyConductiveSphericalParticle, thermal_conductivity=args.thermal_conductivity
+        )]
+        property_updaters = [MarkAsLostWhenVZIsPositivePropertyUpdater()]
+        return Experiment(
+            devices=devices, detectors=detectors, sources=sources, property_updaters=property_updaters,
+            time_interval=main_args.time_interval, delta_z_end=0.0, seed=main_args.seed, number_of_dimensions=2
+        )
 
     @staticmethod
     def get_parser() -> SetupArgumentParser:
@@ -82,25 +96,37 @@ class DesyatnikovPhotophoresisSetup(Setup):
         parser.add_argument('-v', '--velocity',
                             help='Distribution description for the velocity.',
                             nargs='*', type=dist_description)
-        parser.add_argument('-r', '--radius', help='Distribution description for the radius.',
-                            type=dist_description)
-        parser.add_argument('-rho', '--density', help='Density of the particles.',
-                            type=float)
-        parser.add_argument('-mu', '--thermal-conductivity', help='Thermal conductivity of the particles.',
-                            type=float)
-        parser.add_argument('-bp', '--beam-power', help='Power of the laser beam in watts',
-                            type=float)
+        parser.add_argument('-r', '--radius', help='Distribution description for the radius.', type=dist_description)
+        parser.add_argument('-rho', '--density', help='Density of the particles.', type=float)
+        parser.add_argument('-mu', '--thermal-conductivity', help='Thermal conductivity of the particles.', type=float)
+
+        parser.add_argument('-bp', '--beam-power', help='Power of the laser beam in watts', type=float)
+        parser.add_argument('-br', '--beam-waist-radius', help='The waist radius of the LG01 beam (w_0)', type=float)
+
+        parser.add_argument('-gt', '--gas-temperature', help='The temperature of the surrounding gas.', type=float)
+        parser.add_argument('-gv', '--gas-viscosity', help='The dynamic viscosity of the surrounding gas.', type=float)
+        parser.add_argument('-gmu', '--gas-thermal-conductivity',
+                            help='The thermal conductivity of the surrounding gas.', type=float)
+        parser.add_argument('-gd', '--gas-density', help='The density of the surrounding gas.', type=float)
 
         parser.add_argument('-b', '--boundary', help='Boundary (rmin, rmax, zmin, zmax) of the experiment.',
                             type=float, nargs=4)
 
         parser.set_defaults(
+            # Assume carbon nanofoam spheres used in Desyatnikov 2009
+            rho=10.0,  # [kg/(m^3)]
+            thermal_conductivity=26.6e-3,  # [W/(m*K)]
+
+            # Assume air at 293.15K, all values taken from https://www.engineeringtoolbox.com/
+            gas_temperature=293.15,  # [K]
+            gas_viscosity=1.82e-5,  # [Pa*s]
+            gas_thermal_conductivity=25.87e-3,  # [W/(m*K)]
+            gas_density=1.204,  # [kg/(m^3)]
+
+            beam_power=0.01,  # [W]
+            beam_waist_radius=8.4e-6,  # [m]
+
             boundary=[-1e-3, 1e-3, -0.01, 0.05],
-            thermal_conductivity=0.0266,
-            rho=1775.0,
-            beam_power=0.01,
-            loglevel='warning',
-            chunksize=1,  # same as None according to multiprocessing docs
         )
         return parser
 
