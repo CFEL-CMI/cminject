@@ -21,9 +21,12 @@
 import argparse
 from typing import Tuple, List
 
+import numpy as np
+
 from cminject.definitions import Device, Field
 from cminject.definitions.boundaries import CuboidBoundary
 from cminject.definitions.detectors import SimpleZDetector
+from cminject.definitions.fields.function_field import FunctionField
 from cminject.definitions.fields.laser_fields import DesyatnikovPhotophoreticLaserField
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.definitions.sources import VariableDistributionSource
@@ -42,11 +45,13 @@ class DesyatnikovVortexLaserDevice(Device):
             gas_temperature=293.15,
             gas_viscosity=1.76e-5,
             gas_thermal_conductivity=0.02546,  # W/(m*K) for nitrogen
-            gas_density=1.161,  # mg/(cm^3) for nitrogen
+            gas_density=1.161,  # kg/(m^3) for nitrogen
             beam_power=beam_power,  # W
             beam_waist_radius=8.4e-6,  # m
         )
-        self.fields: List[Field] = [pp_field]
+        gravity_field = FunctionField(lambda p, t: np.array([0.0, -9.81]))
+
+        self.fields: List[Field] = [pp_field, gravity_field]
         self.boundary: CuboidBoundary = CuboidBoundary(
             intervals=[(rmin, rmax), (zmin, zmax)]
         )

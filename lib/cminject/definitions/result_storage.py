@@ -15,12 +15,12 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 
 import h5py
 import numpy as np
 
-from .base import ResultStorage, Particle
+from .base import ResultStorage, Particle, ParticleDetectorHit
 
 
 class HDF5ResultStorage(ResultStorage):
@@ -75,7 +75,7 @@ class HDF5ResultStorage(ResultStorage):
         with h5py.File(self.filename, self.mode) as h5f:
             dimensions = len(particles[0].spatial_position)
             h5f.attrs['dimensions'] = dimensions
-            detector_hits = {}
+            detector_hits: Dict[Any, List[ParticleDetectorHit]] = {}
 
             for particle in particles:
                 h5f[f'particles/{particle.identifier}/initial_position'] = np.array(particle.initial_position)

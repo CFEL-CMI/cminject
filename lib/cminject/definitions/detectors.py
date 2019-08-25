@@ -15,20 +15,20 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any, Dict
 
 import numpy as np
 from cminject.definitions.base import Detector, Particle
 
 
 class SimpleZDetector(Detector):
-    def _hit_position(self, particle: Particle) -> Optional[np.array]:
+    def _hit_position(self, position_velocity: np.array) -> Optional[np.array]:
         raise Exception("This should never be called, the implementation should be swapped out by the constructor!")
 
     def __init__(self, identifier: int, z_position: float):
         self.z_position = z_position
         self._z_boundary = (z_position, z_position)
-        self.particle_distances = {}
+        self.particle_distances: Dict[Any, float] = {}
 
         self.number_of_dimensions = 0
 
