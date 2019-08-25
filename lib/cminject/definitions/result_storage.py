@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 import os
-from typing import List, Union, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any
 
 import h5py
 import numpy as np
@@ -66,6 +66,12 @@ class HDF5ResultStorage(ResultStorage):
             raise ValueError("Output file already exists! Please delete or move the existing file.")
 
     def store_results(self, particles: List[Particle]) -> None:
+        """
+        Stores experiment results into an HDF5 file as described in the class docstring.
+
+        :param particles: The list of particles as returned as the result from a finished Experiment run.
+        :return: Nothing.
+        """
         with h5py.File(self.filename, self.mode) as h5f:
             dimensions = len(particles[0].spatial_position)
             h5f.attrs['dimensions'] = dimensions
@@ -89,6 +95,66 @@ class HDF5ResultStorage(ResultStorage):
                 if hits:
                     h5f[f'detector_hits/{detector_id}'] = np.array([hit.full_properties for hit in hits])
                     h5f[f'detector_hits/{detector_id}'].attrs['description'] = hits[0].full_properties_description
+
+    def get_dimensions(self) -> int:
+        """
+        Gets the number of spatial dimensions stored on the HDF5 file. Useful for properly separating out e.g. positions
+        and velocities from the arrays returned by get_trajectories and get_positions.
+
+        :return: The number of spatial dimensions.
+        """
+        with h5py.File(self.filename, self.mode) as h5f:
+            return int(h5f.attrs['dimensions'])
+
+    def get_trajectories(self) -> List[np.array]:
+        """
+        Gets all stored trajectories as a list of np.arrays, each array being (d, n_i)-shaped, where d is the number
+        of measured quantities of the stored results, and n_i is the number of data points along the trajectory
+        of the i-th particle.
+
+        :return: A list of np.arrays as described above.
+        """
+        trajectories = []
+
+        with h5py.File(self.filename, self.mode) as h5f:
+            for particle_id in h5f['particles']:
+                if 'trajectory' in h5f[f'particles/{particle_id}'].keys():
+                    trajectory = h5f[f'particles/{particle_id}/trajectory'][:].transpose()
+                    trajectories.append(trajectory)
+
+        return trajectories
+
+    def get_initial_and_final_positions(self) -> Tuple[np.array, np.array]:
+        """
+        Gets all stored initial and final particle positions.
+
+        :return: A 2-tuple containing:
+
+            - One (d, m)-shaped np.array containing the initial positions
+            - Another (d, m)-shaped np.array containing the final positions
+
+            Here, d is the number of stored quantities for each particle, m is the number of stored particles.
+        """
+        with h5py.File(self.filename, self.mode) as h5f:
+            particles = [h5f['particles'][k] for k in h5f['particles']]
+            initial_positions = np.array([p['initial_position'] for p in particles]).transpose()
+            final_positions = np.array([p['final_position'] for p in particles]).transpose()
+            return initial_positions, final_positions
+
+    def get_detectors(self) -> List[List[np.array]]:
+        """
+        Gets all stored detectors with their hits.
+
+        :return: A list of np.arrays, each np.array corresponding to one detector and containing all hits as a
+            (d, m_i)-shaped array.
+        """
+        detectors = []
+        with h5py.File(self.filename, self.mode) as h5f:
+            if 'detector_hits' in h5f:
+                for detector_id in h5f['detector_hits']:
+                    hits = h5f['detector_hits'][detector_id][:].transpose()
+                    detectors.append(hits)
+        return detectors
 
 
 ### Local Variables:

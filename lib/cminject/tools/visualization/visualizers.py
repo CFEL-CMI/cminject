@@ -21,9 +21,12 @@ from typing import List, Tuple, Any, Callable, Union
 import h5py
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
 from matplotlib.collections import LineCollection
 from matplotlib.figure import Figure
 from matplotlib.ticker import ScalarFormatter
+
+from cminject.definitions.result_storage import HDF5ResultStorage
 
 
 class Visualizer(ABC):
@@ -51,19 +54,18 @@ class Visualizer(ABC):
         pass
 
 
-class MatplotlibVisualizer(Visualizer):
-    """
-    A more concrete visualizer class (with regards to the expected return type of `visualize`).
-
-    Subclasses are expected to return a Matplotlib figure and a set of axes, which the caller is able to do
-    additional modifications (labeling, sizing, ...) on before actually showing the visualization.
-    """
-    @abstractmethod
-    def visualize(self) -> Tuple[Figure, np.ndarray]:
-        pass
+DimensionType = Union[str, Callable[[List[np.array]], np.array]]
 
 
-class DetectorHistogramVisualizer(MatplotlibVisualizer):
+def _get_dims(description: List[str], dims: List[DimensionType], hits: List[np.array]) -> List[np.array]:
+    return [
+        dim(hits) if callable(dim)
+        else hits[np.where(description == dim)[0][0]]
+        for dim in dims
+    ]
+
+
+class DetectorHistogramVisualizer(Visualizer):
     """
     A class to visualize 1D/2D histograms on a detector for arbitrary dimension pairs,
     based on an HDF5 file and Matplotlib.
@@ -76,7 +78,7 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
     """
     # describes a dimension as either a string or a callable that takes a list of np.arrays and returns one np.array
     # (a function that works on a list of hits and returns an array of values, one per hit)
-    DimensionType = Union[str, Callable[[List[np.array]], np.array]]
+
 
     def __init__(self, filename: str, dimension_pairs: List[Tuple[DimensionType, DimensionType]],
                  colormap: str = 'viridis', highlight_origin: bool = True,
@@ -100,17 +102,6 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
         self.highlight_origin = highlight_origin
         self.bins = bins
         self.bins_1d = bins_1d
-
-    @staticmethod
-    def _get_dims(description: List[str],
-                  dims: List[DimensionType],
-                  hits: List[np.array])\
-            -> List[np.array]:
-        return [
-            dim(hits) if callable(dim)
-            else hits[np.where(description == dim)[0][0]]
-            for dim in dims
-        ]
 
     def _vis1d(self, ax, y, label) -> None:
         ax.hist(y, bins=self.bins_1d)
@@ -157,6 +148,10 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
         :return: A Matplotlib figure and a 2-dimensional ndarray of all axes present in the figure.
         """
         with h5py.File(self.filename, 'r') as h5f:
+            if 'detector_hits' not in h5f:
+                fig = plt.figure()
+                return fig, fig.gca()
+
             detectors = h5f['detector_hits']
             detector_count = len(detectors)
             detector_keys = list(detectors.keys())
@@ -175,7 +170,7 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
                     # Find the dimensions' indices and get the correct axis to plot on
                     dim_a, dim_b = self.dimension_pairs[j]
                     try:
-                        x, y = self._get_dims(description, [dim_a, dim_b], hits=hits)
+                        x, y = _get_dims(description, [dim_a, dim_b], hits=hits)
                     except IndexError as e:
                         raise ValueError(f"Could not find dimension {dim_a} or {dim_b}!")
 
@@ -201,7 +196,7 @@ class DetectorHistogramVisualizer(MatplotlibVisualizer):
             return fig, axes
 
 
-class TrajectoryVisualizer(MatplotlibVisualizer):
+class TrajectoryVisualizer(Visualizer):
     """
     Visualizes the initial and final positions of all particles stored in an HDF5 file, along with their trajectories,
     in a 2D or 3D plot (based on the dimensionality of the stored particle positions). Detector hits are also shown.
@@ -209,41 +204,65 @@ class TrajectoryVisualizer(MatplotlibVisualizer):
     Useful to get a general idea of where the particles started and went, but not very useful for data analysis:
     the plots can get rather chaotic and slow (especially in 3D).
     """
-    def _get_trajectories(self, h5f: h5py.File, return_velocities: bool, dimensions: int)\
-            -> Union[Tuple[np.array, np.array], np.array]:
+    def visualize(self) -> Tuple[Figure, Axes]:
         """
-        Gets the trajectory positions, and optionally velocities, from a file given a space dimensionality
-        :param h5f: The h5py.File instance to retrieve the data from
-        :param return_velocities: Whether to also return the velocities or only the positions
-        :param dimensions: The number of spatial dimensions
-        :return: Either one np.array (positions) or a 2-tuple of np.arrays (positions, velocities)
+        Visualizes the results as described in the class.
+        :return: A 2-tuple of (the plt.Figure instance, the plt.Axes instance created to plot)
         """
-        trajectories = []
-        velocities = []
+        storage = HDF5ResultStorage(self.filename, mode='r')
+        dimensions = storage.get_dimensions()
 
-        for particle_id in h5f['particles']:
-            if 'trajectory' in h5f[f'particles/{particle_id}'].keys():
-                trajectory = h5f[f'particles/{particle_id}/trajectory'][:]
-                trajectory_positions = trajectory[:, 1:dimensions+1].transpose()
-                trajectory_velocities = trajectory[:, dimensions+1:dimensions*2+1].transpose()
-                trajectories.append(trajectory_positions)
-                if return_velocities:
-                    velocities.append(trajectory_velocities)
+        if dimensions not in [2, 3]:
+            raise ValueError("Can only plot 2D/3D!")
 
-        if return_velocities:
-            return trajectories, velocities
+        # Construct the figure and axis
+        fig = plt.figure()
+        if dimensions == 3:
+            # this import is not 'unused', it's a magic import that makes all the 3D stuff below possible
+            from mpl_toolkits.mplot3d import Axes3D
+            ax = fig.add_subplot(111, projection='3d')
+            ax.set_zlabel('z')
         else:
-            return trajectories
+            ax = fig.add_subplot(111)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
 
-    def _plot_traj_colored(self, trajs: np.array, vels: np.array, ax: plt.Axes, dimensions: int, cmap: str = 'viridis')\
+        # Plot all trajectories that are present
+        trajectories = storage.get_trajectories()
+        if trajectories:
+            self._plot_traj_colored(trajectories, ax, dimensions, cmap='viridis')
+
+        # Plot all particle initial and final positions
+        initial, final = storage.get_initial_and_final_positions()
+        self._plot_positions(initial, final, ax, dimensions)
+
+        # Plot detector hits
+        detectors = storage.get_detectors()
+        self._plot_detector_hits(detectors, ax, dimensions)
+
+        # Set the x/y/(z) limits to contain all trajectories
+        if trajectories:
+            all_positions = np.concatenate(trajectories, axis=1)[1:dimensions + 1]
+            X = all_positions[0]
+            Y = all_positions[1]
+            ax.set_xlim((np.min(X), np.max(X)))
+            ax.set_ylim((np.min(Y), np.max(Y)))
+            if dimensions == 3:
+                Z = all_positions[2]
+                ax.set_zlim((np.min(Z), np.max(Z)))
+
+        fig.tight_layout()
+        return fig, ax
+
+    @staticmethod
+    def _plot_traj_colored(trajectories: np.array, ax: plt.Axes, dimensions: int, cmap: str = 'viridis')\
             -> LineCollection:
         """
         Plots the trajectories as lines made of colored segments representing the magnitude of
         the corresponding velocity, and also adds a color bar.
 
-        :param trajs: A list of np.arrays, each np.array describing the particle positions with a shape of (d, n_i),
-            where d is the spatial dimensions and n_i the number of points along the trajectory of the i-th particle
-        :param vels: A list of velocities, matching the trajs parameter (1<->1 correspondence).
+        :param trajectories: A list of np.arrays, each np.array containing the full trajectory of the corresponding
+            particle.
         :param ax: The axis (some plt.Axes instance) to plot on.
         :param dimensions: The number of spatial dimensions.
         :param cmap: The colormap to use, 'viridis' by default.
@@ -252,16 +271,17 @@ class TrajectoryVisualizer(MatplotlibVisualizer):
         VMAG = None
         SEGMENTS = None
 
-        for i in range(len(trajs)):
-            t = trajs[i]
-            v = vels[i]
+        for i in range(len(trajectories)):
+            t = trajectories[i]
+            p = t[1:dimensions+1]
+            v = t[dimensions+1:dimensions*2+1]
             vmag = np.linalg.norm(v.transpose(), axis=1)
 
             if dimensions == 2:
-                points = t.T.reshape(-1, 1, 2)
+                points = p.T.reshape(-1, 1, 2)
                 segments = np.concatenate([points[:-1], points[1:]], axis=1)
             elif dimensions == 3:
-                points = t.T.reshape(-1, 1, 3)
+                points = p.T.reshape(-1, 1, 3)
                 segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
             VMAG = vmag if VMAG is None else np.concatenate((VMAG, vmag), axis=0)
@@ -283,87 +303,42 @@ class TrajectoryVisualizer(MatplotlibVisualizer):
 
         return lc
 
-    def _plot_detector_hits(self, h5f: h5py.File, ax: plt.Axes, dimensions: int) -> None:
+    @staticmethod
+    def _plot_detector_hits(detectors: List[np.array], ax: plt.Axes, dimensions: int) -> None:
         """
         Plots the detector hit positions from an HDF5 results file.
 
-        :param h5f: A h5py.File instance
+        :param detectors: A list of np.arrays, each np.array corresponding to one detector and containing all hits
+            on this detector
         :param ax: The axis to plot on
         :param dimensions: The number of spatial dimensions
         :return: Nothing
         """
-        if 'detector_hits' in h5f:
-            for detector_id in h5f['detector_hits']:
-                hits = h5f['detector_hits'][detector_id][:]
-                if dimensions == 3:
-                    ax.scatter(hits[:, 0], hits[:, 1], zs=hits[:, 2], s=10, color='yellow')
-                elif dimensions == 2:
-                    ax.scatter(hits[:, 0], hits[:, 1], s=10, color='yellow')
+        for hits in detectors:
+            if dimensions == 3:
+                ax.scatter(hits[0], hits[1], zs=hits[2], s=10)
+            elif dimensions == 2:
+                ax.scatter(hits[0], hits[1], s=10)
 
-    def _plot_positions(self, h5f: h5py.File, ax: plt.Axes, dimensions: int) -> None:
+    @staticmethod
+    def _plot_positions(initial: np.array, final: np.array, ax: plt.Axes, dimensions: int) -> None:
         """
-        Plots the initial and final particle positions from an HDF5 results file.
+        Plots the initial and final particle positions from an HDF5 results file. The initial positions
+        are plotted as a scatter plot of black points, the final positions as a scatter plot of green points.
 
-        :param h5f: A h5py.File instance
+        :param initial: An np.array containing all initial positions
+        :param final: An np.array containing all final positions
         :param ax: The axis to plot on
         :param dimensions: The number of spatial dimensions
         :return: Nothing
         """
-        particles = [h5f['particles'][k] for k in h5f['particles']]
+        initial_kwargs, final_kwargs = {}, {}
+        if dimensions == 3:
+            initial_kwargs['zs'] = initial[2]
+            final_kwargs['zs'] = final[2]
 
-        initial_positions = np.array([p['initial_position'][:dimensions] for p in particles])
-        final_positions = np.array([p['final_position'][:dimensions] for p in particles])
-        initial_positions_kwargs = {}
-        final_positions_kwargs = {}
-
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        ax.scatter(initial_positions[:, 0], initial_positions[:, 1], s=3, c='black', **initial_positions_kwargs)
-        # FIXME these are often buggy so let's not plot them for now
-        ax.scatter(final_positions[:, 0], final_positions[:, 1], s=3, c='green', **final_positions_kwargs)
-
-    def visualize(self) -> Tuple[Figure, np.ndarray]:
-        """
-        Visualizes the results as described in the class.
-        :return: A 2-tuple of (a plt.Figure instance, the array of plt.Axes instances created to plot)
-        """
-        with h5py.File(self.filename, 'r') as h5f:
-            dimensions = int(h5f.attrs['dimensions'])
-            if dimensions not in [2, 3]:
-                raise ValueError("Can only plot 2D/3D!")
-
-            # Construct the figure and axis
-            fig = plt.figure()
-            if dimensions == 3:
-                # this import is not 'unused', it's a magic import that makes all the 3D stuff below possible
-                from mpl_toolkits.mplot3d import Axes3D
-                ax = fig.add_subplot(111, projection='3d')
-                ax.set_zlabel('z')
-            else:
-                ax = fig.add_subplot(111)
-
-            # Plot all trajectories that are present
-            trajs, vels = self._get_trajectories(h5f, True, dimensions)
-            self._plot_traj_colored(trajs, vels, ax, dimensions, cmap='viridis')
-
-            # Plot all particle initial and final positions
-            self._plot_positions(h5f, ax, dimensions)
-
-            # Plot detector hits
-            self._plot_detector_hits(h5f, ax, dimensions)
-
-            T = np.concatenate(trajs, axis=1)
-            X = T[0]
-            Y = T[1]
-
-            ax.set_xlim((np.min(X), np.max(X)))
-            ax.set_ylim((np.min(Y), np.max(Y)))
-            if dimensions == 3:
-                Z = T[2]
-                ax.set_zlim((np.min(Z), np.max(Z)))
-
-        fig.tight_layout()
-        return fig, np.array([ax]).reshape((1, 1))  # reshape to adhere to 2D axes ndarray
+        ax.scatter(initial[0], initial[1], s=3, c='black', **initial_kwargs)
+        ax.scatter(final[0], final[1], s=3, c='green', **final_kwargs)
 
 
 ### Local Variables:
