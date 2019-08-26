@@ -113,6 +113,13 @@ class DesyatnikovPhotophoresisSetup(Setup):
                             type=float, nargs=4)
 
         parser.set_defaults(
+            # Defaults given to me by Andrei Rode
+            position=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 42.47e-6},
+                      {'kind': 'gaussian', 'mu': 20e-3, 'sigma': 0.0}],
+            velocity=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.01},
+                      {'kind': 'gaussian', 'mu': -20.0, 'sigma': 0.01}],
+            radius={'kind': 'gaussian', 'mu': 2e-6, 'sigma': 10e-9},
+
             # Assume carbon nanofoam spheres used in Desyatnikov 2009
             rho=10.0,  # [kg/(m^3)]
             thermal_conductivity=26.6e-3,  # [W/(m*K)]
@@ -126,7 +133,7 @@ class DesyatnikovPhotophoresisSetup(Setup):
             beam_power=0.01,  # [W]
             beam_waist_radius=8.4e-6,  # [m]
 
-            boundary=[-1e-3, 1e-3, -0.01, 0.05],
+            boundary=[-1e-3, 1e-3, -0.01, 0.05],  # [m]
         )
         return parser
 

@@ -24,7 +24,6 @@ from typing import List, Tuple, Optional
 import numpy as np
 from cminject.definitions.base import Particle, Source, Device, Detector, ZBounded, \
     PropertyUpdater, infinite_interval, ResultStorage
-from cminject.definitions.result_storage import HDF5ResultStorage
 from scipy.integrate import ode
 
 
