@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 import os
+import random
 from typing import List, Tuple, Dict, Any
 
 import h5py
@@ -106,12 +107,15 @@ class HDF5ResultStorage(ResultStorage):
         with h5py.File(self.filename, self.mode) as h5f:
             return int(h5f.attrs['dimensions'])
 
-    def get_trajectories(self) -> List[np.array]:
+    def get_trajectories(self, n_samples: int = None) -> List[np.array]:
         """
         Gets all stored trajectories as a list of np.arrays, each array being (d, n_i)-shaped, where d is the number
         of measured quantities of the stored results, and n_i is the number of data points along the trajectory
         of the i-th particle.
 
+        :param n_samples: The number of samples to draw (without replacement) from the whole list of trajectories.
+            If None, all trajectories are returned. Note that if there are less than n_samples trajectories in the file,
+            this will not fail, but all trajectories in the file will be returned.
         :return: A list of np.arrays as described above.
         """
         trajectories = []
@@ -121,6 +125,10 @@ class HDF5ResultStorage(ResultStorage):
                 if 'trajectory' in h5f[f'particles/{particle_id}'].keys():
                     trajectory = h5f[f'particles/{particle_id}/trajectory'][:].transpose()
                     trajectories.append(trajectory)
+
+        if n_samples is not None:
+            n_samples = min(n_samples, len(trajectories))
+            trajectories = random.sample(trajectories, n_samples)
 
         return trajectories
 

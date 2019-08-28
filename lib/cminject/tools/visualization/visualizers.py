@@ -157,7 +157,7 @@ class DetectorHistogramVisualizer(Visualizer):
             plot_count = len(self.dimension_pairs)
 
             fig, axes = plt.subplots(detector_count, plot_count)
-            axes = axes.reshape((detector_count, plot_count))
+            axes = np.array(axes).reshape((detector_count, plot_count))
             # Plot a hist2d in each subplot in the grid :)
             for j in range(plot_count):
                 for i in range(detector_count):
@@ -203,6 +203,10 @@ class TrajectoryVisualizer(Visualizer):
     Useful to get a general idea of where the particles started and went, but not very useful for data analysis:
     the plots can get rather chaotic and slow (especially in 3D).
     """
+    def __init__(self, *args, n_samples: int = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.n_samples = n_samples
+
     def visualize(self) -> Tuple[Figure, Axes]:
         """
         Visualizes the results as described in the class.
@@ -227,7 +231,7 @@ class TrajectoryVisualizer(Visualizer):
         ax.set_ylabel('y')
 
         # Plot all trajectories that are present
-        trajectories = storage.get_trajectories()
+        trajectories = storage.get_trajectories(self.n_samples)
         if trajectories:
             self._plot_traj_colored(trajectories, ax, dimensions, cmap='viridis')
 
