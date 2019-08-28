@@ -54,16 +54,19 @@ class DesyatnikovVortexLaserDevice(Device):
         return self.boundary.z_boundary
 
     def __init__(self, r_boundary, z_boundary,
-                 gas_temperature, gas_viscosity, gas_thermal_conductivity, gas_density, beam_power, beam_waist_radius):
+                 gas_temperature, gas_viscosity, gas_thermal_conductivity, gas_density,
+                 beam_power, beam_waist_radius, drag_field_velocity=None):
         pp_field = DesyatnikovPhotophoreticLaserField(
             gas_viscosity, gas_temperature, gas_thermal_conductivity, gas_density, beam_power, beam_waist_radius)
         gravity_field = FunctionField(lambda p, t: np.array([0.0, -9.81]))
 
-        # Assume air at 100 mbar
-        drag_field = FunctionField(get_uniform_drag_force(gas_viscosity, np.array([0, -10.0]),
-                                                          gas_temperature, 5.6e-26, 10000))
+        self.fields: List[Field] = [pp_field, gravity_field]
+        if drag_field_velocity:
+            # Assume air at 100 mbar
+            drag_field = FunctionField(get_uniform_drag_force(gas_viscosity, np.array([0, drag_field_velocity]),
+                                                              gas_temperature, 5.6e-26, 10000))
+            self.fields.append(drag_field)
 
-        self.fields: List[Field] = [pp_field, drag_field, gravity_field]
         self.boundary: CuboidBoundary = CuboidBoundary(
             intervals=[r_boundary, z_boundary]
         )
@@ -91,7 +94,8 @@ class DesyatnikovPhotophoresisSetup(Setup):
             r_boundary=args.boundary[:2], z_boundary=args.boundary[2:],
             gas_temperature=args.gas_temperature, gas_viscosity=args.gas_viscosity,
             gas_thermal_conductivity=args.gas_thermal_conductivity, gas_density=args.gas_density,
-            beam_power=args.beam_power, beam_waist_radius=args.beam_waist_radius
+            beam_power=args.beam_power, beam_waist_radius=args.beam_waist_radius,
+            drag_field_velocity=args.uniform_flow_velocity
         )]
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
         sources = [VariableDistributionSource(
@@ -128,6 +132,9 @@ class DesyatnikovPhotophoresisSetup(Setup):
                             help='The thermal conductivity of the surrounding gas.', type=float)
         parser.add_argument('-gd', '--gas-density', help='The density of the surrounding gas.', type=float)
 
+        parser.add_argument('-F', '--uniform-flow-velocity', help='Add a uniform flow field with a given Z velocity',
+                            type=float, required=False)
+
         parser.add_argument('-b', '--boundary', help='Boundary (rmin, rmax, zmin, zmax) of the experiment.',
                             type=float, nargs=4)
 
@@ -136,8 +143,11 @@ class DesyatnikovPhotophoresisSetup(Setup):
             position=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 42.47e-6},
                       {'kind': 'gaussian', 'mu': 20e-3, 'sigma': 0.0}],
             velocity=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.01},
-                      {'kind': 'gaussian', 'mu': -20.0, 'sigma': 0.01}],
+                      {'kind': 'gaussian', 'mu': -10.0, 'sigma': 0.01}],
             radius={'kind': 'gaussian', 'mu': 2e-6, 'sigma': 10e-9},
+
+            # Add a uniform flow field
+            uniform_flow_velocity=None,
 
             # Assume polystyrene spheres
             rho=1050.0,  # [kg/(m^3)]
@@ -149,8 +159,8 @@ class DesyatnikovPhotophoresisSetup(Setup):
             gas_thermal_conductivity=25.87e-3,  # [W/(m*K)]
             gas_density=1.204,  # [kg/(m^3)]
 
-            beam_power=0.01,  # [W]
-            beam_waist_radius=8.4e-6,  # [m]
+            beam_power=1.0,  # [W]
+            beam_waist_radius=4.0e-6,  # [m]
 
             boundary=[-1e-3, 1e-3, -0.01, 0.05],  # [m]
         )
