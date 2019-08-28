@@ -22,6 +22,7 @@ import argparse
 from typing import Tuple, List
 
 import numpy as np
+from scipy.constants import Boltzmann
 
 from cminject.definitions import Device, Field, PropertyUpdater, Particle
 from cminject.definitions.boundaries import CuboidBoundary
@@ -35,16 +36,34 @@ from cminject.setups.base import Setup
 from cminject.utils.args import dist_description, SetupArgumentParser
 
 
+def get_uniform_drag_force(viscosity, velocity, temperature, m_gas, pressure):
+    def uniform_drag_force(particle, time):
+        knudsen = viscosity / (pressure * particle.radius) * \
+                  np.sqrt(np.pi * Boltzmann * temperature / (2 * m_gas))
+        s = 1 + knudsen * (1.231 + 0.4695 * np.exp(-1.1783 / knudsen))
+        relative_velocity = velocity - particle.velocity
+
+        force = 6 * np.pi * viscosity * particle.radius * relative_velocity * s
+        return force / particle.mass
+    return uniform_drag_force
+
+
 class DesyatnikovVortexLaserDevice(Device):
     @property
     def z_boundary(self) -> Tuple[float, float]:
         return self.boundary.z_boundary
 
-    def __init__(self, r_boundary, z_boundary,  **pp_field_args):
-        pp_field = DesyatnikovPhotophoreticLaserField(**pp_field_args)
+    def __init__(self, r_boundary, z_boundary,
+                 gas_temperature, gas_viscosity, gas_thermal_conductivity, gas_density, beam_power, beam_waist_radius):
+        pp_field = DesyatnikovPhotophoreticLaserField(
+            gas_viscosity, gas_temperature, gas_thermal_conductivity, gas_density, beam_power, beam_waist_radius)
         gravity_field = FunctionField(lambda p, t: np.array([0.0, -9.81]))
 
-        self.fields: List[Field] = [pp_field, gravity_field]
+        # Assume air at 100 mbar
+        drag_field = FunctionField(get_uniform_drag_force(gas_viscosity, np.array([0, -10.0]),
+                                                          gas_temperature, 5.6e-26, 10000))
+
+        self.fields: List[Field] = [pp_field, drag_field, gravity_field]
         self.boundary: CuboidBoundary = CuboidBoundary(
             intervals=[r_boundary, z_boundary]
         )
@@ -120,9 +139,9 @@ class DesyatnikovPhotophoresisSetup(Setup):
                       {'kind': 'gaussian', 'mu': -20.0, 'sigma': 0.01}],
             radius={'kind': 'gaussian', 'mu': 2e-6, 'sigma': 10e-9},
 
-            # Assume carbon nanofoam spheres used in Desyatnikov 2009
-            rho=10.0,  # [kg/(m^3)]
-            thermal_conductivity=26.6e-3,  # [W/(m*K)]
+            # Assume polystyrene spheres
+            rho=1050.0,  # [kg/(m^3)]
+            thermal_conductivity=0.030,  # [W/(m*K)]
 
             # Assume air at 293.15K, all values taken from https://www.engineeringtoolbox.com/
             gas_temperature=293.15,  # [K]

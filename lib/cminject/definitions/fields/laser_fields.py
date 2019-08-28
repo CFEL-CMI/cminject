@@ -91,7 +91,7 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
             DesyatnikovPhotophoreticLaserField._transverse_integrand,
             0, a,  # 0 to a since the integrand is even in x
             lambda x: -np.sqrt(a**2 - x**2), lambda x: np.sqrt(a**2 - x**2),
-            args=(a, r, w)
+            args=(a, r, w),
         )
         return -1/np.pi * 2 * result  # 2*result since the integrand is even in x
 
