@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/>.
 import os
 import random
+import warnings
 from typing import List, Tuple, Dict, Any
 
 import h5py
@@ -43,7 +44,8 @@ class HDF5ResultStorage(ResultStorage):
         at each hit. A `description` field should be attached similar to the one in `particles/i/trajectory`.
 
     The root node will also have a `dimensions` attribute attached, which is an integer denoting the number of spatial
-    dimensions used in the simulation.
+    dimensions used in the simulation. Further attributes can be stored on the root node by passing a metadata
+    dictionary to the __init__ method.
 
     .. note::
         For efficient and predictable storage, it's assumed that all detector hits on each detector return
@@ -51,7 +53,7 @@ class HDF5ResultStorage(ResultStorage):
         implementation of a detector anyways. If you do find you need to deviate from this, store an array of the
         maximum necessary length for each hit and fill out values you can't have for a specific hit with `np.nan`.
     """
-    def __init__(self, filename: str, mode: str = 'r'):
+    def __init__(self, filename: str, mode: str = 'r', metadata: Dict[str, Any] = None):
         """
         Constructs a HDF5ResultStorage object.
 
@@ -59,9 +61,13 @@ class HDF5ResultStorage(ResultStorage):
         :param mode: The mode to open the file with. 'r' by default to avoid overwriting data when using the convenience
             methods to read data from a written file, so if an instance should be used to actually store data,
             'w' or similar must be passed explicitly (refer to `h5py.File` docs for available modes).
+        :param metadata: A dictionary of metadata to store on the output file for reference, like for instance
+             all parameters involved in the experiment that generated the result.
         """
         self.filename = filename
         self.mode = mode
+        self.metadata = metadata
+
         # Verify that the output file doesn't already exist, let's avoid overwriting existing data
         if self.mode != 'r' and os.path.isfile(filename):
             raise ValueError("Output file already exists! Please delete or move the existing file.")
@@ -76,8 +82,20 @@ class HDF5ResultStorage(ResultStorage):
         with h5py.File(self.filename, self.mode) as h5f:
             dimensions = len(particles[0].spatial_position)
             h5f.attrs['dimensions'] = dimensions
-            detector_hits: Dict[Any, List[ParticleDetectorHit]] = {}
 
+            # Store the metadata: Try storing each value directly, if that fails, try storing a string representation,
+            # and if anything fails at that point, output a warning. We do NOT want to lose experiment results just
+            # because metadata could not be stored.
+            for k, v in self.metadata.items():
+                try:
+                    h5f.attrs[k] = v
+                except TypeError:
+                    try:
+                        h5f.attrs[k] = str(v)
+                    except Exception as e:
+                        warnings.warn(f"Could not store metadata with key {k}, exception occurred: {e}")
+
+            detector_hits: Dict[Any, List[ParticleDetectorHit]] = {}
             for particle in particles:
                 h5f[f'particles/{particle.identifier}/initial_position'] = np.array(particle.initial_position)
                 h5f[f'particles/{particle.identifier}/final_position'] = np.array(particle.position)

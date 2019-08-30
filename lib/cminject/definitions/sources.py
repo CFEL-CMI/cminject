@@ -15,13 +15,13 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from typing import List, Type, Dict
+from typing import List, Type, Dict, Union
 
 import numpy as np
 from cminject.definitions.base import Source
 from cminject.definitions.particles import SphericalParticle
 
-Distribution = Dict  # An appropriate type for variable distribution descriptions
+Distribution = Union[Dict, float]  # An appropriate type for variable distribution descriptions
 
 
 class VariableDistributionSource(Source):
@@ -75,6 +75,9 @@ class VariableDistributionSource(Source):
             )
 
     def _generate(self, dist: Distribution):
+        if type(dist) is float:
+            return np.repeat(dist, self.number_of_particles)
+
         if dist['kind'] == 'gaussian':
             mu, sigma = dist['mu'], dist['sigma']
             return np.random.normal(mu, sigma, self.number_of_particles)

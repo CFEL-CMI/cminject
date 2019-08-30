@@ -139,11 +139,11 @@ class OneFlowFieldSetup(Setup):
     def validate_args(args: argparse.Namespace):
         # Verify dimensionality match for position description and dimensions parameter
         if len(args.position) != args.dimensions:
-            raise argparse.ArgumentError(
+            raise ValueError(
                 "The length of the position description vectors must match the simulation dimensionality!"
             )
         if len(args.velocity) != args.dimensions:
-            raise argparse.ArgumentError(
+            raise ValueError(
                 "The length of the velocity description vectors must match the simulation dimensionality!"
             )
 

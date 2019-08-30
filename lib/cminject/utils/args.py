@@ -58,6 +58,12 @@ def dist_description(x):
         'U': 'uniform', 'RU': 'radial_uniform'
     }
     values = x.split()
+    if len(values) == 1:
+        try:
+            return float(values[0])
+        except ValueError:
+            raise argparse.ArgumentTypeError("When passing only one value, it must be parsable as a float!")
+
     kind = values[0]
     if kind in ['G', 'RG']:
         if len(values) != 3:

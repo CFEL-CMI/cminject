@@ -170,9 +170,9 @@ class DesyatnikovPhotophoresisSetup(Setup):
     def validate_args(args: argparse.Namespace):
         # Verify dimensionality match for position description and dimensions parameter
         if len(args.position) != 2:
-            raise argparse.ArgumentError("The length of the position description must be 2!")
+            raise ValueError("The length of the position description must be 2!")
         if len(args.velocity) != 2:
-            raise argparse.ArgumentError("The length of the velocity description must be 2!")
+            raise ValueError("The length of the velocity description must be 2!")
 
 
 ### Local Variables:
