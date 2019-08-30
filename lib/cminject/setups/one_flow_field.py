@@ -61,7 +61,8 @@ class OneFlowFieldSetup(Setup):
     """
     @staticmethod
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
-        t_start, t_end, dt = main_args.time_interval
+        t_start, t_end = main_args.time_interval
+        dt = main_args.time_step
 
         devices = [FluidFlowFieldDevice(flow_type=args.flow_type, filename=args.flow_field,
                                         temperature=args.flow_temperature,
@@ -81,7 +82,7 @@ class OneFlowFieldSetup(Setup):
                                               radius=args.radius, rho=args.density, subclass=SphericalParticle)]
 
         return Experiment(devices=devices, detectors=detectors, sources=sources, property_updaters=property_updaters,
-                          time_interval=(t_start, t_end, dt), delta_z_end=0.001, seed=main_args.seed,
+                          time_interval=(t_start, t_end), time_step=dt, delta_z_end=0.001, seed=main_args.seed,
                           number_of_dimensions=args.dimensions)
 
     @staticmethod
