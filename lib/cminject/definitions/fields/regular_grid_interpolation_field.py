@@ -30,11 +30,12 @@ class RegularGridInterpolationField(Field, ABC):
     regular grid. This class provides an `interpolate` method; the actual calculation of acceleration has to be
     defined in a subclass and should use the result of this method.
     """
-    def __init__(self, filename: str, *args, **kwargs):
+    def __init__(self, filename: str, offset: np.array = None, *args, **kwargs):
         """
         The constructor for RegularGridInterpolationField.
 
         :param filename: The filename of an HDF5 file in the format as constructed by `tools/txt_to_hdf5`.
+        :param offset: The positional offset of the field as a (d,)-ndarray, where d is the number of spatial dimensions
 
         .. todo:: Provide a "formal" definition of the Field-file format in documentaiton, not only through an implementation
            And then refer to this file format by its name, not by its "implemented somewhere" specification...
@@ -43,6 +44,10 @@ class RegularGridInterpolationField(Field, ABC):
         # Construct the interpolator from the HDF5 file passed by file name
         self.filename = filename
         data_index, data_grid = hdf5_to_data_grid(self.filename)
+        if offset is not None:
+            for i, off in enumerate(offset):
+                data_index[i] += off
+
         self.number_of_dimensions = len(data_index)
         self._interpolator = get_regular_grid_interpolator(tuple(data_index), data_grid)
 
@@ -51,7 +56,7 @@ class RegularGridInterpolationField(Field, ABC):
         maxima = list(np.max(d) for d in data_index)
         self._z_boundary = (minima[self.number_of_dimensions - 1], maxima[self.number_of_dimensions - 1])
         self.grid_boundary = np.array(list(zip(minima, maxima)))
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
