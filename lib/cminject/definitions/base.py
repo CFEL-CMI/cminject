@@ -346,7 +346,7 @@ class Boundary(NDimensional, ZBounded, ABC):
     the experiment setup.
     """
     @abstractmethod
-    def is_particle_inside(self, position: float, time: float) -> bool:
+    def is_particle_inside(self, position: np.array, time: float) -> bool:
         """
         Tells whether the passed Particle is inside of this Boundary or not.
 
@@ -394,17 +394,6 @@ class Device(NDimensional, ZBounded, ABC):
         self.boundary = boundary
         super().__init__()
 
-    def _calculate_z_boundary(self) -> Tuple[float, float]:
-        """
-        Returns the Z boundary of this device. Defaults to returning a Z boundary encompassing both
-        the device's Z boundary and the field's Z boundary, but should be overridden if a different
-        Z boundary is required.
-
-        :return: A (z_min, z_max) tuple as defined in ZBoundedMixin.
-        """
-        boundary = self.boundary.z_boundary
-        return boundary
-
     def set_number_of_dimensions(self, number_of_dimensions: int) -> None:
         for field in self.fields:
             field.set_number_of_dimensions(number_of_dimensions)
@@ -424,6 +413,10 @@ class Device(NDimensional, ZBounded, ABC):
         :return: True if the Particle inside this Device, False if it is not (or if this is unknown).
         """
         return self.boundary.is_particle_inside(particle_position, time)
+
+    @property
+    def z_boundary(self) -> Tuple[float, float]:
+        return self.boundary.z_boundary
 
 
 class PropertyUpdater(NDimensional, ABC):

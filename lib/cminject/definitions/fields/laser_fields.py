@@ -56,7 +56,8 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
     def __init__(self,
                  gas_viscosity: float, gas_temperature: float,
                  gas_thermal_conductivity: float, gas_density: float,
-                 beam_power: float, beam_waist_radius: float, beam_lambda: float = 523e-9):
+                 beam_power: float, beam_waist_radius: float, beam_lambda: float = 523e-9,
+                 z_position: float = 0.0):
         super().__init__(beam_power, beam_waist_radius, beam_lambda)
         self.gas_thermal_conductivity = gas_thermal_conductivity
         self.gas_density = gas_density
@@ -65,6 +66,7 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
 
         self.j1 = -0.5  # TODO assumed
         self.z0 = 2 * np.pi * self.beam_waist_radius ** 2 / self.beam_lambda  # see Desyatnikov 2009
+        self.z_position = z_position or 0.0
 
     def kappa(self, particle_radius: float, particle_thermal_conductivity: float):
         return -self.j1 * 9*self.gas_viscosity**2 / \
@@ -75,8 +77,13 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
                                particle: ThermallyConductiveSphericalParticle,
                                time: float) -> np.array:
         a, r, z, m = particle.radius, particle.position[0], particle.position[1], particle.mass
+        z = z - self.z_position  # For when the laser is offset in Z by some amount
+
         mu_a = particle.thermal_conductivity
-        return self.pp_force(a, r, z, mu_a) / m
+        f = self.pp_force(a, r, z, mu_a)
+        a = f / m
+
+        return a
 
     @staticmethod
     @numba.jit("float64(float64,float64,float64,float64,float64)", nopython=True)
@@ -121,6 +128,7 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
 
         tr = self._transverse(a, r, w)
         ax = self._axial(a, w)
+
         return kappa * P * np.array([tr, ax])
 
 

@@ -19,58 +19,19 @@
 # <http://www.gnu.org/licenses/>.
 
 import argparse
-from typing import Tuple, List
 
-import numpy as np
-from scipy.constants import Boltzmann
-
-from cminject.definitions import Device, Field, PropertyUpdater, Particle
-from cminject.definitions.boundaries import CuboidBoundary
+from cminject.definitions import PropertyUpdater, Particle
 from cminject.definitions.detectors import SimpleZDetector
-from cminject.definitions.fields.function_field import FunctionField
-from cminject.definitions.fields.laser_fields import DesyatnikovPhotophoreticLaserField
+from cminject.definitions.devices.desyatnikov_photophoresis_device import DesyatnikovVortexLaserDevice, \
+    UniformBrownianMotionPropertyUpdater
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.definitions.sources import VariableDistributionSource
 from cminject.experiment import Experiment
 from cminject.setups.base import Setup
-from cminject.utils.args import dist_description, SetupArgumentParser
+from cminject.utils.args import dist_description, SetupArgumentParser, auto_time_step
 
 
-def get_uniform_drag_force(viscosity, velocity, temperature, m_gas, pressure):
-    def uniform_drag_force(particle, time):
-        knudsen = viscosity / (pressure * particle.radius) * \
-                  np.sqrt(np.pi * Boltzmann * temperature / (2 * m_gas))
-        s = 1 + knudsen * (1.231 + 0.4695 * np.exp(-1.1783 / knudsen))
-        relative_velocity = velocity - particle.velocity
-
-        force = 6 * np.pi * viscosity * particle.radius * relative_velocity * s
-        return force / particle.mass
-    return uniform_drag_force
-
-
-class DesyatnikovVortexLaserDevice(Device):
-    @property
-    def z_boundary(self) -> Tuple[float, float]:
-        return self.boundary.z_boundary
-
-    def __init__(self, r_boundary, z_boundary,
-                 gas_temperature, gas_viscosity, gas_thermal_conductivity, gas_density,
-                 beam_power, beam_waist_radius, drag_field_velocity=None):
-        pp_field = DesyatnikovPhotophoreticLaserField(
-            gas_viscosity, gas_temperature, gas_thermal_conductivity, gas_density, beam_power, beam_waist_radius)
-        gravity_field = FunctionField(lambda p, t: np.array([0.0, -9.81]))
-
-        self.fields: List[Field] = [pp_field, gravity_field]
-        if drag_field_velocity:
-            # Assume air at 100 mbar
-            drag_field = FunctionField(get_uniform_drag_force(gas_viscosity, np.array([0, drag_field_velocity]),
-                                                              gas_temperature, 5.6e-26, 10000))
-            self.fields.append(drag_field)
-
-        self.boundary: CuboidBoundary = CuboidBoundary(
-            intervals=[r_boundary, z_boundary]
-        )
-        super().__init__(fields=self.fields, boundary=self.boundary)
+M_GAS_AIR = 5.6e-26
 
 
 class MarkAsLostWhenVZIsPositivePropertyUpdater(PropertyUpdater):
@@ -90,10 +51,12 @@ class MarkAsLostWhenVZIsPositivePropertyUpdater(PropertyUpdater):
 class DesyatnikovPhotophoresisSetup(Setup):
     @staticmethod
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
+        dt = main_args.time_step or auto_time_step(abs(args.velocity[-1]['mu']))
+
         devices = [DesyatnikovVortexLaserDevice(
             r_boundary=args.boundary[:2], z_boundary=args.boundary[2:],
-            gas_temperature=args.gas_temperature, gas_viscosity=args.gas_viscosity,
-            gas_thermal_conductivity=args.gas_thermal_conductivity, gas_density=args.gas_density,
+            gas_temperature=args.gas_temperature, gas_viscosity=args.gas_viscosity, gas_pressure=args.gas_pressure,
+            gas_thermal_conductivity=args.gas_thermal_conductivity, gas_density=args.gas_density, gas_mass=M_GAS_AIR,
             beam_power=args.beam_power, beam_waist_radius=args.beam_waist_radius,
             drag_field_velocity=args.uniform_flow_velocity
         )]
@@ -102,10 +65,22 @@ class DesyatnikovPhotophoresisSetup(Setup):
             main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius, rho=args.rho,
             subclass=ThermallyConductiveSphericalParticle, thermal_conductivity=args.thermal_conductivity
         )]
-        property_updaters = [MarkAsLostWhenVZIsPositivePropertyUpdater()]
+
+        if args.brownian:
+            property_updaters = [
+                # MarkAsLostWhenVZIsPositivePropertyUpdater(),
+                UniformBrownianMotionPropertyUpdater(
+                    viscosity=args.gas_viscosity, temperature=args.gas_temperature,
+                    m_gas=M_GAS_AIR, pressure=args.gas_pressure, dt=dt
+                ),
+            ]
+        else:
+            property_updaters = []
+
         return Experiment(
             devices=devices, detectors=detectors, sources=sources, property_updaters=property_updaters,
-            time_interval=main_args.time_interval, delta_z_end=0.0, seed=main_args.seed, number_of_dimensions=2
+            time_interval=main_args.time_interval, time_step=dt,
+            delta_z_end=0.0, seed=main_args.seed, number_of_dimensions=2
         )
 
     @staticmethod
@@ -126,14 +101,19 @@ class DesyatnikovPhotophoresisSetup(Setup):
         parser.add_argument('-bp', '--beam-power', help='Power of the laser beam in watts', type=float)
         parser.add_argument('-br', '--beam-waist-radius', help='The waist radius of the LG01 beam (w_0)', type=float)
 
-        parser.add_argument('-gt', '--gas-temperature', help='The temperature of the surrounding gas.', type=float)
-        parser.add_argument('-gv', '--gas-viscosity', help='The dynamic viscosity of the surrounding gas.', type=float)
+        parser.add_argument('-gt', '--gas-temperature', help='The temperature of the surrounding gas [K].', type=float)
+        parser.add_argument('-gv', '--gas-viscosity', help='The dynamic viscosity of the surrounding gas [Pa*s].',
+                            type=float)
         parser.add_argument('-gmu', '--gas-thermal-conductivity',
-                            help='The thermal conductivity of the surrounding gas.', type=float)
-        parser.add_argument('-gd', '--gas-density', help='The density of the surrounding gas.', type=float)
+                            help='The thermal conductivity of the surrounding gas [W m^-1 K^-1].', type=float)
+        parser.add_argument('-gd', '--gas-density', help='The density of the surrounding gas  [kg m^-3].', type=float)
+        parser.add_argument('-gp', '--gas-pressure', help='The pressure of the surrounding gas [Pa].', type=float)
 
         parser.add_argument('-F', '--uniform-flow-velocity', help='Add a uniform flow field with a given Z velocity',
                             type=float, required=False)
+        parser.add_argument('-B', '--brownian',
+                            help='Enable brownian motion in a uniform drag force flow field. Requires -F to be set.',
+                            action='store_true')
 
         parser.add_argument('-b', '--boundary', help='Boundary (rmin, rmax, zmin, zmax) of the experiment.',
                             type=float, nargs=4)
