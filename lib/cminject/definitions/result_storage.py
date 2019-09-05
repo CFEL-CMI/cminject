@@ -139,14 +139,16 @@ class HDF5ResultStorage(ResultStorage):
         trajectories = []
 
         with h5py.File(self.filename, self.mode) as h5f:
-            for particle_id in h5f['particles']:
+            if n_samples is not None:
+                n_trajs = len(h5f['particles'].keys())
+                ids = random.sample(h5f['particles'].keys(), min(n_samples, n_trajs))
+            else:
+                ids = h5f['particles'].keys()
+
+            for particle_id in ids:
                 if 'trajectory' in h5f[f'particles/{particle_id}'].keys():
                     trajectory = h5f[f'particles/{particle_id}/trajectory'][:].transpose()
                     trajectories.append(trajectory)
-
-        if n_samples is not None:
-            n_samples = min(n_samples, len(trajectories))
-            trajectories = random.sample(trajectories, n_samples)
 
         return trajectories
 
