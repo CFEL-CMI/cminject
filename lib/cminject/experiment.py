@@ -26,6 +26,8 @@ from cminject.definitions.base import Particle, Source, Device, Detector, ZBound
     PropertyUpdater, infinite_interval, ResultStorage
 from scipy.integrate import ode
 
+from cminject.utils.args import auto_time_step
+
 
 def spatial_derivatives(time: float, position_and_velocity: np.array,
                         particle: Particle, devices: List[Device], number_of_dimensions: int) -> np.array:
@@ -204,7 +206,7 @@ class Experiment:
         self.devices = devices
         self.sources = sources
         self.detectors = detectors
-        self.property_updaters = property_updaters
+        self.property_updaters = property_updaters or []
         self.result_storage = result_storage
 
         # Store the number of dimensions and set it on all relevant objects
@@ -241,7 +243,7 @@ class Experiment:
         # Store the time interval with the time step, determining an appropriate time step if none was passed explicitly
         if time_step is None:
             # This is a crude empirical approximation, better to pass a time step explicitly
-            time_step = 10e-6/np.mean([np.linalg.norm(p.velocity) for p in self.particles])
+            time_step = auto_time_step(np.mean([np.linalg.norm(p.velocity) for p in self.particles]))
             warnings.warn(f"Determining time step automatically, set to {time_step}. This might be inappropriate "
                           f"for your experiment conditions, it's better to set one explicitly.")
         self.time_interval = time_interval[0], time_interval[1], time_step

@@ -94,6 +94,10 @@ def natural_number(x):
     return x
 
 
+def auto_time_step(mean_velocity):
+    return 10e-6 / abs(mean_velocity)
+
+
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
