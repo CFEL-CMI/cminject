@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 import os
+import pathlib
 import random
 import warnings
 from typing import List, Tuple, Dict, Any
@@ -71,6 +72,9 @@ class HDF5ResultStorage(ResultStorage):
         # Verify that the output file doesn't already exist, let's avoid overwriting existing data
         if self.mode != 'r' and os.path.isfile(filename):
             raise ValueError("Output file already exists! Please delete or move the existing file.")
+
+        # Try to create the directories the file should be stored in
+        pathlib.Path(os.path.dirname(self.filename)).mkdir(parents=True, exist_ok=True)
 
     def store_results(self, particles: List[Particle]) -> None:
         """
