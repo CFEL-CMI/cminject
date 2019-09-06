@@ -141,21 +141,29 @@ def simulate_particle(particle: Particle) -> Particle:
             particle.time_of_flight = integral.t
 
             # - Run all property updaters for the particle with the current integral time
-            changed_position = False
+            prop_updater_changed_position = False
             for property_updater in PROPERTY_UPDATERS:
-                changed_position |= property_updater.update(particle, integral.t)
+                prop_updater_changed_position |= property_updater.update(particle, integral.t)
 
             # - Have each detector try to detect the particle
             for detector in DETECTORS:
                 detector.try_to_detect(particle)
 
-            # Propagate by integrating until the next time step
-            if changed_position:
+            # If some property updater changed the position, reset the integrator's initial value
+            # NOTE: doing this is slow and should be reserved for cases where motion cannot be modeled differently
+            if prop_updater_changed_position:
                 integral.set_initial_value(particle.position, integral.t)
+            # Propagate by integrating until the next time step
             integral.integrate(integral.t + dt)
         else:
             # If particle is lost, store this and (implicitly) break the loop
             particle.lost = True
+
+    # Run the updaters and detectors one last time after simulation completed
+    for property_updater in PROPERTY_UPDATERS:
+        property_updater.update(particle, integral.t)
+    for detector in DETECTORS:
+        detector.try_to_detect(particle)
 
     if particle.lost:
         if Z_BOUNDARY[0] <= particle.spatial_position[NUMBER_OF_DIMENSIONS - 1] <= Z_BOUNDARY[1]:
