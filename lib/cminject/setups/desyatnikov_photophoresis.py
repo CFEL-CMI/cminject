@@ -138,6 +138,7 @@ class DesyatnikovPhotophoresisSetup(Setup):
             gas_viscosity=1.82e-5,  # [Pa*s]
             gas_thermal_conductivity=25.87e-3,  # [W/(m*K)]
             gas_density=1.204,  # [kg/(m^3)]
+            gas_pressure=10000.0,  # [Pa]
 
             beam_power=1.0,  # [W]
             beam_waist_radius=4.0e-6,  # [m]
