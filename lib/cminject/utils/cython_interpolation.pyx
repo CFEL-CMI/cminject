@@ -43,7 +43,7 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp2D(np.float_t[:,:,::1] v, np.float_
     yd = (y1-y)/(y1-y0)
 
     # All the calculated corners must be within the grid bounds...
-    if x0 >= 0 and y0 >= 0 and x1 <= nx and y1 <= ny:
+    if x0 >= 0 and y0 >= 0 and x1 < nx and y1 < ny:
         # For each output dimension ai:
         for ai in range(nd):
             # Get the slice of the data array for this dimension
@@ -104,7 +104,7 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp3D(np.float_t[:,:,:,::1] v, np.floa
     zd = (z-z0)/(z1-z0)
 
     # All the calculated corners must be within the grid bounds...
-    if x0 >= 0 and y0 >= 0 and z0 >= 0 and x1 <= nx and y1 <= ny and z1 <= nz:
+    if x0 >= 0 and y0 >= 0 and z0 >= 0 and x1 < nx and y1 < ny and z1 < nz:
         # For each output dimension ci:
         for ci in range(nd):
             # Get the slice of the data array for this dimension
