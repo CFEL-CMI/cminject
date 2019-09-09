@@ -357,7 +357,7 @@ class TrajectoryVisualizer(Visualizer):
         return lc, cb
 
     @staticmethod
-    def _plot_detector_hits(detectors: List[np.array], ax: plt.Axes, dimensions: int) -> None:
+    def _plot_detector_hits(detectors: List[np.array], ax: plt.Axes, dimensions: int, *args, **kwargs) -> None:
         """
         Plots the detector hit positions from an HDF5 results file.
 
@@ -367,11 +367,16 @@ class TrajectoryVisualizer(Visualizer):
         :param dimensions: The number of spatial dimensions
         :return: Nothing
         """
+        if 'zorder' not in kwargs:
+            kwargs.update({'zorder': 3})
+        if 's' not in kwargs:
+            kwargs.update({'s': 10})
+
         for hits in detectors:
             if dimensions == 3:
-                ax.scatter(hits[0], hits[1], zs=hits[2], s=10)
+                ax.scatter(hits[0], hits[1], zs=hits[2], *args, **kwargs)
             elif dimensions == 2:
-                ax.scatter(hits[0], hits[1], s=10)
+                ax.scatter(hits[0], hits[1], *args, **kwargs)
 
     @staticmethod
     def _plot_positions(initial: np.array, final: np.array, ax: plt.Axes, dimensions: int) -> None:
