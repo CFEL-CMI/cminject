@@ -82,7 +82,7 @@ class OneFlowFieldSetup(Setup):
                                               radius=args.radius, rho=args.density, subclass=SphericalParticle)]
 
         return Experiment(devices=devices, detectors=detectors, sources=sources, property_updaters=property_updaters,
-                          time_interval=(t_start, t_end), time_step=dt, delta_z_end=0.001, seed=main_args.seed,
+                          time_interval=(t_start, t_end), time_step=dt, seed=main_args.seed,
                           number_of_dimensions=args.dimensions)
 
     @staticmethod
