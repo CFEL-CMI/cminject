@@ -173,7 +173,7 @@ class HDF5ResultStorage(ResultStorage):
             final_positions = np.array([p['final_position'] for p in particles]).transpose()
             return initial_positions, final_positions
 
-    def get_detectors(self) -> List[List[np.array]]:
+    def get_detectors(self) -> List[np.array]:
         """
         Gets all stored detectors with their hits.
 
@@ -183,7 +183,7 @@ class HDF5ResultStorage(ResultStorage):
         detectors = []
         with h5py.File(self.filename, self.mode) as h5f:
             if 'detector_hits' in h5f:
-                for detector_id in h5f['detector_hits']:
+                for detector_id in sorted(h5f['detector_hits'], key=float):
                     hits = h5f['detector_hits'][detector_id][:].transpose()
                     detectors.append(hits)
         return detectors
