@@ -45,6 +45,9 @@ class SimpleZDetector(Detector):
         self.number_of_dimensions = number_of_dimensions
 
     def _has_particle_reached_detector(self, particle_identifier: int, position_velocity: np.array) -> bool:
+        if position_velocity[self.number_of_dimensions - 1] == self.z_position:
+            return True
+
         reached = False
         prev_distance = self.particle_distances.get(particle_identifier, None)
         curr_distance = position_velocity[self.number_of_dimensions - 1] - self.z_position
