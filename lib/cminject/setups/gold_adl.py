@@ -109,7 +109,7 @@ class GoldADLSetup(Setup):
         wtf_offset = -1e-3  # TODO i know this is necessary, but where is it coming from?
         adl_offset = exit_offset + adl_extent + wtf_offset + skimmer_length + inter_distance + skimmer_tube_length
 
-        adl_exit_position = 0.60015
+        adl_exit_position = 0.59915  # 0.60015 is where the entire ADL flow field terminates
 
         devices = [
             SkimmersDevice(
@@ -122,23 +122,20 @@ class GoldADLSetup(Setup):
 
         if args.beam_power is not None:  # if missing or 0.0, we don't need to create a device
             devices += [DesyatnikovVortexLaserDevice(
-                # All gas properties are assuming nitrogen at 293.15K and 1 bar.
-                # FIXME this is not reality at all. the ADL lens stack has 360Pa inpropternal pressure and expands into
-                # FIXME 5.9e-4 mbar (? Lena noted this, but blog 2019-05-23 mentions 10e-4 mbar exit condition),
-                # FIXME so the flow field and ADL lenses would have to be redesigned completely, or a new device
-                # FIXME after the ADL stack that can work at these pressures while not interfering with the existing
-                # FIXME setup too much would have to be designed
-                gas_density=1.165,  # [kg/m^3]
-                gas_viscosity=17.58e-6,  # [Pa*s]
-                gas_pressure=10000.0,  # [Pa]
+                # All gas properties are assuming dilute nitrogen at 293.15K.
+                gas_density=(0.059, devices[1].fields[0]),
+                # taken for dilute nitrogen from Lemmon and Jacobsen 2003
+                gas_viscosity=17.8771e-6,  # [Pa*s]
+                gas_thermal_conductivity=25.9361e-3,  # [W/(m*K)]
+
                 gas_mass=4.652e-26,  # [kg], one molecule
                 gas_temperature=293.15,  # [K]
-                gas_thermal_conductivity=25.47e-3,  # [W/(m*K)]
+
                 beam_waist_radius=args.beam_waist_radius,  # [m]
                 beam_power=args.beam_power,  # [W]
-                r_boundary=[-2e-4, 2e-4],  # [m]
-                z_boundary=[adl_exit_position, adl_exit_position + 1e-1],  # [m]
-                z_position=adl_exit_position + 5e-3,  # [m]
+                r_boundary=(-1e-3, 1e-3),  # [m]
+                z_boundary=(adl_exit_position, adl_exit_position + 1e-1),  # [m]
+                z_position=adl_exit_position + 1e-2,  # [m]
             )]
 
         detectors = [SimpleZDetector(i, adl_exit_position + i*5e-4) for i in range(10)]
@@ -149,16 +146,17 @@ class GoldADLSetup(Setup):
                 rho=19320.0,  # Assuming 50nm gold particles
                 radius=50e-9,
                 thermal_conductivity=315.0,  # [W / (m*K)], taken from Wikipedia
-
                 #rho=1050.0,  # Assuming expanded Polystyrene at 50nm
                 #radius=50e-9,
                 #thermal_conductivity=0.030,
 
+                position=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 3.0e-3},
+                          skimmer_min_z],
+                velocity=[{'kind': 'gaussian', 'mu': 1e-3, 'sigma': 1e-5},
+                          {'kind': 'gaussian', 'mu': 0.155, 'sigma': 0.001}]
                 # for ADL exit, approximated:
                 # position=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 10e-6}, 0.6],
                 # velocity=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.1}, {'kind': 'gaussian', 'mu': 39.0, 'sigma': 0.01}]
-                position=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 2.5e-3}, skimmer_min_z],
-                velocity=[0.0, {'kind': 'gaussian', 'mu': 0.155, 'sigma': 0.01}]
             )
         ]
         # Construct the Experiment, still missing brownian motion
@@ -170,15 +168,15 @@ class GoldADLSetup(Setup):
             number_of_dimensions=2
         )
 
-        # Add brownian motion property updaters _after_ the Experiment has decided on a time step to use.
-        # Might be a good idea to refactor this.
-        dt = exp.time_interval[-1]
-        bm_updaters = [BrownianMotionPropertyUpdater(field=devices[0].fields[0], dt=dt),
-                       BrownianMotionPropertyUpdater(field=devices[1].fields[0], dt=dt)]
-        for updater in bm_updaters:
-            updater.set_number_of_dimensions(exp.number_of_dimensions)
-
-        exp.property_updaters = bm_updaters + exp.property_updaters
+        if args.brownian:
+            # Add brownian motion property updaters _after_ the Experiment has decided on a time step to use.
+            # TODO Might be a good idea to refactor this automatic choice of time step to somewhere else.
+            dt = exp.time_interval[-1]
+            bm_updaters = [BrownianMotionPropertyUpdater(field=devices[0].fields[0], dt=dt),
+                           BrownianMotionPropertyUpdater(field=devices[1].fields[0], dt=dt)]
+            for updater in bm_updaters:
+                updater.set_number_of_dimensions(exp.number_of_dimensions)
+            exp.property_updaters = bm_updaters + exp.property_updaters
 
         return exp
 
@@ -196,5 +194,7 @@ class GoldADLSetup(Setup):
         parser.add_argument('-bw0', '--beam-waist-radius',
                             help='Beam waist radius of a photophoretic LG01 vortex laser beam [m]',
                             type=float, default=8e-6)
+
+        parser.add_argument('-B', '--brownian', help='Enable brownian motion', action='store_true')
 
         return parser

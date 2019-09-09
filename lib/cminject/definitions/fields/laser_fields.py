@@ -16,12 +16,14 @@
 # <http://www.gnu.org/licenses/>.
 
 from abc import ABC
+from typing import Union, Tuple
 
 import numba
 import numpy as np
 from cminject.definitions.base import Field, empty_interval
+from cminject.definitions.fields import DragForceInterpolationField
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
-from scipy.constants import pi
+from scipy.constants import pi, Avogadro, R
 from scipy.integrate import dblquad
 
 
@@ -54,8 +56,8 @@ class VortexBeamPhotophoreticForceField(Field, ABC):
 
 class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
     def __init__(self,
-                 gas_viscosity: float, gas_temperature: float,
-                 gas_thermal_conductivity: float, gas_density: float,
+                 gas_viscosity: float, gas_temperature: float, gas_thermal_conductivity: float,
+                 gas_density: Union[float, Tuple[float, DragForceInterpolationField]], gas_mass: float,
                  beam_power: float, beam_waist_radius: float, beam_lambda: float = 523e-9,
                  z_position: float = 0.0):
         super().__init__(beam_power, beam_waist_radius, beam_lambda)
@@ -63,14 +65,15 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
         self.gas_density = gas_density
         self.gas_viscosity = gas_viscosity
         self.gas_temperature = gas_temperature
+        self.molar_mass = gas_mass*Avogadro
 
         self.j1 = -0.5  # TODO assumed
         self.z0 = 2 * np.pi * self.beam_waist_radius ** 2 / self.beam_lambda  # see Desyatnikov 2009
         self.z_position = z_position or 0.0
 
-    def kappa(self, particle_radius: float, particle_thermal_conductivity: float):
+    def kappa(self, particle_radius: float, particle_thermal_conductivity: float, gas_density: float):
         return -self.j1 * 9*self.gas_viscosity**2 / \
-               (2*particle_radius * self.gas_density * self.gas_temperature *
+               (2*particle_radius * gas_density * self.gas_temperature *
                 (particle_thermal_conductivity + 2*self.gas_thermal_conductivity))
 
     def calculate_acceleration(self,
@@ -80,7 +83,20 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
         z = z - self.z_position  # For when the laser is offset in Z by some amount
 
         mu_a = particle.thermal_conductivity
-        f = self.pp_force(a, r, z, mu_a)
+
+        if type(self.gas_density) == float:
+            gas_density = self.gas_density
+        else:
+            default_pressure, field = self.gas_density
+            pressure = 0.0
+            try:
+                pressure = field.interpolate(particle.spatial_position)[2]  # pV=nRT
+            except IndexError:
+                pass
+            pressure = pressure or default_pressure
+            gas_density = self.molar_mass * pressure / (R * self.gas_temperature)
+
+        f = self.pp_force(a, r, z, mu_a, gas_density)
         a = f / m
 
         return a
@@ -110,7 +126,7 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
     def w(self, z: float):
         return self.beam_waist_radius * np.sqrt(1 + (z / self.z0) ** 2)
 
-    def pp_force(self, a: float, r: float, z: float, k_f: float) -> np.array:
+    def pp_force(self, a: float, r: float, z: float, k_f: float, rho: float) -> np.array:
         """
         Calculates the axial component of the photophoretic force, based on an approximation by Desyatnikov, 2009,
         for small particles with a << w.
@@ -119,11 +135,13 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
         :param r: The particle's radial offset relative to the beam axis.
         :param z: The particle's axial offset relative to the beam origin.
         :param k_f: The particle's thermal conductivity.
+        :param rho: The local density of the gas at (r, z).
         :return: A tuple containing the transverse (first element) and axial (second element) components of
             the photophoretic force.
         """
         P = self.beam_power
-        kappa = self.kappa(a, k_f)
+        kappa = self.kappa(a, k_f, rho)
+
         w = self.w(z)
 
         tr = self._transverse(a, r, w)

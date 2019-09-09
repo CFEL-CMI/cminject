@@ -55,10 +55,10 @@ class DesyatnikovPhotophoresisSetup(Setup):
 
         devices = [DesyatnikovVortexLaserDevice(
             r_boundary=args.boundary[:2], z_boundary=args.boundary[2:],
-            gas_temperature=args.gas_temperature, gas_viscosity=args.gas_viscosity, gas_pressure=args.gas_pressure,
+            gas_temperature=args.gas_temperature, gas_viscosity=args.gas_viscosity, flow_gas_pressure=args.gas_pressure,
             gas_thermal_conductivity=args.gas_thermal_conductivity, gas_density=args.gas_density, gas_mass=M_GAS_AIR,
             beam_power=args.beam_power, beam_waist_radius=args.beam_waist_radius,
-            drag_field_velocity=args.uniform_flow_velocity
+            flow_gas_velocity=args.uniform_flow_velocity
         )]
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
         sources = [VariableDistributionSource(

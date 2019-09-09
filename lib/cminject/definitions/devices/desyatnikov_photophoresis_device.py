@@ -1,10 +1,11 @@
-from typing import List
+from typing import List, Tuple, Union
 
 import numpy as np
 from scipy.constants import Boltzmann
 
 from cminject.definitions import Device, Field, PropertyUpdater
 from cminject.definitions.boundaries import CuboidBoundary
+from cminject.definitions.fields import StokesDragForceField
 from cminject.definitions.fields.laser_fields import DesyatnikovPhotophoreticLaserField
 from cminject.definitions.fields.function_field import FunctionField
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
@@ -59,24 +60,47 @@ class UniformBrownianMotionPropertyUpdater(PropertyUpdater):
 
 
 class DesyatnikovVortexLaserDevice(Device):
-    def __init__(self, r_boundary, z_boundary,
-                 gas_temperature, gas_viscosity, gas_thermal_conductivity, gas_density, gas_pressure, gas_mass,
-                 beam_power, beam_waist_radius, drag_field_velocity=None, z_position=0.0):
+    """
+    A photophoretic LG01 vortex laser device based on Desyatnikov 2009.
+    """
+    def __init__(self, r_boundary: Tuple[float, float], z_boundary: Tuple[float, float],
+                 gas_temperature: float, gas_viscosity: float, gas_thermal_conductivity: float,
+                 gas_density: Union[float, Tuple[float, StokesDragForceField]], gas_mass: float,
+                 beam_power: float, beam_waist_radius: float,
+                 flow_gas_velocity: float = None, flow_gas_pressure: float = None, z_position: float = 0.0):
+        """
+        The constructor for DesyatnikovVortexLaserDevice.
+
+        :param r_boundary: The r interval where the laser is active
+        :param z_boundary: The z interval where the laser is active
+        :param gas_temperature: The temperature of the gas the laser is positioned in [K]
+        :param gas_viscosity: The viscosity of the gas the laser is positioned in [Pa*s]
+        :param gas_thermal_conductivity: The thermal conductivity of the gas the laser is positioned in [W/(m*K)]
+        :param gas_density: The density of the gas the laser is positioned in, either as a fixed value or a tuple of a
+            default value (a float) and a flow field to base the density on an interpolated pressure.
+        :param gas_mass: The mass of a single gas molecule [kg]
+        :param beam_power: The total power of the laser [W]
+        :param beam_waist_radius: The radius of the laser beam waist [m]
+        :param flow_gas_pressure: The pressure of a uniform drag force field
+            (optional, but required if flow_gas_velocity is passed) [Pa]
+        :param flow_gas_velocity: The velocity of a uniform drag force field
+            (optional, but required if flow_gas_pressure is passed) [m/s]
+        :param z_position: The Z position of the laser beam waist (0.0 by default)
+        """
 
         if beam_power:
             pp_field = DesyatnikovPhotophoreticLaserField(
                 gas_viscosity=gas_viscosity, gas_temperature=gas_temperature,
-                gas_thermal_conductivity=gas_thermal_conductivity, gas_density=gas_density,
+                gas_thermal_conductivity=gas_thermal_conductivity, gas_density=gas_density, gas_mass=gas_mass,
                 beam_power=beam_power, beam_waist_radius=beam_waist_radius, z_position=z_position
             )
             fields: List[Field] = [pp_field]
         else:
             fields = []
 
-        if drag_field_velocity:
-            # Assume air at 100 mbar
-            drag_field = FunctionField(get_uniform_drag_force(gas_viscosity, np.array([0, drag_field_velocity]),
-                                                              gas_temperature, gas_mass, gas_pressure))
+        if flow_gas_velocity:
+            drag_field = FunctionField(get_uniform_drag_force(gas_viscosity, np.array([0, flow_gas_velocity]),
+                                                              gas_temperature, gas_mass, flow_gas_pressure))
             fields.append(drag_field)
 
         boundary: CuboidBoundary = CuboidBoundary(intervals=[r_boundary, z_boundary])
