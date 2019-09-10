@@ -121,7 +121,7 @@ def simulate_particle(particle: Particle) -> Particle:
 
     # Construct integrals
     integral = ode(spatial_derivatives)
-    integral.set_integrator('lsoda', nsteps=2000)
+    integral.set_integrator('lsoda', nsteps=3000)
     integral.set_initial_value(particle.position, t_start)
     integral.set_f_params(particle, DEVICES, NUMBER_OF_DIMENSIONS)
     logging.info(f"\tSimulating particle {particle.identifier}...")

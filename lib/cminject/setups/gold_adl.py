@@ -138,7 +138,7 @@ class GoldADLSetup(Setup):
                 z_position=adl_exit_position + 1e-2,  # [m]
             )]
 
-        detectors = [SimpleZDetector(i, adl_exit_position + i*5e-4) for i in range(10)]
+        detectors = [SimpleZDetector(i, adl_exit_position + i*5e-4) for i in range(20)]
         sources = [
             VariableDistributionSource(
                 subclass=ThermallyConductiveSphericalParticle,
@@ -151,7 +151,7 @@ class GoldADLSetup(Setup):
                 #thermal_conductivity=0.030,
 
                 position=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 3.0e-3},
-                          skimmer_min_z],
+                          skimmer_min_z+abs(skimmer_min_z*0.001)],
                 velocity=[{'kind': 'gaussian', 'mu': 1e-3, 'sigma': 1e-5},
                           {'kind': 'gaussian', 'mu': 0.155, 'sigma': 0.001}]
                 # for ADL exit, approximated:
