@@ -27,7 +27,7 @@ from typing import Type
 
 from cminject.definitions.property_updaters import TrajectoryPropertyUpdater
 from cminject.definitions.result_storage import HDF5ResultStorage
-from cminject.setups.base import Setup
+from cminject.definitions import Setup
 from cminject.utils.args import natural_number
 
 
@@ -85,7 +85,7 @@ def main():
     """
     The main method of cminject. Further documentation is given by the help strings of the argparse parser.
     """
-    DEFAULT_SETUP = 'cminject.setups.OneFlowFieldSetup'
+    DEFAULT_SETUP = 'cminject.definitions.setups.OneFlowFieldSetup'
     # This base_parser is a small workaround for wanting to print out the help of the given --setup parameter.
     # If we define an action directly on `parser` that prints the help, it won't have parsed the other arguments
     # at all, so the setup help will always be printed for the same default setup, which of course isn't intended.

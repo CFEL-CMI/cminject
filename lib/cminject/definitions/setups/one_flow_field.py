@@ -19,39 +19,16 @@
 # <http://www.gnu.org/licenses/>.
 
 import argparse
-import logging
-from typing import Tuple, List
 
-from cminject.definitions import Device, Boundary
-from cminject.definitions.boundaries import GridFieldBasedBoundary
 from cminject.definitions.detectors import SimpleZDetector
-from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField, MolecularFlowDragForceField
+from cminject.definitions.devices.fluid_flow_field_device import FluidFlowFieldDevice, FlowType
 from cminject.definitions.particles import SphericalParticle
 from cminject.definitions.property_updaters import BrownianMotionPropertyUpdater, \
     BrownianMotionMolecularFlowPropertyUpdater
+from cminject.definitions.setups import Setup
 from cminject.definitions.sources import VariableDistributionSource
 from cminject.experiment import Experiment
-from cminject.setups.base import Setup
 from cminject.utils.args import dist_description, SetupArgumentParser
-
-
-class FluidFlowFieldDevice(Device):
-    @property
-    def z_boundary(self) -> Tuple[float, float]:
-        return self.boundary.z_boundary
-
-    def __init__(self, flow_type, *args, **kwargs):
-        if flow_type == 'stokes':
-            self.fields = [StokesDragForceField(*args, **kwargs)]
-        elif flow_type == 'molecular_flow':
-            self.fields = [MolecularFlowDragForceField(*args, **kwargs)]
-        else:
-            raise ValueError(
-                f"Unknown flow type: {flow_type}. Available are: [stokes, molecular_flow]."
-            )
-
-        self.boundary: Boundary = GridFieldBasedBoundary(self.fields[0])
-        super().__init__(fields=self.fields, boundary=self.boundary)
 
 
 class OneFlowFieldSetup(Setup):
@@ -64,10 +41,13 @@ class OneFlowFieldSetup(Setup):
         t_start, t_end = main_args.time_interval
         dt = main_args.time_step
 
-        devices = [FluidFlowFieldDevice(flow_type=args.flow_type, filename=args.flow_field,
-                                        temperature=args.flow_temperature,
-                                        slip_correction_scale=args.flow_scale_slip or 1.0)]
+        devices = [FluidFlowFieldDevice(
+            filename=args.flow_field,
+            temperature=args.flow_temperature, slip_correction_scale=args.flow_scale_slip or 1.0,
+            flow_type=(FlowType.STOKES if args.flow_type == 'stokes' else FlowType.MOLECULAR_FLOW)
+        )]
 
+        # Add Brownian motion for the picked flow model, if it was enabled
         property_updaters = []
         if args.brownian:
             if args.flow_type == 'stokes':

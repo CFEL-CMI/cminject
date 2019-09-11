@@ -15,10 +15,13 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-__all__ = ['base', 'desyatnikov_photophoresis', 'one_flow_field']
+__all__ = ['Setup', 'DesyatnikovPhotophoresisSetup', 'OneFlowFieldSetup', 'GoldADLSetup']
+
 from .base import Setup
-from .desyatnikov_photophoresis import DesyatnikovPhotophoresisSetup
 from .one_flow_field import OneFlowFieldSetup
+from .desyatnikov_photophoresis import DesyatnikovPhotophoresisSetup
+from .gold_adl import GoldADLSetup
+
 
 ### Local Variables:
 ### fill-column: 100

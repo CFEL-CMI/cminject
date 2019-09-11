@@ -3,16 +3,20 @@ from typing import Tuple
 
 import numpy as np
 
+from cminject.experiment import Experiment
+from cminject.utils.args import SetupArgumentParser
 from cminject.definitions import Device, Boundary
+from cminject.definitions.setups import Setup
+
 from cminject.definitions.boundaries import GridFieldBasedBoundary
 from cminject.definitions.detectors import SimpleZDetector
-from cminject.definitions.devices.desyatnikov_photophoresis_device import DesyatnikovVortexLaserDevice
+from cminject.definitions.devices.desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice
 from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.definitions.property_updaters import BrownianMotionPropertyUpdater
 from cminject.definitions.sources import VariableDistributionSource
-from cminject.experiment import Experiment
-from .base import Setup, SetupArgumentParser
+
+
 
 
 class SkimmersBoundary(Boundary):
@@ -121,7 +125,7 @@ class GoldADLSetup(Setup):
         ]
 
         if args.beam_power is not None:  # if missing or 0.0, we don't need to create a device
-            devices += [DesyatnikovVortexLaserDevice(
+            devices += [DesyatnikovPhotophoresisDevice(
                 # All gas properties are assuming dilute nitrogen at 293.15K.
                 gas_density=(0.059, devices[1].fields[0]),
                 # taken for dilute nitrogen from Lemmon and Jacobsen 2003
@@ -146,6 +150,7 @@ class GoldADLSetup(Setup):
                 rho=19320.0,  # Assuming 50nm gold particles
                 radius=50e-9,
                 thermal_conductivity=315.0,  # [W / (m*K)], taken from Wikipedia
+                specific_heat=0.0,
                 #rho=1050.0,  # Assuming expanded Polystyrene at 50nm
                 #radius=50e-9,
                 #thermal_conductivity=0.030,

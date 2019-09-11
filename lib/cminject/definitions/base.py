@@ -14,7 +14,6 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
-
 from abc import ABC, abstractmethod
 from typing import Tuple, List, Any, Optional, Dict
 
@@ -470,7 +469,6 @@ class ResultStorage(ABC):
         :param particles: The list of particles, each in the state of after running a simulation.
         """
         pass
-
 
 ### Local Variables:
 ### fill-column: 100

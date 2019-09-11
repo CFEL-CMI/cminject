@@ -181,13 +181,10 @@ def simulate_particle(particle: Particle) -> Particle:
 
 
 class Experiment:
-    """"""
-
-    def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
+    def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector], number_of_dimensions,
                  property_updaters: List[PropertyUpdater] = None, result_storage: ResultStorage = None,
                  time_interval: Tuple[float, float] = (0.0, 1.8), time_step: float = None,
-                 z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0,
-                 number_of_dimensions: int = 3, seed=None):
+                 z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0, seed=None):
         """
         Construct an Experiment to run.
 
@@ -234,7 +231,7 @@ class Experiment:
         for source in self.sources:
             source_particles = source.generate_particles(time_interval[0])  # initialize with t_0
             if source_particles:
-                # FIXME assuming a source only generates one particle type
+                # FIXME this is assuming a source only generates one particle type --> is this an issue?
                 particle_types.add(type(source_particles[0]))
 
             # Set the number of dimensions for each particle.

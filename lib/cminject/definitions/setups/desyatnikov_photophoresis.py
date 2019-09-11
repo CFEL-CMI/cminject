@@ -21,13 +21,13 @@
 import argparse
 
 from cminject.definitions import PropertyUpdater, Particle
+from cminject.definitions.setups import Setup
 from cminject.definitions.detectors import SimpleZDetector
-from cminject.definitions.devices.desyatnikov_photophoresis_device import DesyatnikovVortexLaserDevice, \
+from cminject.definitions.devices.desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice, \
     UniformBrownianMotionPropertyUpdater
 from cminject.definitions.particles import ThermallyConductiveSphericalParticle
 from cminject.definitions.sources import VariableDistributionSource
 from cminject.experiment import Experiment
-from cminject.setups.base import Setup
 from cminject.utils.args import dist_description, SetupArgumentParser, auto_time_step
 
 
@@ -53,7 +53,7 @@ class DesyatnikovPhotophoresisSetup(Setup):
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
         dt = main_args.time_step or auto_time_step(abs(args.velocity[-1]['mu']))
 
-        devices = [DesyatnikovVortexLaserDevice(
+        devices = [DesyatnikovPhotophoresisDevice(
             r_boundary=args.boundary[:2], z_boundary=args.boundary[2:],
             gas_temperature=args.gas_temperature, gas_viscosity=args.gas_viscosity, flow_gas_pressure=args.gas_pressure,
             gas_thermal_conductivity=args.gas_thermal_conductivity, gas_density=args.gas_density, gas_mass=M_GAS_AIR,
@@ -63,7 +63,8 @@ class DesyatnikovPhotophoresisSetup(Setup):
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
         sources = [VariableDistributionSource(
             main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius, rho=args.rho,
-            subclass=ThermallyConductiveSphericalParticle, thermal_conductivity=args.thermal_conductivity
+            subclass=ThermallyConductiveSphericalParticle, specific_heat=0.0,
+            thermal_conductivity=args.thermal_conductivity
         )]
 
         if args.brownian:

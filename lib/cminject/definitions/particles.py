@@ -58,37 +58,20 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
     that is required by e.g. the photophoretic force and for thermal calculations.
     """
     def __init__(self, *args,
-                 thermal_conductivity: float = 6.3,
-                 temperature: float = 298.0,
-                 refraction_index: float = 1.0,
+                 thermal_conductivity: float, temperature: float, specific_heat: float,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.thermal_conductivity = thermal_conductivity
         self.temperature = temperature
-        self.collision_temperature = temperature
-        self.refractive_index = refraction_index
-
-        self.time_to_liquid_n = float('inf')
-        self.collision_time_to_liquid_n = float('inf')
+        self.specific_heat = specific_heat
 
     @property
     def properties(self) -> np.array:
-        basic_phase = super().properties
-        return np.concatenate([
-            basic_phase,
-            [
-                self.temperature,
-                self.collision_temperature,
-                self.time_to_liquid_n,
-                self.collision_time_to_liquid_n,
-            ]
-        ])
+        return np.concatenate([super().properties, [self.temperature]])
 
     @property
     def properties_description(self) -> List[str]:
-        return super().properties_description + [
-            'T', 'T_c', 't_Ln', 't_Ln_c'
-        ]
+        return super().properties_description + ['T']
 
 
 ### Local Variables:

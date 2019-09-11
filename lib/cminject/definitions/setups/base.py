@@ -1,10 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# This file is part of CMInject.
-# It is a reference implementation of a subset of possible experimental setups, together with command line argument
-# parsing. Its purpose is to allow those simulations to be run without additional code needing to be written, and to
-# showcase how the setup is created so people can extend it or write more complex setups.
+# This file is part of CMInject
 #
 # This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
@@ -25,6 +22,9 @@ from cminject.experiment import Experiment
 from cminject.utils.args import SetupArgumentParser
 
 
+# The Setup base class is defined in its own file, not together with all others in cminject.definitions.base.
+# The reason this is done because otherwise we end up with circular imports, as the type annotation in Setup refers
+# to Experiment.
 class Setup(ABC):
     """
     A base class for classes that define experiment setups. Should be considered static, i.e. its method are all

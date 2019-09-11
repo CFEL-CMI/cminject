@@ -1,14 +1,16 @@
 # CMInject: A framework for particle injection trajectory simulations
 
 CMInject is a Python 3 framework that can be used to define and run particle trajectory simulations
-for sample injection. It can run 1D, 2D and 3D simulations, given that all parts in a simulation
-setup allow the given dimensionality. The minimum required Python version to use it is 3.6.
+for sample injection. It can run 1D, 2D and 3D simulations based on the ODE describing Newton's equation of motion,
+given that all parts in a simulation setup allow this dimensionality.
 
 It is meant to be used by different groups of people and match different needs, and so it is meant
 to be both:
 
 - a library that provides a generic way to define and run whole simulation setups, and
 - a collection of such setups (coming soon).
+
+The minimum required Python version to use it is 3.6.
 
 
 ## Dependencies and Installation
@@ -21,7 +23,8 @@ or need to change the way the Cython extensions are built), the more general way
 
 - Installing `Cython` and `numpy`, via pip/pipenv/macports/..., to be available for `setup.py`
 - Building the Cython extensions via `python setup.py build_ext --inplace` (refer to setuptools/Cython docs)
-- Installing the software and its other dependencies via `python setup.py install` (refer to setuptools docs)
+- Installing the software and its other dependencies via `python setup.py install`, or `python setup.py develop`
+  if changes to the library code are to be made (refer to setuptools docs)
 
 
 ## Generating docs
@@ -30,21 +33,25 @@ you can generate the docs in HTML format by running `python setup.py build_sphin
 root folder. The generated HTML can then be viewed by opening `build/sphinx/html/index.html`.
 
 
-## Overview of an Experiment setup
-A user creates an `Experiment` instance and passes the constructor lists of (i.e. one list of each)
+## Overview of an experiment Setup
+To define a new experiment Setup, a user creates a subclass of `cminject.definitions.base.Setup`, and must then
+implement the abstract methods defined by this class. In doing so, the user defines both a parser for experiment
+parameters and a way to construct an `Experiment` instance from the parameters to this parser and common parameters to
+the main program (defined in the program, `bin/cminject`). An `Experiment` instance is constructed with the following:
 
-- `Source`s (which generate `Particle`s)
-- `Device`s (which consist of a `Field` and a `Boundary`)
-- `Detector`s
-- `PropertyUpdater`s
+- A list of `Source`s (which generate `Particle`s)
+- A list of `Device`s (which consist of several `Field`s and a `Boundary`)
+- A list of `Detector`s (optional)
+- A list of `PropertyUpdater`s (optional)
+- Additional parameters like the `number_of_dimensions`, the `time_interval` and `time_step`, which are otherwise set
+  to defaults which might not fit the setup's needs.
 
-which are all described in more detail below. They can then call the Experiment's `.run()` method to
-actually run the simulation and get back a list of all Particle objects that were initially
-generated, modified as they were during the course of the simulated experiment.
+The user can then run the setup via `bin/cminject -s <setupcls>`, where `<setupcls>` is replaced with a fully qualified
+Python import name for the Setup subclass they defined. All classes mentioned in the list above are described in more
+detail in the following, and also have more extensive Python documentation (see section "Generating docs" above).
 
 
 ## Overview of abstract base definitions
-
 These definitions are all abstract, i.e. the classes mentioned lack concrete implementations for the
 tasks they're supposed to perform. There are also some concrete implementations for these classes
 included in the framework; a user can either extend from there, or write their own implementations
@@ -107,7 +114,6 @@ Particle-Detector hit happens.
 
 > - `SimpleZDetector`: A detector located at some Z position, detecting along the full X/Y plane.
 
-
 ### PropertyUpdater
 A PropertyUpdater is something that can update any properties of a Particle instance handed to the
 PropertyUpdater's `update` method.
@@ -118,9 +124,6 @@ position and properties, or also not involve any calculation at all
 and appends them to a trajectory list).
 
 > - `TrajectoryPropertyUpdater`: Tracks the particle phase position along its whole flight path.
-> - `MirrorSymmetryPropertyUpdater`: Ensures mirror symmetry of particles around some axis by ensuring they're on the
- "right" (larger) side of the axis position. Useful in things like 2D simulations that model radially symmetrical
- 3D simulations, as particles should always be positioned at r >= 0.0.
 > - `BrownianMotionPropertyUpater`: Adds Brownian motion to the particle flight path based on some fluid flow field's
 macroscopic properties and the time step size of the integrator.
 

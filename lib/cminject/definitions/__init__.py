@@ -20,9 +20,9 @@ __all__ = ['base', 'boundaries', 'detectors', 'devices', 'fields',
 
            'Boundary', 'Detector', 'Device', 'Field', 'NDimensional', 'Particle', 'ParticleDetectorHit',
            'PropertyUpdater', 'ResultStorage', 'Source', 'ZBounded']
-from .base import Boundary, Detector, Device, Field, NDimensional, Particle, ParticleDetectorHit, \
+from cminject.definitions.base import Boundary, Detector, Device, Field, NDimensional, Particle, ParticleDetectorHit, \
     PropertyUpdater, ResultStorage, Source, ZBounded
-
+from cminject.definitions.setups.base import Setup
 
 ### Local Variables:
 ### fill-column: 100

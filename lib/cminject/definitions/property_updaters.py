@@ -18,7 +18,7 @@
 import numpy as np
 from cminject.definitions.base import PropertyUpdater, Particle
 from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField, MolecularFlowDragForceField
-from cminject.definitions.particles import SphericalParticle
+from cminject.definitions.particles import SphericalParticle, ThermallyConductiveSphericalParticle
 from scipy.constants import pi, Boltzmann
 
 
@@ -79,20 +79,24 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
         self.dt = dt
         self.number_of_dimensions = None
 
-    def update(self, particle: SphericalParticle, time: float) -> bool:
+    def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
         pressure = self.field.interpolate(particle.spatial_position)[self.number_of_dimensions]
         if pressure >= 0.0:
             h = self.field.m_gas / (2 * Boltzmann * self.field.temperature)
-            s0 = (16/3 + 3*pi/5) * np.sqrt(pi/h) * pressure * self.field.m_gas * particle.radius**2
+            h_ = self.field.m_gas / (2 * Boltzmann * particle.temperature)
+
+            s0 = (16/3 + 2/3*pi*np.sqrt(h/h_)) * np.sqrt(pi/h) * pressure * self.field.m_gas * particle.radius**2
             if self.number_of_dimensions == 2:  # TODO this is just for radial symmetry
                 a = np.random.normal(0.0, 1.0, 3) * np.sqrt(s0 / self.dt) / particle.mass
-                r_sign=np.sign(particle.position[0])
-                vr_sign=np.sign(particle.position[2])
-                particle.position[0] = r_sign*np.sqrt((particle.position[0] + (0.5 * a[0] * self.dt**2))**2 +
-                                               (0.5 * a[1] * self.dt**2)**2)
+
+                new_x = particle.position[0] + (0.5 * a[0] * self.dt**2)
+                new_vx = particle.position[2] + (a[0] * self.dt)
+                r_sign = np.sign(new_x)
+                vr_sign = np.sign(new_vx)
+
+                particle.position[0] = r_sign * np.sqrt(new_x**2 + (0.5 * a[1] * self.dt**2)**2)
                 particle.position[1] = particle.position[1] + (0.5 * a[2] * self.dt**2)
-                particle.position[2] = vr_sign*np.sqrt((particle.position[2] + (a[0] * self.dt))**2 +
-                                               (a[1] * self.dt)**2)
+                particle.position[2] = vr_sign * np.sqrt(new_vx**2 + (a[1] * self.dt)**2)
                 particle.position[3] = particle.position[3] + (a[2] * self.dt)
             else:
                 a = np.random.normal(0.0, 1.0, self.number_of_dimensions) * np.sqrt(s0 / self.dt) / particle.mass                
@@ -101,6 +105,26 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
                 particle.position = np.concatenate([position, velocity])
 
         return True
+
+
+class ParticleTemperaturePropertyUpdater(PropertyUpdater):
+    def __init__(self, field: MolecularFlowDragForceField, dt: float):
+        self.field = field
+        self.dt = dt
+        self.number_of_dimensions = None
+
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        self.number_of_dimensions = number_of_dimensions
+
+    def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
+        pressure = self.field.interpolate(particle.spatial_position)[self.number_of_dimensions]
+        h = self.field.m_gas / (2 * Boltzmann * self.field.temperature)
+        h_ = self.field.m_gas / (2 * Boltzmann * particle.temperature)
+        deltaE = 4 * pressure * np.sqrt(np.pi) * particle.radius**2 * (np.sqrt(h)/h_ - 1/np.sqrt(h))
+        deltaT = deltaE / (particle.specific_heat * particle.mass)
+
+        particle.temperature += deltaT * self.dt
+        return False
 
 
 ### Local Variables:
