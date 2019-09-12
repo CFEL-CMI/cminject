@@ -44,7 +44,7 @@ class OneFlowFieldSetup(Setup):
         devices = [FluidFlowFieldDevice(
             filename=args.flow_field,
             temperature=args.flow_temperature, slip_correction_scale=args.flow_scale_slip or 1.0,
-            flow_type=(FlowType.STOKES if args.flow_type == 'stokes' else FlowType.MOLECULAR_FLOW)
+            flow_type=(FlowType.MOLECULAR_FLOW if args.flow_type == 'molecular_flow' else FlowType.STOKES)
         )]
 
         # Add Brownian motion for the picked flow model, if it was enabled

@@ -120,7 +120,8 @@ class StokesDragForceField(DragForceInterpolationField):
             return np.zeros(self.number_of_dimensions)
 
         force_vector = 6 * np.pi * self.dynamic_viscosity * particle.radius * relative_velocity
-        return force_vector / self.calc_slip_correction(pressure, particle.radius)
+        acceleration = force_vector / particle.mass
+        return acceleration / self.calc_slip_correction(pressure, particle.radius)
 
     def calc_slip_correction(self, pressure: float, particle_radius: float) -> float:
         """
@@ -247,7 +248,8 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
             ) / (2 * h * relative_velocity**2)
         )
         force_vector = f_spec + 1.8 / 3 * pressure * pi**(3/2) * h/np.sqrt(h_) * particle.radius**2 * relative_velocity
-        return force_vector
+        acceleration = force_vector / particle.mass
+        return acceleration
 
 
 ### Local Variables:

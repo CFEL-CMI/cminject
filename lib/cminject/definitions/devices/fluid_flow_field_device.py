@@ -41,4 +41,4 @@ class FluidFlowFieldDevice(Device):
             field = StokesDragForceField(filename=filename, *args, **kwargs)
 
         boundary = GridFieldBasedBoundary(field=field)
-        super().__init__([field], boundary)
+        super().__init__(fields=[field], boundary=boundary)
