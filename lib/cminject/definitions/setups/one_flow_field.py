@@ -73,17 +73,17 @@ class OneFlowFieldSetup(Setup):
         parser.add_argument('-F', '--flow-type', help='The type of flow model to use.',
                             type=str, choices=['stokes', 'molecular_flow'], default='stokes')
         parser.add_argument('-D', '--dimensions', help='# of spatial dimensions',
-                            type=int)
+                            type=int, required=True)
         parser.add_argument('-p', '--position',
                             help='Distribution description for the position.',
-                            nargs='*', type=dist_description)
+                            nargs='*', type=dist_description, required=True)
         parser.add_argument('-v', '--velocity',
                             help='Distribution description for the velocity.',
-                            nargs='*', type=dist_description)
+                            nargs='*', type=dist_description, required=True)
         parser.add_argument('-r', '--radius', help='Distribution description for the radius.',
-                            type=dist_description)
+                            type=dist_description, required=True)
         parser.add_argument('-rho', '--density', help='Density of the particles.',
-                            type=float)
+                            type=float, required=True)
 
         parser.add_argument('-d', '--detectors', help='The Z positions of the detectors', nargs='+',
                             type=float, required=True)
@@ -96,22 +96,6 @@ class OneFlowFieldSetup(Setup):
                             type=float)
         parser.add_argument('-fs', '--flow-scale-slip', help='Slip scale factor of the flow field',
                             type=float)
-
-        parser.set_defaults(
-            dimensions=3,
-            radius={'kind': 'gaussian', 'mu': 2.45e-7, 'sigma': 7.5e-9},
-            position=[
-                {'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.0002},
-                {'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.0002},
-                {'kind': 'gaussian', 'mu': 0.0048, 'sigma': 0.00001}
-            ],
-            velocity=[
-                {'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.1},
-                {'kind': 'gaussian', 'mu': 0.7, 'sigma': 0.3},
-                {'kind': 'gaussian', 'mu': -43.0, 'sigma': 2.0},
-            ],
-            density=1050.0,
-        )
 
         return parser
 
