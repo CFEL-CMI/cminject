@@ -57,6 +57,9 @@ class SimpleZDetector(Detector):
         return reached
 
     def _hit_position3(self, position_velocity: np.array) -> Optional[np.array]:
+        if position_velocity[self.number_of_dimensions-1] == self.z_position:
+            return position_velocity
+
         x, y, z, u, v, w = position_velocity
         d = abs(z) - abs(self.z_position)
         t = d / abs(w)
@@ -65,6 +68,9 @@ class SimpleZDetector(Detector):
         return np.array([x, y, self.z_position, u, v, w])
 
     def _hit_position2(self, position_velocity: np.array) -> Optional[np.array]:
+        if position_velocity[self.number_of_dimensions - 1] == self.z_position:
+            return position_velocity
+
         r, z, vr, vz = position_velocity
         d = abs(z) - abs(self.z_position)
         t = d / abs(vz)

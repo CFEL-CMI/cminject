@@ -126,6 +126,10 @@ def simulate_particle(particle: Particle) -> Particle:
     integral.set_f_params(particle, DEVICES, NUMBER_OF_DIMENSIONS)
     logging.info(f"\tSimulating particle {particle.identifier}...")
 
+    # Run detectors once
+    for detector in DETECTORS:
+        detector.try_to_detect(particle)
+
     # TODO:
     """
     when loop was broken due to the integration not being successful, we need to somehow continue to simulate
