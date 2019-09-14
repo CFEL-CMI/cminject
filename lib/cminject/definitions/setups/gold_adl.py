@@ -151,6 +151,7 @@ class GoldADLSetup(Setup):
                 radius=50e-9,
                 thermal_conductivity=315.0,  # [W / (m*K)], taken from Wikipedia
                 specific_heat=0.0,
+                temperature=293.15,
                 #rho=1050.0,  # Assuming expanded Polystyrene at 50nm
                 #radius=50e-9,
                 #thermal_conductivity=0.030,
