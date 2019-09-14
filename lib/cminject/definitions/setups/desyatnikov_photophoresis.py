@@ -63,7 +63,7 @@ class DesyatnikovPhotophoresisSetup(Setup):
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
         sources = [VariableDistributionSource(
             main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius, rho=args.rho,
-            subclass=ThermallyConductiveSphericalParticle, specific_heat=0.0,
+            subclass=ThermallyConductiveSphericalParticle, specific_heat=0.0, temperature=293.15,
             thermal_conductivity=args.thermal_conductivity
         )]
 
