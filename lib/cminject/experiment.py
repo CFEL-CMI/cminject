@@ -126,10 +126,6 @@ def simulate_particle(particle: Particle) -> Particle:
     integral.set_f_params(particle, DEVICES, NUMBER_OF_DIMENSIONS)
     logging.info(f"\tSimulating particle {particle.identifier}...")
 
-    # Run detectors once
-    for detector in DETECTORS:
-        detector.try_to_detect(particle)
-
     # TODO:
     """
     when loop was broken due to the integration not being successful, we need to somehow continue to simulate
@@ -170,10 +166,11 @@ def simulate_particle(particle: Particle) -> Particle:
         detector.try_to_detect(particle)
 
     if particle.lost:
-        if Z_BOUNDARY[0] <= particle.spatial_position[NUMBER_OF_DIMENSIONS - 1] <= Z_BOUNDARY[1]:
+        z_position = particle.spatial_position[NUMBER_OF_DIMENSIONS - 1]
+        if Z_BOUNDARY[0] <= z_position <= Z_BOUNDARY[1]:
             reason = 'hit boundary within the experiment'
         else:
-            reason = 'left experiment Z boundary'
+            reason = f'left experiment Z boundary (at {z_position:.2g})'
     elif integral.t >= t_end:
         reason = 'whole timespan simulated'
     else:
@@ -185,7 +182,8 @@ def simulate_particle(particle: Particle) -> Particle:
 
 
 class Experiment:
-    def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector], number_of_dimensions,
+    def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
+                 number_of_dimensions: int,
                  property_updaters: List[PropertyUpdater] = None, result_storage: ResultStorage = None,
                  time_interval: Tuple[float, float] = (0.0, 1.8), time_step: float = None,
                  z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0, seed=None):
