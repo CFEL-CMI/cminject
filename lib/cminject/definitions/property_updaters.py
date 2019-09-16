@@ -14,7 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
-
+import numba
 import numpy as np
 from cminject.definitions.base import PropertyUpdater, Particle
 from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField, MolecularFlowDragForceField
@@ -41,14 +41,47 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
     Models brownian motion for a Stokes drag force field based on the paper:
     A. Li, G. Ahmadi, Dispersion and deposition of spherical particles from point sources in a turbulent channel flow,
     Aerosol Sci. Techn. 16 (24) (1992) 209–226. doi:10.1080/02786829208959550
+
+    .. note::
+        This property updater assumes that when the number of spatial dimensions is 2, the problem is radially
+        symmetrical. If you need an x/y 2D simulation rather than a r/z simulation, derive a new class.
     """
     def set_number_of_dimensions(self, number_of_dimensions: int):
-        self.number_of_dimensions = number_of_dimensions  # TODO validate against field dimensions
+        if number_of_dimensions not in [2, 3]:
+            raise ValueError(f"{self.__class__.__name__} only works in 2D and 3D!")
+        self.number_of_dimensions = number_of_dimensions
 
     def __init__(self, field: StokesDragForceField, dt: float):
         self.field = field
         self.dt = dt
         self.number_of_dimensions = None
+
+    @staticmethod
+    @numba.jit(nopython=True)
+    def _generate_random_3d_vec():
+        r = np.random.normal(0.0, 1.0)
+        phi, two_theta = np.random.uniform(0, 2 * np.pi, 2)
+        theta = two_theta / 2
+        r_cos_theta = r * np.cos(theta)
+        ax = r_cos_theta * np.cos(phi)
+        ay = r_cos_theta * np.sin(phi)
+        az = r * np.sin(theta)
+        a = np.array([ax, ay, az])
+        return a
+
+    @staticmethod
+    @numba.jit(nopython=True)
+    def _generate_new_pos_2d(pos, a, dt):
+        pos3d = np.array([pos[0], 0, pos[1]])
+        vel3d = np.array([pos[2], 0, pos[3]])
+        pos3d_ = pos3d + (0.5 * a * dt ** 2)
+        vel3d_ = vel3d + (a * dt)
+
+        psign = np.sign(pos3d_[0])
+        vsign = np.sign(vel3d_[0])
+        position = np.array([psign * np.sqrt(pos3d_[0] ** 2 + pos3d_[1] ** 2), pos3d_[2],
+                             vsign * np.sqrt(vel3d_[0] ** 2 + vel3d_[1] ** 2), vel3d_[2]])
+        return position
 
     def update(self, particle: SphericalParticle, time: float) -> bool:
         data = self.field.interpolate(particle.spatial_position)
@@ -57,13 +90,16 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
             cunningham = self.field.calc_slip_correction(pressure, particle.radius)
             s0 = 216 * self.field.dynamic_viscosity * Boltzmann * self.field.temperature /\
                  (pi**2 * (2 * particle.radius)**5 * particle.rho**2 * cunningham)
-            a = np.random.normal(0.0, 1.0, self.number_of_dimensions) * np.sqrt(pi * s0 / self.dt)
+            a = self._generate_random_3d_vec() * np.sqrt(pi * s0 / self.dt)
 
-            position = particle.spatial_position + (0.5 * a * self.dt**2)
-            velocity = particle.velocity + (a * self.dt)
-            particle.position = np.concatenate([position, velocity])
-
-        return True
+            if self.number_of_dimensions == 3:
+                position = particle.spatial_position + (0.5 * a * self.dt**2)
+                velocity = particle.velocity + (a * self.dt)
+                particle.position = np.concatenate((position, velocity))
+            elif self.number_of_dimensions == 2:
+                particle.position = self._generate_new_pos_2d(particle.position, a, self.dt)
+            return True
+        return False
 
 
 class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
