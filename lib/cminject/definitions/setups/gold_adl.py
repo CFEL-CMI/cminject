@@ -156,7 +156,7 @@ class GoldADLSetup(Setup):
                 #radius=50e-9,
                 #thermal_conductivity=0.030,
 
-                position=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 3.0e-3},
+                position=[{'kind': 'radial_gaussian', 'mu': 0.0, 'sigma': 3.0e-3},
                           skimmer_min_z+abs(skimmer_min_z*0.001)],
                 velocity=[{'kind': 'gaussian', 'mu': 1e-3, 'sigma': 1e-5},
                           {'kind': 'gaussian', 'mu': 0.155, 'sigma': 0.001}]
