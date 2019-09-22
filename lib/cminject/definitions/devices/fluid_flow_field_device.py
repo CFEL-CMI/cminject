@@ -16,7 +16,9 @@
 # <http://www.gnu.org/licenses/>.
 from enum import Enum
 
-from cminject.definitions.base import Device
+import numpy as np
+
+from cminject.definitions.base import Device, Particle
 from cminject.definitions.boundaries import GridFieldBasedBoundary
 from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField, MolecularFlowDragForceField
 
@@ -42,3 +44,10 @@ class FluidFlowFieldDevice(Device):
 
         boundary = GridFieldBasedBoundary(field=field)
         super().__init__(fields=[field], boundary=boundary)
+
+    def calculate_acceleration(self, particle: Particle, time: float) -> np.array:
+        """
+        This method is overridden since we know this device only has one field -- so we can avoid the overhead
+        of summing a list of 1 item that the default implementation of calculate_acceleration of Device has
+        """
+        return self.fields[0].calculate_acceleration(particle, time)

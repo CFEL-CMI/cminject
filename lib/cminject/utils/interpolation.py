@@ -1,3 +1,4 @@
+import logging
 from typing import List, Tuple
 
 import numpy as np
@@ -6,10 +7,14 @@ from scipy.interpolate import RegularGridInterpolator, interp1d
 from cminject.utils.cython_interpolation import interp2D, interp3D
 
 
+# --- For n-linear interpolation on a regular grid
+
 class Interp2D:
     """
     A fast linear interpolator on a regular 2D grid with interpolation implemented in Cython,
-    with a construction and call API like scipy.interpolate.RegularGridInterpolator. Wraps cython_interpolation.pyx.
+    with a construction and call API like scipy.interpolate.RegularGridInterpolator, except
+    that it accepts a (2,)-shaped np.array directly at call and not a 2-tuple of (x,y) coordinate arrays.
+    Wraps cython_interpolation.pyx.
     """
     def __init__(self, grid, data):
         x, y = grid
@@ -21,20 +26,29 @@ class Interp2D:
         self.min_y, self.max_y = y[0], y[-1]
         self.delta_x = (self.max_x - self.min_x) / (x.shape[0] - 1)
         self.delta_y = (self.max_y - self.min_y) / (y.shape[0] - 1)
+        # A vector of appropriate output size to copy, modify and return from each call
+        self._nanvec = np.full(self.data.shape[0], np.nan, dtype=np.float64)
 
     def __call__(self, t):
+        """
+        Return the interpolated data at the 3D coordinate coord.
+        :param coord: The coordinate to interpolate at, as a (2,)-shaped np.array.
+        :return: An (nd,)-shaped np.array with the interpolated results.
+        """
         # Get the size of the data grid in the output, X, and Y dimension
         D, X, Y = self.data.shape
         # Map the x,y position to the scale of the array indices
         x = (t[0] - self.min_x) / self.delta_x
         y = (t[1] - self.min_y) / self.delta_y
 
-        return interp2D(self.data, x, y, D, X, Y)
+        out = self._nanvec.copy()
+        interp2D(self.data, x, y, D, X, Y, out)
+        return out
 
 
 class Interp3D:
     """
-    Like Interp2D, but on a 3D grid.
+    Like Interp2D, but on a 3D regular grid.
     """
     def __init__(self, c, data):
         x, y, z = c
@@ -48,16 +62,39 @@ class Interp3D:
         self.delta_x = (self.max_x - self.min_x) / (x.shape[0] - 1)
         self.delta_y = (self.max_y - self.min_y) / (y.shape[0] - 1)
         self.delta_z = (self.max_z - self.min_z) / (z.shape[0] - 1)
+        # A vector of appropriate output size to copy, modify and return from each call
+        self._nanvec = np.full(self.data.shape[0], np.nan, dtype=np.float64)
 
-    def __call__(self, t):
+    def __call__(self, coord: np.array):
+        """
+        Return the interpolated data at the 3D coordinate coord.
+        :param coord: The coordinate to interpolate at, as a (3,)-shaped np.array.
+        :return: An (nd,)-shaped np.array with the interpolated results.
+        """
         # Get the size of the data grid in the output, X, Y, and Z dimension
         D, X, Y, Z = self.data.shape
         # Map the x,y,z position to the scale of the array indices
-        x = (t[0] - self.min_x) / self.delta_x
-        y = (t[1] - self.min_y) / self.delta_y
-        z = (t[2] - self.min_z) / self.delta_z
+        x = (coord[0] - self.min_x) / self.delta_x
+        y = (coord[1] - self.min_y) / self.delta_y
+        z = (coord[2] - self.min_z) / self.delta_z
 
-        return interp3D(self.data, x, y, z, D, X, Y, Z)
+        out = self._nanvec.copy()
+        interp3D(self.data, x, y, z, D, X, Y, Z, out)
+        return out
+
+
+class InterpND:
+    """
+    A simple wrapper for n-dimensional n-linear interpolation on a regular grid. Wraps
+    scipy.interpolate.RegularGridInterpolator directly except for an additional `tuple()` call around the passed
+    coordinate to interpolate at. This is to make the API coherent with Interp2D and Interp3D, which directly accept
+    NumPy arrays, as this is faster for single-coordinate interpolation which Interp2D/Interp3D are optimized for.
+    """
+    def __init__(self, *args, **kwargs):
+        self.interpolator = RegularGridInterpolator(*args, **kwargs)
+
+    def __call__(self, t):
+        return self.interpolator(tuple(t))
 
 
 def get_regular_grid_interpolator(grid, data):
@@ -79,8 +116,10 @@ def get_regular_grid_interpolator(grid, data):
     elif len(grid) == 2:
         return Interp2D(grid, data)
     else:
-        return RegularGridInterpolator(grid, data)
+        return InterpND(grid, data)
 
+
+# --- For interpolation along particle trajectories
 
 def split_at_inflections(a: np.array) -> Tuple[List[np.array], np.array]:
     """

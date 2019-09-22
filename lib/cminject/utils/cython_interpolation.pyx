@@ -9,8 +9,8 @@ np.import_array()
 @boundscheck(False)
 @wraparound(False)
 @nonecheck(False)
-cpdef np.ndarray[np.float64_t, ndim=1] interp2D(np.float_t[:,:,::1] v, np.float_t x, np.float_t y,
-                                                int nd, int nx, int ny):
+cpdef int interp2D(np.float_t[:,:,::1] v, np.float_t x, np.float_t y,
+                    int nd, int nx, int ny, np.ndarray[np.float64_t, ndim=1] out) except -1:
     """
     Interpolates a n-dimensional vector field bilinearly based on a 2D regular data grid.
 
@@ -22,15 +22,13 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp2D(np.float_t[:,:,::1] v, np.float_
     :param nd: As described in v.
     :param nx: As described in v.
     :param ny: As described in v.
-    :return: The interpolated output vector, which is an interpolated (nd,)-shaped np.array.
+    :param out: The interpolated output vector, which is an interpolated (nd,)-shaped np.array.
+    :return Nothing
     """
     cdef:
         int x0, x1, y0, y1
         np.float_t xd, yd, a0, a1
         np.float_t *v_a
-
-    # Declare a result array with the required size, and fill it with NaN
-    cdef np.ndarray[np.float64_t, ndim=1] result = np.full(nd, np.nan, dtype=np.float64)
 
     # Get the x0,y0 and x1,y1 corner indices of the rectangle that the point (x,y) lies within
     x0 = <int>floor(x)
@@ -54,19 +52,18 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp2D(np.float_t[:,:,::1] v, np.float_
             a1 = xd*v_a[ny*x0+y1] + (1-xd)*v_a[ny*x1+y1]
 
             # Linearly interpolate and write the value to the result vector
-            result[ai] = yd*a0 + (1-yd)*a1
+            out[ai] = yd*a0 + (1-yd)*a1
     # ...otherwise raise an error
     else:
         raise ValueError("At least one of the coordinate components is outside of the grid!")
-    return result
 
 
 @cdivision(True)
 @boundscheck(False)
 @wraparound(False)
 @nonecheck(False)
-cpdef np.ndarray[np.float64_t, ndim=1] interp3D(np.float_t[:,:,:,::1] v, np.float_t x, np.float_t y, np.float_t z,
-                                                int nd, int nx, int ny, int nz):
+cpdef int interp3D(np.float_t[:,:,:,::1] v, np.float_t x, np.float_t y, np.float_t z,
+                    int nd, int nx, int ny, int nz, np.ndarray[np.float64_t, ndim=1] out) except -1:
     """
     Interpolates a n-dimensional vector field trilinearly based on a 3D regular data grid.
 
@@ -80,15 +77,13 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp3D(np.float_t[:,:,:,::1] v, np.floa
     :param nx: As described in v.
     :param ny: As described in v.
     :param nz: As described in v.
-    :return: The interpolated output vector, which is an interpolated (nd,)-shaped np.array.
+    :param out: The interpolated output vector, which is an interpolated (nd,)-shaped np.array.
+    :return Nothing
     """
     cdef:
         int x0, x1, y0, y1, z0, z1
         np.float_t xd, yd, zd, c00, c01, c10, c11, c0, c1
         np.float_t *v_c
-
-    # Declare a result array with the required size, and fill it with NaN
-    cdef np.ndarray[np.float64_t, ndim=1] result = np.full(nd, np.nan, dtype=np.float64)
 
     # Get the indices for the 6 corners of the cube that (x,y,z) lies within
     x0 = <int>floor(x)
@@ -121,11 +116,10 @@ cpdef np.ndarray[np.float64_t, ndim=1] interp3D(np.float_t[:,:,:,::1] v, np.floa
             c1 = c01*(1-yd) + c11*yd
 
             # Linearly interpolate and write the value to the result vector
-            result[ci] = c0*(1-zd) + c1*zd
+            out[ci] = c0*(1-zd) + c1*zd
     # ...otherwise raise an error
     else:
         raise ValueError("At least one of the coordinate components is outside of the grid!")
-    return result
 
 
 

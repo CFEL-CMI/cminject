@@ -15,16 +15,15 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 import logging
-import multiprocessing
 import warnings
-from abc import abstractmethod, ABC
+from abc import ABC
 from typing import Tuple
 
 import h5py
+import numba
 import numpy as np
 from cminject.definitions.fields.regular_grid_interpolation_field import RegularGridInterpolationField
 from cminject.definitions.particles import SphericalParticle, ThermallyConductiveSphericalParticle
-from cminject.utils.perf import numpy_method_cache
 from scipy.constants import pi, Boltzmann
 from scipy.special import erf
 
@@ -45,16 +44,14 @@ class DragForceInterpolationField(RegularGridInterpolationField, ABC):
         pressure = data[self.number_of_dimensions]
         return pressure, relative_velocity
 
-    @numpy_method_cache(maxsize=multiprocessing.cpu_count() * 32)
     def interpolate(self, position: np.array) -> np.array:
         try:
-            return self._interpolator(tuple(position))
+            return self._interpolator(position)
         except ValueError:
             return np.zeros(self.number_of_dimensions + 1)  # vr,vz,p / vx,vy,vz,p / ...
 
     def is_particle_inside(self, position: np.array, time: float) -> bool:
-        return super().is_particle_inside(position, time) and \
-               self.interpolate(position)[self.number_of_dimensions] > 0.0
+        return self.interpolate(position)[self.number_of_dimensions] > 0.0
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
@@ -109,19 +106,41 @@ class StokesDragForceField(DragForceInterpolationField):
 
         super().__init__(filename, *args, **kwargs)
 
+    @staticmethod
+    @numba.jit('float64[::1](float64, float64[::1], float64, float64, float64, float64, float64[::1])', nopython=True)
+    def _a(p, delta_v, mu, r_p, m_p, Cc, azero):
+        if p <= 0:
+            return azero
+        return 6*pi * mu * r_p * delta_v / (m_p * Cc)
+
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
         """
         Calculates the drag force using Stokes' law for spherical particles in continuum
         """
-        # Negative pressure or zero pressure is akin to the particle not being in the flow field, force is zero
-        # and we can stop considering the particle to be inside this field
         pressure, relative_velocity = self.get_local_properties(particle.spatial_position, particle.velocity)
-        if pressure <= 0:
-            return np.zeros(self.number_of_dimensions)
+        Cc = self.calc_slip_correction(pressure, particle.radius)
+        return self._a(pressure, relative_velocity, self.dynamic_viscosity,
+                       particle.radius, particle.mass, Cc, self._zero_acceleration)
 
-        force_vector = 6 * np.pi * self.dynamic_viscosity * particle.radius * relative_velocity
-        acceleration = force_vector / particle.mass
-        return acceleration / self.calc_slip_correction(pressure, particle.radius)
+    @staticmethod
+    @numba.jit(nopython=True)
+    def _slip_correction_4k(p, r_p, T, ss):
+        # The Sutherland constant for helium is 79.4 at reference temperature of 273.0 K.
+        # I took a reference pressure of 1 Pascal, in which the mean free path of helium is 0.01754.
+        # see J. Aerosol Sci. 1976 Vol. 7. pp 381-387 by Klaus Willeke
+        knudsen = 0.01754 * 1 / (p * r_p) * (T / 273.0) * ((1 + 79.4 / 273.0) / (1 + 79.4 / T))
+        s = 1 + knudsen * (1.246 + (0.42 * np.exp(-0.87 / knudsen)))
+        return s * ss
+
+    @staticmethod
+    @numba.jit(nopython=True)
+    def _slip_correction_hutchins(mu, p, r_p, T, m_g, ss):
+        # D. K. Hutchins, M. H. Harper, R. L. Felder, Slip correction measurements for solid spherical particles
+        # by modulated dynamic light scattering, Aerosol Sci. Techn. 22 (2) (1995) 202–218.
+        # doi:10.1080/02786829408959741.
+        knudsen = mu / (p * r_p) * np.sqrt(pi * Boltzmann * T / (2 * m_g))
+        s = 1 + knudsen * (1.231 + 0.4695 * np.exp(-1.1783 / knudsen))
+        return s * ss
 
     def calc_slip_correction(self, pressure: float, particle_radius: float) -> float:
         """
@@ -132,27 +151,28 @@ class StokesDragForceField(DragForceInterpolationField):
         D. K. Hutchins, M. H. Harper, R. L. Felder, Slip correction measurements for solid spherical particles
         by modulated dynamic light scattering, Aerosol Sci. Techn. 22 (2) (1995) 202–218. doi:10.1080/02786829408959741.
 
-        TODO what model is 4_kelvin based on?
+        .. todo::
+            what model is 4_kelvin based on?
+
+        .. note::
+            This method is replaced at runtime with a concrete implementation for the chosen slip correction model,
+            to avoid the overhead of choosing at every call.
         """
+        raise NotImplementedError("Unknown slip correction model -- "
+                                  "this method should have been replaced at construction!")
+
+    def _calc_slip_correction_4k(self, pressure: float, particle_radius: float) -> float:
         if pressure == 0.0:
             return float('inf')  # Correct force to 0 by dividing by infinity. FIXME better way?
+        return self._slip_correction_4k(pressure, particle_radius, self.temperature, self.slip_correction_scale)
 
-        s = 0.0
-        if self.slip_correction_model == '4_kelvin':
-            # The Sutherland constant for helium is 79.4 at reference temperature of 273.0 K.
-            # I took a reference pressure of 1 Pascal, in which the mean free path of helium is 0.01754.
-            # see J. Aerosol Sci. 1976 Vol. 7. pp 381-387 by Klaus Willeke
-            c_sutherland = 79.4
-            ref_temp = 273.0
-            knudsen = 0.01754 * 1 / (pressure * particle_radius)\
-                      * self.temperature / ref_temp * (1 + c_sutherland / ref_temp)\
-                      / (1 + c_sutherland / self.temperature)
-            s = 1 + knudsen * (1.246 + (0.42 * np.exp(-0.87 / knudsen)))
-        elif self.slip_correction_model == 'room_temp':
-            knudsen = self.dynamic_viscosity / (pressure * particle_radius) *\
-                      np.sqrt(pi * Boltzmann * self.temperature / (2 * self.m_gas))
-            s = 1 + knudsen * (1.231 + 0.4695 * np.exp(-1.1783 / knudsen))
-        return s * self.slip_correction_scale
+    def _calc_slip_correction_hutchins(self, pressure: float, particle_radius: float) -> float:
+        if pressure == 0.0:
+            return float('inf')  # Correct force to 0 by dividing by infinity. FIXME better way?
+        return self._slip_correction_hutchins(
+            self.dynamic_viscosity, pressure, particle_radius, self.temperature,
+            self.m_gas, self.slip_correction_scale
+        )
 
     def _set_properties_based_on_gas_type(self, gas_type: str, gas_temp: float):
         self.temperature = gas_temp
@@ -200,6 +220,12 @@ class StokesDragForceField(DragForceInterpolationField):
             # Require m_gas for the room_temp model
             if self.m_gas is None:
                 raise ValueError("m_gas is a required parameter for the 'room_temp' slip correction model!")
+
+        # Swap out the implementation
+        if self.slip_correction_model == '4_kelvin':
+            self.calc_slip_correction = self._calc_slip_correction_4k
+        else:
+            self.calc_slip_correction = self._calc_slip_correction_hutchins
 
         logging.info(f"Set slip correction model to {self.slip_correction_model}.")
 

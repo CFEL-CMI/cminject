@@ -49,6 +49,7 @@ class RegularGridInterpolationField(Field, ABC):
                 data_index[i] += off
 
         self.number_of_dimensions = len(data_index)
+        self._zero_acceleration = np.zeros(self.number_of_dimensions)
         self._interpolator = get_regular_grid_interpolator(tuple(data_index), data_grid)
 
         # Assuming that Z is always the last dimension, construct the Z boundary from it
