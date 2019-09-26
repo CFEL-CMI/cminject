@@ -39,7 +39,8 @@ packages = find_packages(where='lib')
 scripts = [
     'bin/cminject',
     'bin/cminject_txt-to-hdf5',
-    'bin/cminject_visualize'
+    'bin/cminject_visualize',
+    'bin/cminject_reconstruct-detectors'
 ]
 
 install_requires = [

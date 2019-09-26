@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+
+import argparse
+import logging
+
+import h5py
+
+from cminject.definitions.result_storage import HDF5ResultStorage
+from cminject.utils.interpolation import reconstruct_detector_hits
+
+
+def main():
+    parser = argparse.ArgumentParser(prog='cminject_reconstruct-detectors')
+    parser.add_argument('file', help='The HDF5 file with trajectories to reconstruct detectors for.',
+                        type=str, metavar='infile')
+    parser.add_argument('--zi', help='The Z dimension index', type=int, required=True, metavar='zindex')
+    parser.add_argument('--xis', help='The X/Y/... dimensions indices', type=int, required=True, nargs='+')
+    parser.add_argument('--zs', help='The Z positions to reconstruct', type=float, required=True, nargs='+')
+    parser.add_argument('--abs', help='Dimension indices to take absolute values of', type=int, nargs='*')
+    parser.add_argument('--interpolation-kind', help='The interpolation kind to use.',
+                        choices={'linear', 'cubic'}, default='linear')
+    args = parser.parse_args()
+
+    logging.basicConfig(format='%(levelname)s:[%(filename)s/%(funcName)s] %(message)s', level=logging.INFO)
+    with h5py.File(args.file, 'r+') as h5f:
+        zs = args.zs
+        trajectories = HDF5ResultStorage(args.file, 'r').get_trajectories_iterator(abs_indices=args.abs)
+        logging.info(f"Reconstructing at {zs}...")
+        detectors = reconstruct_detector_hits(
+            trajectories, xdims=args.xis, zdim=args.zi, zs=zs,
+            interpolation_kind=args.interpolation_kind
+        )
+        for z, detector in zip(zs, detectors):
+            h5f[f'reconstructed_detectors/{z}'] = detector
+            logging.info(f'Detector at z = {z}: {detector.shape}')
+
+
+if __name__ == '__main__':
+    main()

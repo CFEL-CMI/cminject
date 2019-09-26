@@ -128,7 +128,7 @@ def main():
     parser.set_defaults(
         setup=DEFAULT_SETUP,
         time_interval=[0.0, 1.0],
-        time_step=None,
+        time_step=1e-5,
         chunksize=1,  # same as None according to multiprocessing docs
         loglevel='warning',
         processes=os.cpu_count()

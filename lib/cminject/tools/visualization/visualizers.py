@@ -357,12 +357,13 @@ class TrajectoryVisualizer(Visualizer):
         return lc, cb
 
     @staticmethod
-    def _plot_detector_hits(detectors: List[np.array], ax: plt.Axes, dimensions: int, *args, **kwargs) -> None:
+    def _plot_detector_hits(detectors: List[Tuple[Any, np.array]], ax: plt.Axes, dimensions: int,
+                            *args, **kwargs) -> None:
         """
         Plots the detector hit positions from an HDF5 results file.
 
-        :param detectors: A list of np.arrays, each np.array corresponding to one detector and containing all hits
-            on this detector
+        :param detectors: A list of detectors, each detector represented as a tuple of an identifier and an np.array
+            of detected positions (+ other particle properties at time of detection)
         :param ax: The axis to plot on
         :param dimensions: The number of spatial dimensions
         :return: Nothing
@@ -372,7 +373,7 @@ class TrajectoryVisualizer(Visualizer):
         if 's' not in kwargs:
             kwargs.update({'s': 10})
 
-        for hits in detectors:
+        for i, hits in detectors:
             if dimensions == 3:
                 ax.scatter(hits[0], hits[1], zs=hits[2], *args, **kwargs)
             elif dimensions == 2:
