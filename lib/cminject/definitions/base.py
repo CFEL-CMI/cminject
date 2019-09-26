@@ -391,15 +391,25 @@ class Device(NDimensional, ZBounded, ABC):
         """
         self.fields = fields
         self.boundary = boundary
+        self.number_of_dimensions = None
         super().__init__()
 
     def set_number_of_dimensions(self, number_of_dimensions: int) -> None:
         for field in self.fields:
             field.set_number_of_dimensions(number_of_dimensions)
         self.boundary.set_number_of_dimensions(number_of_dimensions)
+        self.number_of_dimensions = number_of_dimensions
 
     def calculate_acceleration(self, particle: Particle, time: float) -> np.array:
-        return np.sum([field.calculate_acceleration(particle, time) for field in self.fields], axis=0)
+        # We've chosen to use this implementation as a default, as for n <= 10 fields, it is roughly 10 times faster
+        # than using np.sum([f.calculate_acceleration(particle,time) for f in self.fields], axis=0). Devices with >10
+        # fields are assumed to be rare.
+        # This function should be overridden in a subclass if > 10 fields are used on this Device.
+        # TODO reasons for this speed difference and numpy's worse performance should be investigated.
+        acceleration = np.zeros(self.number_of_dimensions)
+        for field in self.fields:
+            acceleration += field.calculate_acceleration(particle, time)
+        return acceleration
 
     def is_particle_inside(self, particle_position: np.array, time: float) -> bool:
         """
