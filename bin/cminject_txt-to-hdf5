@@ -20,9 +20,15 @@ import logging
 
 from cminject.tools.structured_txt_hdf5_tools import txt_to_hdf5
 
+program_description = """
+Converts an input txt file describing a field represented as a grid of values
+to an HDF5 file that CMInject can interpret and simulate particles with.
+"""
+
 
 def main():
-    parser = argparse.ArgumentParser(prog='convert_txt_to_hdf5')
+    parser = argparse.ArgumentParser(prog='convert_txt_to_hdf5', description=program_description,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('-i', help='Input file (COMSOL .txt format)', type=str, required=True, metavar='infile')
     parser.add_argument('-o', help='Output file (.hdf5)', type=str, required=True, metavar='outfile')
     parser.add_argument('-d', help='Number of spatial dimensions', type=int, required=True, metavar='#dims')
