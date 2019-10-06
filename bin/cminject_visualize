@@ -37,21 +37,32 @@ if __name__ == '__main__':
     parser.add_argument('-T', help='Plot the trajectories.', action='store_true')
     parser.add_argument('-Tn', help='(Only used when -t is given) Only plot n randomly sampled trajectories. '
                                     'Useful for quick qualitative analysis of large files.', type=int, metavar='n')
-    parser.add_argument('-Txabs', help='Make x (dimension 0) coordinates for trajectories absolute. Useful for '
-                                       'radially symmetrical simulations where "x" is r and negative r were '
-                                       'used during the simulation.', action='store_true')
+    parser.add_argument('-Tc',
+                        help='Plot colored trajectories, as line segments encoding particle velocity. '
+                             'Shows more information, but is more computationally expensive to render.',
+                        action='store_true')
+    parser.add_argument('-Txabs',
+                        help='Take the modulus of x (dimension 0) coordinates. Useful for radially symmetrical '
+                             'simulations where "x" is r and negative r were used during the simulation.',
+                        action='store_true')
 
     parser.add_argument('-H', help='Plot histograms based on a list of dimension pairs to plot against each other.',
                         nargs='+', default=[], type=comma_tuple, metavar='x,y')
     args = parser.parse_args()
 
     if args.H:
-        visualizer = DetectorHistogramVisualizer(filename=args.file, dimension_pairs=args.H)
+        visualizer = DetectorHistogramVisualizer(
+            filename=args.file, dimension_pairs=args.H, use_tex=True,
+        )
         fig, axes = visualizer.visualize()
         fig.show()
 
     if args.T:
-        visualizer = TrajectoryVisualizer(filename=args.file, n_samples=args.Tn, make_x_absolute=args.Txabs)
+        visualizer = TrajectoryVisualizer(
+            filename=args.file, n_samples=args.Tn,
+            colored=args.Tc, make_x_absolute=args.Txabs,
+            scatter_kwargs={'alpha': 0.3},
+        )
         fig, axes = visualizer.visualize()
         fig.show()
 

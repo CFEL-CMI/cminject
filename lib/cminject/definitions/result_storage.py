@@ -209,8 +209,8 @@ class HDF5ResultStorage(ResultStorage):
         """
         Gets all stored detectors with their hits.
 
-        :return: A list of np.arrays, each np.array corresponding to one detector and containing all hits as a
-            (d, m_i)-shaped array.
+        :return: A list of 2-tuples, the first component being each detector's identifier and the second
+            being a (d, m_i)-shaped np.array containing all hits.
         """
         detectors = []
         with h5py.File(self.filename, self.mode) as h5f:
@@ -219,6 +219,21 @@ class HDF5ResultStorage(ResultStorage):
                     hits = h5f['detector_hits'][detector_id][:].transpose()
                     detectors.append((detector_id, hits))
         return detectors
+
+    def get_reconstructed_detectors(self) -> List[Tuple[float, np.array]]:
+        """
+        Gets all reconstructed detectors as stored by the `cminject_reconstruct-detectors` tool.
+
+        :return: A list of 2-tuples, the first component being each detector's Z position and the second
+            being a (d, k_i)-shaped np.array containing all hits, where k_i is the number of reconstructed quantities
+            (the number of --xi parameters passed to `cminject_reconstruct-detectors`).
+        """
+        with h5py.File(self.filename, self.mode) as h5f:
+            if 'reconstructed_detectors' in h5f:
+                dataset = h5f['reconstructed_detectors']
+                return [(float(z), dataset[z][:]) for z in dataset.keys()]
+            else:
+                return []
 
 
 ### Local Variables:

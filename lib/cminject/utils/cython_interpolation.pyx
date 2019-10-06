@@ -1,16 +1,12 @@
-cimport numpy as np
-import numpy as np
 from libc.math cimport floor
 from cython cimport boundscheck, wraparound, nonecheck, cdivision
-
-np.import_array()
 
 @cdivision(True)
 @boundscheck(False)
 @wraparound(False)
 @nonecheck(False)
-cpdef int interp2D(np.float_t[:,:,::1] v, np.float_t x, np.float_t y,
-                    int nd, int nx, int ny, np.ndarray[np.float64_t, ndim=1] out) except -1:
+cpdef int interp2D(double[:,:,::1] v, double x, double y,
+                   int nd, int nx, int ny, double[::1] out) except -1:
     """
     Interpolates a n-dimensional vector field bilinearly based on a 2D regular data grid.
 
@@ -27,8 +23,8 @@ cpdef int interp2D(np.float_t[:,:,::1] v, np.float_t x, np.float_t y,
     """
     cdef:
         int x0, x1, y0, y1
-        np.float_t xd, yd, a0, a1
-        np.float_t *v_a
+        double xd, yd, a0, a1
+        double *v_a
 
     # Get the x0,y0 and x1,y1 corner indices of the rectangle that the point (x,y) lies within
     x0 = <int>floor(x)
@@ -62,8 +58,8 @@ cpdef int interp2D(np.float_t[:,:,::1] v, np.float_t x, np.float_t y,
 @boundscheck(False)
 @wraparound(False)
 @nonecheck(False)
-cpdef int interp3D(np.float_t[:,:,:,::1] v, np.float_t x, np.float_t y, np.float_t z,
-                    int nd, int nx, int ny, int nz, np.ndarray[np.float64_t, ndim=1] out) except -1:
+cpdef int interp3D(double[:,:,:,::1] v, double x, double y, double z,
+                   int nd, int nx, int ny, int nz, double[::1] out) except -1:
     """
     Interpolates a n-dimensional vector field trilinearly based on a 3D regular data grid.
 
@@ -82,8 +78,8 @@ cpdef int interp3D(np.float_t[:,:,:,::1] v, np.float_t x, np.float_t y, np.float
     """
     cdef:
         int x0, x1, y0, y1, z0, z1
-        np.float_t xd, yd, zd, c00, c01, c10, c11, c0, c1
-        np.float_t *v_c
+        double xd, yd, zd, c00, c01, c10, c11, c0, c1
+        double *v_c
 
     # Get the indices for the 6 corners of the cube that (x,y,z) lies within
     x0 = <int>floor(x)

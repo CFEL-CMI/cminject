@@ -40,7 +40,8 @@ scripts = [
     'bin/cminject',
     'bin/cminject_txt-to-hdf5',
     'bin/cminject_visualize',
-    'bin/cminject_reconstruct-detectors'
+    'bin/cminject_reconstruct-detectors',
+    'bin/cminject_analyze-asymmetry'
 ]
 
 install_requires = [

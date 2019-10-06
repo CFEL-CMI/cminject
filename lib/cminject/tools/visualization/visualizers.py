@@ -16,20 +16,20 @@
 # <http://www.gnu.org/licenses/>.
 
 from abc import abstractmethod, ABC
-from typing import List, Tuple, Any, Callable, Union
+from typing import List, Tuple, Any, Callable, Union, Dict
 
 import h5py
-import matplotlib as mpl
-from matplotlib.colorbar import Colorbar
 import numpy as np
+from cminject.definitions.result_storage import HDF5ResultStorage
 from matplotlib import patheffects
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import LineCollection
+from matplotlib.colorbar import Colorbar
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from cminject.definitions.result_storage import HDF5ResultStorage
+from mpl_toolkits.mplot3d.art3d import Line3D
 
 
 class Visualizer(ABC):
@@ -45,7 +45,7 @@ class Visualizer(ABC):
         self.filename = filename
 
     @abstractmethod
-    def visualize(self) -> Any:
+    def visualize(self, *args, **kwargs) -> Any:
         """
         A highly generic method to construct a visualization based on the filename passed at construction.
 
@@ -84,7 +84,8 @@ class DetectorHistogramVisualizer(Visualizer):
 
     def __init__(self, filename: str, dimension_pairs: List[Tuple[DimensionType, DimensionType]],
                  colormap: str = 'viridis', highlight_origin: bool = True,
-                 bins: int = 100, bins_1d: int = 30, use_tex: bool = False):
+                 bins: int = 100, bins_1d: int = 30, use_tex: bool = False,
+                 hist1d_kwargs: Dict[Any, Any] = None, hist2d_kwargs: Dict[Any, Any] = None):
         """
         The constructor for DetectorHistogramVisualizer.
 
@@ -106,46 +107,22 @@ class DetectorHistogramVisualizer(Visualizer):
         self.bins = bins
         self.bins_1d = bins_1d
         self.use_tex = use_tex
+        self.hist1d_kwargs = hist1d_kwargs or {}
+        self.hist2d_kwargs = hist2d_kwargs or {}
 
     @staticmethod
-    def _latex_float(f, pos=None):
-        float_str = "{0:.2g}".format(f)
-        if "e" in float_str:
-            base, exponent = float_str.split("e")
-            return r"{0} \times 10^{{{1}}}".format(base, int(exponent))
-        else:
-            return float_str
-
-    def _vis1d(self, fig, ax, y, label, text_y_offset=-0.2) -> None:
-        h = ax.hist(y, bins=self.bins_1d, rasterized=True)
-
-        mu, median, sigma = y.mean(), np.median(y), y.std()
-        txtstr = '\n'.join((f'$\mu={self._latex_float(mu)}$', f'$\sigma={self._latex_float(sigma)}$'))
-        txt = ax.text(0.0, text_y_offset, txtstr, ha='left', va='bottom', transform=ax.transAxes,
-                      fontsize=plt.rcParams['font.size'] / 1.2)
-        txt.set_path_effects([patheffects.withStroke(linewidth=5, foreground='w')])
-
+    def vis1d(bins, ax, y, **hist_kwargs) -> None:
+        h = ax.hist(y, bins=bins, **hist_kwargs)
         return h
 
-    def _vis2d(self, fig, ax, x, y, xlabel, ylabel, text_y_offset=-0.2, cmap='viridis'):
-        h2d = ax.hist2d(x, y, bins=self.bins, cmap=cmap, rasterized=True)
+    @staticmethod
+    def vis2d(bins, fig, ax, x, y, **hist2d_kwargs):
+        h2d = ax.hist2d(x, y, bins=bins, **hist2d_kwargs)
         img = h2d[3]
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
+        cax.ticklabel_format(scilimits=(-4, 4), useMathText=True)
         fig.colorbar(img, cax=cax)
-
-        mu_x, median_x, sigma_x = x.mean(), np.median(x), x.std()
-        mu_y, median_y, sigma_y = y.mean(), np.median(y), y.std()
-        txtstr = '\n'.join((
-            (r'$\mu_{' + xlabel + r'}=' + self._latex_float(mu_x) +
-             r', \mu_{' + ylabel + r'}=' + self._latex_float(mu_y) + '$'),
-            (r'$\sigma_{' + xlabel + r'}=' + self._latex_float(sigma_x) +
-             r', \sigma_{' + ylabel + r'}=' + self._latex_float(sigma_y) + '$'),
-        ))
-        txt = ax.text(0.0, text_y_offset, txtstr, ha='left', va='bottom', transform=ax.transAxes,
-                      fontsize=plt.rcParams['font.size'] / 1.2)
-        txt.set_path_effects([patheffects.withStroke(linewidth=5, foreground='w')])
-
         return h2d
 
     def visualize(self) -> Tuple[Figure, np.ndarray]:
@@ -170,8 +147,11 @@ class DetectorHistogramVisualizer(Visualizer):
             detector_keys = list(sorted(detectors.keys(), key=int))
             dimpair_count = len(self.dimension_pairs)
 
-            fig, axes = plt.subplots(nrows=detector_count, ncols=dimpair_count, sharex='col', sharey='col',
-                                     gridspec_kw={'hspace': .5, 'wspace': .5})
+            fig, axes = plt.subplots(
+                nrows=detector_count, ncols=dimpair_count,
+                figsize=(dimpair_count, detector_count),
+                gridspec_kw={'hspace': .7, 'wspace': .7}
+            )
             axes = np.array(axes).reshape((detector_count, dimpair_count))
             # Plot a hist2d in each subplot in the grid :)
             for j in range(dimpair_count):
@@ -186,7 +166,7 @@ class DetectorHistogramVisualizer(Visualizer):
                     try:
                         x, y = _get_dims(description, [dim_a, dim_b], hits=hits)
                     except IndexError as e:
-                        raise ValueError(f"Could not find dimension {dim_a} or {dim_b}!")
+                        raise ValueError(f"Could either not find dimension {dim_a} or dimension {dim_b}!")
 
                     ax = axes[i, j]
                     ax.ticklabel_format(scilimits=(-2, 2))
@@ -201,16 +181,15 @@ class DetectorHistogramVisualizer(Visualizer):
                     if j == 0:
                         ax.set_ylabel(f"Det. {detector_keys[i]}", rotation=90, size='large')
 
-                    yoff = -0.3 if i == detector_count-1 else -0.2
                     one_dimensional = False
-                    if (x == x[0]).all():  # X values are all equal, plot 1D histogram of Y
+                    if np.all(x == x[0]):  # X values are all equal, plot 1D histogram of Y
                         one_dimensional = True
-                        self._vis1d(fig, ax, y, dim_b, text_y_offset=yoff)
-                    elif (y == y[0]).all():  # Y values are all equal, plot 1D histogram of X
+                        self.vis1d(self.bins_1d, ax, y, **self.hist1d_kwargs)
+                    elif np.all(y == y[0]):  # Y values are all equal, plot 1D histogram of X
                         one_dimensional = True
-                        self._vis1d(fig, ax, x, dim_a, text_y_offset=yoff)
+                        self.vis1d(self.bins_1d, ax, x, **self.hist1d_kwargs)
                     else:
-                        self._vis2d(fig, ax, x, y, dim_a, dim_b, text_y_offset=yoff)
+                        self.vis2d(self.bins, fig, ax, x, y)
 
                     # Origin highlighting for 2D histograms
                     if self.highlight_origin and not one_dimensional:
@@ -218,7 +197,7 @@ class DetectorHistogramVisualizer(Visualizer):
                         # want to stretch the existing plot just to show the origin marker
                         ax.autoscale(enable=False)
                         ax.scatter([0.0], [0.0], s=10, c=[(1.0, 0.0, 0.0, 0.5)], marker='x')
-
+        fig.tight_layout()
         return fig, axes
 
 
@@ -230,16 +209,22 @@ class TrajectoryVisualizer(Visualizer):
     Useful to get a general idea of where the particles started and went, but not very useful for data analysis:
     the plots can get rather chaotic and slow (especially in 3D).
     """
-    def __init__(self, *args, n_samples: int = None, cmap: str = 'viridis',
-                 fig: plt.Figure = None, ax: plt.Axes = None, rasterized: bool = False, colorbar: bool = True,
+    def __init__(self, *args, n_samples: int = None,
+                 fig: plt.Figure = None, ax: plt.Axes = None,
+                 colored: bool = False, colorbar: bool = True,
+                 make_x_absolute: bool = False,
+                 traj_kwargs: Dict[Any, Any] = None, scatter_kwargs: Dict[Any, Any] = None,
                  **kwargs):
         super().__init__(*args, **kwargs)
-        self.cmap = cmap
         self.n_samples = n_samples
         self.fig = fig
         self.ax = ax
-        self.rasterized = rasterized
         self.colorbar = colorbar
+
+        self.colored = colored
+        self.make_x_absolute = make_x_absolute
+        self.traj_kwargs = traj_kwargs or {}
+        self.scatter_kwargs = scatter_kwargs or {}
 
     def visualize(self) -> Tuple[Figure, Axes]:
         """
@@ -271,18 +256,28 @@ class TrajectoryVisualizer(Visualizer):
 
         # Plot all trajectories that are present
         trajectories = storage.get_trajectories(self.n_samples)
+        if self.make_x_absolute:
+            for traj in trajectories:
+                traj[1] = np.abs(traj[1])
+
         if trajectories:
-            self._plot_traj_colored(trajectories, ax, dimensions,
-                                    cmap=self.cmap, rasterized=self.rasterized, colorbar=self.colorbar)
+            if self.colored:
+                self.plot_traj_colored(
+                    trajectories, ax, dimensions, colorbar=self.colorbar, **self.traj_kwargs
+                )
+            else:
+                self.plot_traj_monochrome(
+                    trajectories, ax, dimensions, **self.traj_kwargs
+                )
 
         # Plot all particle initial and final positions
         if self.n_samples is None:
             initial, final = storage.get_initial_and_final_positions()
-            self._plot_positions(initial, final, ax, dimensions)
+            self.plot_positions(initial, final, ax, dimensions, **self.scatter_kwargs)
 
         # Plot detector hits
         detectors = storage.get_detectors()
-        self._plot_detector_hits(detectors, ax, dimensions)
+        self.plot_detector_hits(detectors, ax, dimensions, **self.scatter_kwargs)
 
         # Set the x/y/(z) limits to contain all trajectories
         if trajectories:
@@ -299,8 +294,31 @@ class TrajectoryVisualizer(Visualizer):
         return fig, ax
 
     @staticmethod
-    def _plot_traj_colored(trajectories: np.array, ax: plt.Axes, dimensions: int, cmap: str = 'viridis',
-                           rasterized: bool = False, colorbar: bool = True)\
+    def plot_traj_monochrome(trajectories: np.array, ax: plt.Axes, dimensions: int, **plot_kwargs)\
+            -> List[Union[Line2D, Line3D]]:
+        """
+        Plots the trajectories as monochromatic lines (curves).
+
+        :param trajectories: A list of np.arrays, each np.array containing the full trajectory of the corresponding
+            particle.
+        :param ax: The axis (some plt.Axes instance) to plot on.
+        :param dimensions: The number of spatial dimensions.
+        :param plot_kwargs: The kwargs to pass to plt.plot.
+        :return: A list of line instances (Line2D or Line3D) that were plotted.
+        """
+        lines = []
+
+        for i in range(len(trajectories)):
+            traj = trajectories[i]
+            lines.append(ax.plot(*traj[1:dimensions+1], **plot_kwargs))
+
+        ax.autoscale_view(True, True)
+        ax.ticklabel_format(style='sci', scilimits=(0, 0), axis='both')
+
+        return lines
+
+    @staticmethod
+    def plot_traj_colored(trajectories: np.array, ax: plt.Axes, dimensions: int, colorbar: bool = True, **line_kwargs)\
             -> Tuple[LineCollection, Colorbar]:
         """
         Plots the trajectories as lines made of colored segments representing the magnitude of
@@ -310,10 +328,10 @@ class TrajectoryVisualizer(Visualizer):
             particle.
         :param ax: The axis (some plt.Axes instance) to plot on.
         :param dimensions: The number of spatial dimensions.
-        :param cmap: The colormap to use, 'viridis' by default.
-        :param rasterized: Whether to rasterize the line plot. False by default.
         :param colorbar: Whether to plot a color bar. True by default.
-        :return: The LineCollection that was plotted.
+        :param line_kwargs: The kwargs to pass to LineCollection / Line3DCollection.
+        :return: A 2-tuple of the LineCollection and the colorbar that was plotted. The returned colorbar may be None,
+            if the colorbar argument passed to this function was False.
         """
         VMAG = None
         SEGMENTS = None
@@ -339,9 +357,9 @@ class TrajectoryVisualizer(Visualizer):
 
         if dimensions == 3:
             from mpl_toolkits.mplot3d.art3d import Line3DCollection
-            lc = Line3DCollection(SEGMENTS, cmap=cmap, rasterized=rasterized)
+            lc = Line3DCollection(SEGMENTS, **line_kwargs)
         else:
-            lc = LineCollection(SEGMENTS, cmap=cmap, rasterized=rasterized)
+            lc = LineCollection(SEGMENTS, **line_kwargs)
 
         lc.set_array(VMAG)
         ax.add_collection(lc)
@@ -357,8 +375,8 @@ class TrajectoryVisualizer(Visualizer):
         return lc, cb
 
     @staticmethod
-    def _plot_detector_hits(detectors: List[Tuple[Any, np.array]], ax: plt.Axes, dimensions: int,
-                            *args, **kwargs) -> None:
+    def plot_detector_hits(detectors: List[Tuple[Any, np.array]], ax: plt.Axes, dimensions: int, **scatter_kwargs)\
+            -> None:
         """
         Plots the detector hit positions from an HDF5 results file.
 
@@ -368,19 +386,19 @@ class TrajectoryVisualizer(Visualizer):
         :param dimensions: The number of spatial dimensions
         :return: Nothing
         """
-        if 'zorder' not in kwargs:
-            kwargs.update({'zorder': 3})
-        if 's' not in kwargs:
-            kwargs.update({'s': 10})
+        if 'zorder' not in scatter_kwargs:
+            scatter_kwargs.update({'zorder': 3})
+        if 's' not in scatter_kwargs:
+            scatter_kwargs.update({'s': 10})
 
         for i, hits in detectors:
             if dimensions == 3:
-                ax.scatter(hits[0], hits[1], zs=hits[2], *args, **kwargs)
+                ax.scatter(hits[0], hits[1], zs=hits[2], **scatter_kwargs)
             elif dimensions == 2:
-                ax.scatter(hits[0], hits[1], *args, **kwargs)
+                ax.scatter(hits[0], hits[1], **scatter_kwargs)
 
     @staticmethod
-    def _plot_positions(initial: np.array, final: np.array, ax: plt.Axes, dimensions: int) -> None:
+    def plot_positions(initial: np.array, final: np.array, ax: plt.Axes, dimensions: int, **scatter_kwargs) -> None:
         """
         Plots the initial and final particle positions from an HDF5 results file. The initial positions
         are plotted as a scatter plot of black points, the final positions as a scatter plot of green points.
@@ -389,9 +407,10 @@ class TrajectoryVisualizer(Visualizer):
         :param final: An np.array containing all final positions
         :param ax: The axis to plot on
         :param dimensions: The number of spatial dimensions
+        :param scatter_kwargs: The kwargs to pass to plt.scatter.
         :return: Nothing
         """
-        initial_kwargs, final_kwargs = {}, {}
+        initial_kwargs, final_kwargs = scatter_kwargs.copy(), scatter_kwargs.copy()
         if dimensions == 3:
             initial_kwargs['zs'] = initial[2]
             final_kwargs['zs'] = final[2]
