@@ -10,6 +10,8 @@ Subpackages
     cminject.definitions.fields
     cminject.definitions.setups
 
+.. _base-classes:
+
 cminject.definitions.base: Abstract base classes
 ------------------------------------------------
 

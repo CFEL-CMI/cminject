@@ -1,3 +1,5 @@
+.. _apidoc:
+
 The cminject Python package
 ===========================
 

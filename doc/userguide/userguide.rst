@@ -1,3 +1,5 @@
+.. _user-guide:
+
 CMInject's User guide
 =====================
 
@@ -5,7 +7,6 @@ Welcome to the User guide for CMInject! CMInject is a Python3 framework for defi
 nanoparticle trajectory simulations.
 
 .. contents::
-
 
 Installation
 ------------
