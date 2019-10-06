@@ -1,3 +1,5 @@
+.. _list-of-setups:
+
 cminject.definitions.setups: Various experiment setups
 ======================================================
 

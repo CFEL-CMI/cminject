@@ -43,8 +43,8 @@ cminject.definitions.devices: Device definitions
     :show-inheritance:
     :noindex:
 
-cminject.definitions.devices: Field definitions
------------------------------------------------
+cminject.definitions.fields: Field definitions
+----------------------------------------------
 
 .. automodule:: cminject.definitions.fields
     :members:
@@ -76,8 +76,8 @@ cminject.definitions.result\_storage: Result storage definitions
     :undoc-members:
     :show-inheritance:
 
-cminject.definitions.devices: Setup definitions
------------------------------------------------
+cminject.definitions.setups: Setup definitions
+----------------------------------------------
 
 .. automodule:: cminject.definitions.setups
     :members:
