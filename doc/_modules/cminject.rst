@@ -1,5 +1,5 @@
-cminject package
-================
+The cminject Python package
+===========================
 
 Subpackages
 -----------
@@ -7,12 +7,8 @@ Subpackages
 .. toctree::
 
     cminject.definitions
-    cminject.setups
     cminject.tools
     cminject.utils
-
-Submodules
-----------
 
 cminject.experiment: The runner code for experiments
 ----------------------------------------------------

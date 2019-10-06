@@ -6,10 +6,9 @@ Subpackages
 
 .. toctree::
 
+    cminject.definitions.devices
     cminject.definitions.fields
-
-Submodules
-----------
+    cminject.definitions.setups
 
 cminject.definitions.base: Abstract base classes
 ------------------------------------------------
@@ -42,6 +41,16 @@ cminject.definitions.devices: Device definitions
     :members:
     :undoc-members:
     :show-inheritance:
+    :noindex:
+
+cminject.definitions.devices: Field definitions
+-----------------------------------------------
+
+.. automodule:: cminject.definitions.fields
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :noindex:
 
 cminject.definitions.particles: Particle definitions
 ----------------------------------------------------
@@ -66,6 +75,15 @@ cminject.definitions.result\_storage: Result storage definitions
     :members:
     :undoc-members:
     :show-inheritance:
+
+cminject.definitions.devices: Setup definitions
+-----------------------------------------------
+
+.. automodule:: cminject.definitions.setups
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :noindex:
 
 cminject.definitions.sources: Particle source definitions
 ---------------------------------------------------------

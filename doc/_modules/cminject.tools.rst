@@ -8,9 +8,6 @@ Subpackages
 
     cminject.tools.visualization
 
-Submodules
-----------
-
 cminject.tools.structured\_txt\_hdf5\_tools: Converting structured TXT fields to HDF5
 -------------------------------------------------------------------------------------
 

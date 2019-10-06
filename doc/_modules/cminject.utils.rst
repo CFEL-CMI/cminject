@@ -1,9 +1,6 @@
 cminject.utils: Reusable helper code
 ====================================
 
-Submodules
-----------
-
 cminject.utils.args: Utilities for argparse argument handling
 -------------------------------------------------------------
 

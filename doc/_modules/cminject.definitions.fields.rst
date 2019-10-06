@@ -1,9 +1,6 @@
 cminject.definitions.fields: Physical acceleration fields
 =========================================================
 
-Submodules
-----------
-
 cminject.definitions.fields.fluid\_flow\_fields: Different fields for fluid flow
 --------------------------------------------------------------------------------
 
