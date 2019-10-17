@@ -58,5 +58,9 @@ html_theme = 'sphinx_rtd_theme'
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+# Set the master doc explicitly instead of relying on defaults -- this changed
+# in Sphinx 2.0, so older versions will try to find contents.rst instead
+master_doc = 'index'
+
 
 # -- Extension configuration -------------------------------------------------
