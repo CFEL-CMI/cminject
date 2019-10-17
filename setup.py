@@ -61,9 +61,20 @@ extensions = [
               include_dirs=[numpy.get_include(), '.'])
 ]
 
+name = 'cminject'
+version = '0.1'
+release = '0.1.0'
+
+build_sphinx_options = {
+    'project': ('setup.py', name),
+    'version': ('setup.py', version),
+    'release': ('setup.py', release),
+    'source_dir': ('setup.py', 'doc')
+}
+
 setup(
-    name='cminject',
-    version='0.1.0',
+    name=name,
+    version=release,
     description='A framework for particle injection trajectory simulations in different force fields',
     long_description=long_description,
     author='Simon Welker, Muhamed Amin, and the CFEL-CMI group',
@@ -78,6 +89,9 @@ setup(
     install_requires=install_requires,
     setup_requires=['Cython>=0.29.10', 'numpy>=1.16.0'],
     ext_modules=cythonize(extensions),
+    command_options={
+        'build_sphinx': build_sphinx_options,
+    },
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',

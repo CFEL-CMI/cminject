@@ -13,8 +13,8 @@ class Interp2D:
     """
     A fast linear interpolator on a regular 2D grid with interpolation implemented in Cython,
     with a construction and call API like scipy.interpolate.RegularGridInterpolator, except
-    that it accepts a (2,)-shaped np.array directly at call and not a 2-tuple of (x,y) coordinate arrays.
-    Wraps cython_interpolation.pyx.
+    that it accepts a (2,)-shaped np.array directly at call and not a 2-tuple of (x,y) coordinate
+    arrays. Wraps cython_interpolation.pyx.
     """
     def __init__(self, grid, data):
         x, y = grid
@@ -32,6 +32,7 @@ class Interp2D:
     def __call__(self, t):
         """
         Return the interpolated data at the 3D coordinate coord.
+
         :param coord: The coordinate to interpolate at, as a (2,)-shaped np.array.
         :return: An (nd,)-shaped np.array with the interpolated results.
         """
@@ -68,6 +69,7 @@ class Interp3D:
     def __call__(self, coord: np.array):
         """
         Return the interpolated data at the 3D coordinate coord.
+
         :param coord: The coordinate to interpolate at, as a (3,)-shaped np.array.
         :return: An (nd,)-shaped np.array with the interpolated results.
         """
@@ -86,9 +88,10 @@ class Interp3D:
 class InterpND:
     """
     A simple wrapper for n-dimensional n-linear interpolation on a regular grid. Wraps
-    scipy.interpolate.RegularGridInterpolator directly except for an additional `tuple()` call around the passed
-    coordinate to interpolate at. This is to make the API coherent with Interp2D and Interp3D, which directly accept
-    NumPy arrays, as this is faster for single-coordinate interpolation which Interp2D/Interp3D are optimized for.
+    scipy.interpolate.RegularGridInterpolator directly except for an additional `tuple()` call
+    around the passed coordinate to interpolate at. This is to make the API coherent with Interp2D
+    and Interp3D, which directly accept NumPy arrays, as this is faster for single-coordinate
+    interpolation which Interp2D/Interp3D are optimized for.
     """
     def __init__(self, *args, **kwargs):
         self.interpolator = RegularGridInterpolator(*args, **kwargs)
@@ -99,16 +102,18 @@ class InterpND:
 
 def get_regular_grid_interpolator(grid, data):
     """
-    Returns an appropriate regular grid interpolator instance based on the dimensionality. This is either an Interp2D,
-        a Interp3D, or a RegularGridInterpolator instance, and Interp2D/Interp3D are much faster for 2D or 3D.
+    Returns an appropriate regular grid interpolator instance based on the dimensionality.
+    This is either an Interp2D, an Interp3D, or a RegularGridInterpolator instance, and
+    Interp2D/Interp3D are much faster for 2D or 3D.
 
-    The returned objects follow mostly the same API as scipy's RegularGridInterpolator, with the restriction that
-        the coordinate argument must be a single coordinate and not a vector of coordinates.
+    The returned objects follow mostly the same API as scipy's RegularGridInterpolator, with the
+    restriction that the coordinate argument must be a single coordinate and not a vector of
+    coordinates.
 
-    :param grid: The points defining the regular grid in n dimensions. Tuple/list of ndarray of float, with shapes
-        (m1,), ..., (mn,)
-    :param data: The data on the regular grid in n dimensions. Shape (m1, ..., mn, D). Interpolated data vectors with
-        shape (D,) will be returned by the interpolator.
+    :param grid: The points defining the regular grid in n dimensions. Tuple/list of ndarray of
+        float, with shapes (m1,), ..., (mn,)
+    :param data: The data on the regular grid in n dimensions. Shape (m1, ..., mn, D). Interpolated
+        data vectors with shape (D,) will be returned by the interpolator.
     :return: An interpolator instance that can be called like a function.
     """
     if len(grid) == 3:

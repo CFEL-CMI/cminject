@@ -10,16 +10,17 @@ cpdef int interp2D(double[:,:,::1] v, double x, double y,
     """
     Interpolates a n-dimensional vector field bilinearly based on a 2D regular data grid.
 
-    :param v: The data array. (nx, ny, nd)-shaped, where nx and ny are the number of points in each dimension of the
-        regular grid, and nd is the number of dimensions that are interpolated (the size of the output vector).
-        MUST be C-contiguous.
+    :param v: The data array. (nx, ny, nd)-shaped, where nx and ny are the number of points in each
+        dimension of the regular grid, and nd is the number of dimensions that are interpolated
+        (the size of the output vector). MUST be C-contiguous.
     :param x: The x position to interpolate at.
     :param y: The y position to interpolate at.
     :param nd: As described in v.
     :param nx: As described in v.
     :param ny: As described in v.
     :param out: The interpolated output vector, which is an interpolated (nd,)-shaped np.array.
-    :return Nothing
+
+    :return: Nothing
     """
     cdef:
         int x0, x1, y0, y1
@@ -63,9 +64,9 @@ cpdef int interp3D(double[:,:,:,::1] v, double x, double y, double z,
     """
     Interpolates a n-dimensional vector field trilinearly based on a 3D regular data grid.
 
-    :param v: The data array. (nx, ny, nz, nd)-shaped, where nx, ny, nz are the number of points in each dimension
-        of the regular grid, and nd is the number of dimensions that are interpolated (the size of the output vector).
-        MUST be C-contiguous.
+    :param v: The data array. (nx, ny, nz, nd)-shaped, where nx, ny, nz are the number of points in
+      each dimension of the regular grid, and nd is the number of dimensions that are interpolated
+      (the size of the output vector). MUST be C-contiguous.
     :param x: The x position to interpolate at.
     :param y: The y position to interpolate at.
     :param z: The z position to interpolate at.
@@ -74,7 +75,7 @@ cpdef int interp3D(double[:,:,:,::1] v, double x, double y, double z,
     :param ny: As described in v.
     :param nz: As described in v.
     :param out: The interpolated output vector, which is an interpolated (nd,)-shaped np.array.
-    :return Nothing
+    :return: Nothing
     """
     cdef:
         int x0, x1, y0, y1, z0, z1
