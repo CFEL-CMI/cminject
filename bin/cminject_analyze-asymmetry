@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# This file is part of CMInject
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# If you use this program for scientific work, you should correctly reference it; see LICENSE file for details.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program. If not, see
+# <http://www.gnu.org/licenses/>.
+
+import argparse
+import csv
+import logging
+import sys
+
+import numpy as np
+from cminject.definitions.result_storage import HDF5ResultStorage
+
+program_description = """
+Analyzes the asymmetry of the 2D distributions measured at each detector in a
+simulation result HDF5 file. The calculations are done by diagonalizing a
+simplified 2x2 inertia tensor, assuming constant particle mass. The tensor is
+calculated after shifting the distribution's mean to (0, 0). The original means
+are also printed.
+
+The printed values are:
+  - e₀/e₁, the determined eigenvalues 
+  - α = (e₁ - e₀)/(e₁ + e₀), the measure of asymmetry with values in [0, 1]
+  - θ₀/θ₁, the angles of the corresponding eigenvectors in multiples of π
+  - μ_x/μ_y, the means of the distribution in x and y direction 
+"""
+
+
+def moment_of_inertia(detector, xy_idxs=(0, 1)):
+    ix, iy = xy_idxs
+
+    # Get x and y positions, shift them to move the mean to (0,0)
+    center = np.mean(detector, axis=1)[[ix, iy]]
+    x = detector[ix] - center[0]
+    y = detector[iy] - center[1]
+
+    # Calculate the inertia tensor (moment of inertia) in 2D
+    topleft = np.sum(y**2)
+    botrght = np.sum(x**2)
+    tr_n_bl = -np.sum(x * y)
+    mofi = np.array([[topleft, tr_n_bl], [tr_n_bl, botrght]])
+
+    # get the tensor's eigenvalues and -vectors
+    evals, evecs = np.linalg.eigh(mofi)
+    eval0 = evals[0]
+    eval1 = evals[1]
+    evec0 = evecs[:,0]  # the eigenvectors are in the resultant columns
+    evec1 = evecs[:,1]
+
+    # Get theta for both eigenvectors
+    theta0 = np.arctan2(evecs[0][1], evecs[0][0])
+    theta1 = np.arctan2(evecs[1][1], evecs[1][0])
+    # Get alpha (a measure of the asymmetry of the problem)
+    alpha = (eval1 - eval0) / (eval1 + eval0)
+
+    return {'detector': detector, 'evecs': (evec0, evec1), 'evals': (eval0, eval1),
+            'thetas': [theta0, theta1], 'alpha': alpha, 'center': center}
+
+
+def main():
+    parser = argparse.ArgumentParser(prog='cminject_analyze-asymmetry', description=program_description,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('file', help='The HDF5 to read and analyze measured asymmetries from.',
+                        type=str, metavar='infile')
+    parser.add_argument('--x', help='The index of the detector data to take as x. 0 by default.', default=0, type=int)
+    parser.add_argument('--y', help='The index of the detector data to take as y. 1 by default.', default=1, type=int)
+    parser.add_argument('--csv', help='Output a machine-readable CSV file instead of output optimized for readability.',
+                        action='store_true')
+    args = parser.parse_args()
+
+    logging.basicConfig(format='%(levelname)s:[%(filename)s/%(funcName)s] %(message)s', level=logging.INFO)
+
+    detectors = HDF5ResultStorage(args.file, 'r').get_detectors()
+
+    if args.csv:
+        w = csv.writer(sys.stdout)
+        w.writerow(['ID', 'alpha', 'e0', 'e1', 'theta0', 'theta1', 'mux', 'muy'])
+    else:
+        print()
+
+    for detector_id, detector in detectors:
+        mofi = moment_of_inertia(detector, (args.x, args.y))
+        alpha = mofi['alpha']
+        mu0, mu1 = mofi['center']
+        eval0, eval1 = mofi['evals']
+        theta0, theta1 = mofi['thetas']
+
+        if args.csv:
+            w = w or csv.writer(sys.stdout)
+            w.writerow([detector_id, alpha, eval0, eval1, theta0, theta1, mu0, mu1])
+        else:
+            print(f"-------------------- Detector {detector_id} --------------------")
+            print(f"α: {alpha:1.3f}")
+            print(f"e₀ = {eval0:.3e}\t e₁ = {eval1:.3e}")
+            print(f"θ₀ = {theta0/np.pi:1.3f}π\t θ₁ = {theta1/np.pi:1.3f}π")
+            print(f"μx = {mu0:.3e}\t μy = {mu1:.3e}")
+            print()
+
+
+if __name__ == '__main__':
+    main()

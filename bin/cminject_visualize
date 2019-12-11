@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# This file is part of CMInject.
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# If you use this program for scientific work, you should correctly reference it; see LICENSE file for details.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program. If not, see
+# <http://www.gnu.org/licenses/>.
+
+import argparse
+import logging
+
+import matplotlib.pyplot as plt
+
+from cminject.tools.visualization.visualizers import DetectorHistogramVisualizer, TrajectoryVisualizer
+
+program_description = """
+Visualizes a simulation result HDF5 file in one or multiple ways.
+"""
+
+if __name__ == '__main__':
+    def comma_tuple(x):
+        a, b = x.split(',')
+        return (a, b)
+
+    parser = argparse.ArgumentParser(prog='cminject_visualization', description=program_description,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('file', help='The result (HDF5) file to visualize.', type=str, metavar='filename')
+    parser.add_argument('-T', help='Plot the trajectories.', action='store_true')
+    parser.add_argument('-Tn', help='(Only used when -t is given) Only plot n randomly sampled trajectories. '
+                                    'Useful for quick qualitative analysis of large files.', type=int, metavar='n')
+    parser.add_argument('-Tc',
+                        help='Plot colored trajectories, as line segments encoding particle velocity. '
+                             'Shows more information, but is more computationally expensive to render.',
+                        action='store_true')
+    parser.add_argument('-Txabs',
+                        help='Take the modulus of x (dimension 0) coordinates. Useful for radially symmetrical '
+                             'simulations where "x" is r and negative r were used during the simulation.',
+                        action='store_true')
+
+    parser.add_argument('-H', help='Plot histograms based on a list of dimension pairs to plot against each other.',
+                        nargs='+', default=[], type=comma_tuple, metavar='x,y')
+    args = parser.parse_args()
+
+    if args.H:
+        visualizer = DetectorHistogramVisualizer(
+            filename=args.file, dimension_pairs=args.H, use_tex=True,
+        )
+        fig, axes = visualizer.visualize()
+        fig.show()
+
+    if args.T:
+        visualizer = TrajectoryVisualizer(
+            filename=args.file, n_samples=args.Tn,
+            colored=args.Tc, make_x_absolute=args.Txabs,
+            scatter_kwargs={'alpha': 0.3},
+        )
+        fig, axes = visualizer.visualize()
+        fig.show()
+
+    plt.show()
+
+    if not any([args.H, args.T]):
+        logging.error("Missing plot type, please refer to -h.")
+        exit(1)
+
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:

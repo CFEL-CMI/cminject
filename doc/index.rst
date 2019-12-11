@@ -1,38 +1,28 @@
-.. CMIdiffract documentation master file
-   This file should at least contain the root `toctree` directive.
+.. _index:
 
-CMI injector documentation
-==========================
+Welcome to CMInject's documentation!
+====================================
 
-``CMI injector`` is a software package and tool for ...
+CMInject is a Python3 framework that can be used to define and run nanoparticle
+trajectory simulations. It can run 1D, 2D and 3D (or other) simulations, given
+that all parts in a simulation setup allow the given dimensionality.
 
-See [Chang2014]_ for a scientific description of version 1.0 and as a formal, citeable reference.
+It is meant to be used by different groups of people and match different needs,
+and so it is meant to be all of the following:
 
-
-User documentation
-------------------
-
-.. toctree::
-   :maxdepth: 4
-
-   installation
-   user-guide
-   extending
-
-
-Developer documentation
------------------------
-
-The full documentation of the source code is available in the following subpages. This includes, for
-instance, available classes and methods, and their respective parameters and return values.
+- a library that provides a generic way to define and run simulations of
+  experimental setups
+- a collection of such setups
+- a collection of executables and library code for processing, analyzing and
+  visualizing simulation results
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 3
+   :caption: Contents:
 
-   cmi-injector
-   developer-guide
-   todolist
-   references
+   userguide/userguide
+   devguide/devguide
+   _modules/cminject
 
 
 Indices and tables
@@ -41,15 +31,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-
-
-
-
-
-.. comment
-   Local Variables:
-   coding: utf-8
-   mode: fly-spell
-   fill-column: 100
-   truncate-lines: t
-   End:
