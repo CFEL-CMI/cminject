@@ -24,7 +24,7 @@ import h5sparse
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
-import itertools
+
 gte2spaces = re.compile(r'\s{2,}')
 
 def _mirror_around_axis(arr, axis=0, flipsign=False):
