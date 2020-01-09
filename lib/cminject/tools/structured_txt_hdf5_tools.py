@@ -24,7 +24,7 @@ import h5sparse
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
-
+import itertools
 gte2spaces = re.compile(r'\s{2,}')
 
 def _mirror_around_axis(arr, axis=0, flipsign=False):
@@ -220,6 +220,83 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
 
     _save_to_hdf5(attributes, dimensions, headers, index, metadata, outfile_name, values)
 
+def txt_to_hdf5_stark(field_name: str, grad_name: str, outfile_name: str, dimensions: int = 2, mirror: bool = False):
+    """
+    A funciton that reads field and gradient txt. files describing stark deflectors. This functions is needed because Comsol text files
+    for stark deffectors are different from txt files expected in txt_to_hdf5. The structure of the txt file expected:
+        Initial y-coordinate [mm]    initial x-coordinate [mm]    initial z-coordinate [mm]
+        stepsize_y           [mm]    stepsize_x           [mm]    stepsize_z           [mm]
+        #grid_points in y-direction  #grid_points in x-direction  #grid_points in z-direction
+        f(x0,y0) [v/m]
+        f(x1,y0) [v/m]
+        .
+        .
+        f(x0,y1)
+        f(x1, y1)
+        .
+        .
+        f(xn, yn)
+
+    :param field_name: the filename of the field strength
+    :param grad_name: the filename of the gradient
+    :param dimensions: The number of spatial dimensions of the grid. 2 by default, will be 2 or 3 for
+        most cases.
+    :param mirror: A flag for symmetry around an axis: If true, the entire field will be duplicated and mirrored around
+        an axis in the first dimension that's positioned the minimal position in the first dimension.
+    :return: None.
+
+    The constructed HDF5 file will have the following entries:
+
+    - index: Each of these is the set of indices found for each dimension, in order of occurrence
+
+      - x
+      - y
+      - z, if present in the original file
+
+    - data: Each of these is one full row of values, in X*Y*Z order (X and Z are flipped wrt. the original txt file!)
+    """
+    # reading header (it should be the same for the field and the gradient files)
+    info = np.genfromtxt(field_name, dtype = float, max_rows = 3)
+    field = np.genfromtxt(field_name, dtype = float, skip_header = 3)
+    gradient = np.genfromtxt(grad_name, dtype = float, skip_header = 3)
+
+    # creating the grids
+    bins_y = int(info[2,0]) # number of points in the y-direction
+    bins_x = int(info[2,1]) # number of points in the x-direction
+    y0 = info[0,0] # the starting point in the y-direction
+    x0 = info[0,1] # the starting point in the x-direction
+    s_y = info[1,0] # stepsize in the y-direction
+    s_x = info[1,1] # stepsize in the x-direction
+    index_x = np.linspace(x0, x0 + s_x*bins_x, num = bins_x)
+    index_y = np.linspace(y0, y0 + s_y*bins_y, num = bins_y)
+    # if the field is only one dimensional it will be stored in an array of shape (n,). Hence, we must change it
+    try:
+        np.shape(field)[1]
+    except:
+        field = field.reshape(-1,1)
+
+    # Create names for the coloumns of the data we have
+    headers_g = ['ex', 'ey', 'ez']
+    if np.shape(field)[1] == 3:
+        headers_f = ['fx', 'fy', 'fz']
+    else:
+        headers_f = ['f_norm']
+
+    # saving the data to an hdf5 file
+    with h5sparse.File(outfile_name, 'w') as hp:
+        hp.create_dataset('index/0', data = index_x)
+        hp.create_dataset('index/1', data = index_y)
+        for f in range(0, np.shape(field)[1]):
+            group1 = hp.create_group('data/' + headers_f[f])
+            group1.attrs['unit'] = 'v/m'
+            dat1 = group1.create_dataset('data', data = field[:, f])
+
+        for g in range(0, np.shape(gradient)[1]):
+            group2 = hp.create_group('data/' + headers_g[g])
+            group2.attrs['unit'] = 'v/m^2'
+            dat2 = group2.create_dataset('data', data = gradient[:, g])
+
+
 
 def _save_to_hdf5(attributes, dimensions, headers, index, metadata, outfile_name, values):
     # Use h5sparse to save (lots of) space when storing (lots of) NaN or 0.0 values
@@ -314,6 +391,12 @@ def hdf5_to_data_grid(filename: str) -> Tuple[List[np.array], np.array]:
     :return: A 4-tuple of numpy arrays: (x, y, z, data_grid).
     """
     return data_frame_to_data_grid(hdf5_to_data_frame(filename))
+
+if __name__ == "__main__":
+
+    path1 = '../../../../E_3com'
+    path2 = '../../../../G_3com'
+    txt_to_hdf5_stark(path1, path2, outfile_name = 'test')
 
 
 ### Local Variables:
