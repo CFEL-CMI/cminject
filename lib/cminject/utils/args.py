@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -96,7 +96,6 @@ def natural_number(x):
 
 def auto_time_step(mean_velocity):
     return 10e-6 / abs(mean_velocity)
-
 
 ### Local Variables:
 ### fill-column: 100

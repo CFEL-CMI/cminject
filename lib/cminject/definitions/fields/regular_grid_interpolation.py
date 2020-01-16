@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -74,7 +74,6 @@ class RegularGridInterpolationField(Field, ABC):
                 f"This field was constructed from a {self.number_of_dimensions}-dimensional grid and is "
                 f"thus incompatible with a {number_of_dimensions}-dimensional simulation!"
             )
-
 
 ### Local Variables:
 ### fill-column: 100

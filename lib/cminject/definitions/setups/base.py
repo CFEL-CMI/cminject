@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -65,7 +65,6 @@ class Setup(ABC):
         :return: An Experiment instance that's ready to be ran.
         """
         pass
-
 
 ### Local Variables:
 ### fill-column: 100

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -151,7 +151,6 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
         ax = self._axial(a, w)
 
         return kappa * P * np.array([tr, ax])
-
 
 ### Local Variables:
 ### fill-column: 100
