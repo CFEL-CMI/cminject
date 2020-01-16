@@ -73,6 +73,27 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
     def properties_description(self) -> List[str]:
         return super().properties_description + ['T']
 
+class molecule():
+
+    def __init__(self, mass: float, q_n: dict):
+
+        self.mass = mass
+        self.q_n = q_n
+
+    @property
+    def properties(self) -> np.array:
+        return np.array([
+
+            self.time_of_flight,
+            self.radius,
+            self.mass
+        ])
+
+if __name__ == "__main__":
+    d = {'J': 1, 'ka': 2, 'kc': 3, 'm': 2, 'isomer':2}
+    mol = molecule(34, d)
+    print(mol.mass)
+    print(mol.q_n)
 
 ### Local Variables:
 ### fill-column: 100
