@@ -40,3 +40,8 @@ class CuboidBoundary(SimpleZBoundary):
         return np.all(
             (self.intervals[:, 0] <= position) * (position <= self.intervals[:, 1])
         )
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:

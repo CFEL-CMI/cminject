@@ -31,3 +31,8 @@ class InfiniteBoundary(Boundary):
 
     def is_particle_inside(self, position: float, time: float) -> bool:
         return True
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:

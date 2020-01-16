@@ -74,3 +74,8 @@ class ParticleDetectorHit(object):
         :return: The position of the hit.
         """
         return self.full_properties[:self.number_of_dimensions]
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:

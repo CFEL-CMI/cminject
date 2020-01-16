@@ -18,3 +18,8 @@
 __all__ = ['DesyatnikovPhotophoresisDevice', 'FluidFlowFieldDevice']
 from .desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice
 from .fluid_flow_field_device import FluidFlowFieldDevice
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:

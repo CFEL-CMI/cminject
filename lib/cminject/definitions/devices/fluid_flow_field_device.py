@@ -53,3 +53,8 @@ class FluidFlowFieldDevice(Device):
         of summing a list of 1 item that the default implementation of calculate_acceleration of Device has
         """
         return self.fields[0].calculate_acceleration(particle, time)
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:

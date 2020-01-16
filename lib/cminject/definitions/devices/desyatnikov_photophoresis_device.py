@@ -125,3 +125,8 @@ class DesyatnikovPhotophoresisDevice(Device):
 
         boundary: CuboidBoundary = CuboidBoundary(intervals=[r_boundary, z_boundary])
         super().__init__(fields=fields, boundary=boundary)
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:
