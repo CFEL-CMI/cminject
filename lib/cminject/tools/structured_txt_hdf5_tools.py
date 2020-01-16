@@ -242,7 +242,7 @@ def txt_to_hdf5_stark(field_name: str, grad_name: str, outfile_name: str, dimens
     :param dimensions: The number of spatial dimensions of the grid. 2 by default, will be 2 or 3 for
         most cases.
     :param mirror: A flag for symmetry around an axis: If true, the entire field will be duplicated and mirrored around
-        an axis in the first dimension that's positioned the minimal position in the first dimension.
+        an axis in the first dimension that's positioned the minimal position in the first dimension. Not yet applied in this script.
     :return: None.
 
     The constructed HDF5 file will have the following entries:
@@ -391,12 +391,6 @@ def hdf5_to_data_grid(filename: str) -> Tuple[List[np.array], np.array]:
     :return: A 4-tuple of numpy arrays: (x, y, z, data_grid).
     """
     return data_frame_to_data_grid(hdf5_to_data_frame(filename))
-
-if __name__ == "__main__":
-
-    path1 = '../../../../E_3com'
-    path2 = '../../../../G_3com'
-    txt_to_hdf5_stark(path1, path2, outfile_name = 'test')
 
 
 ### Local Variables:
