@@ -20,7 +20,7 @@ from typing import List, Tuple, Any, Callable, Union, Dict
 
 import h5py
 import numpy as np
-from cminject.definitions.result_storage import HDF5ResultStorage
+from cminject.definitions.result_storages.hdf5 import HDF5ResultStorage
 from matplotlib import patheffects
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes

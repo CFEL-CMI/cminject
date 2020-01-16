@@ -20,18 +20,17 @@ from typing import Tuple
 
 import numpy as np
 
+from cminject.definitions.boundaries.grid_field_based import GridFieldBasedBoundary
+from cminject.definitions.detectors.simple_z import SimpleZDetector
+from cminject.definitions.devices.base import Device, Boundary
+from cminject.definitions.devices.desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice
+from cminject.definitions.fields.fluid_flow import StokesDragForceField
+from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
+from cminject.definitions.property_updaters.brownian_motion import BrownianMotionPropertyUpdater
+from cminject.definitions.setups import Setup
+from cminject.definitions.sources.variable_distributions import VariableDistributionSource
 from cminject.experiment import Experiment
 from cminject.utils.args import SetupArgumentParser
-from cminject.definitions import Device, Boundary
-from cminject.definitions.setups import Setup
-
-from cminject.definitions.boundaries import GridFieldBasedBoundary
-from cminject.definitions.detectors import SimpleZDetector
-from cminject.definitions.devices.desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice
-from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField
-from cminject.definitions.particles import ThermallyConductiveSphericalParticle
-from cminject.definitions.property_updaters import BrownianMotionPropertyUpdater
-from cminject.definitions.sources import VariableDistributionSource
 
 
 class SkimmersBoundary(Boundary):

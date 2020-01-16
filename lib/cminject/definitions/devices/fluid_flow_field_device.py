@@ -14,13 +14,15 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
+
 from enum import Enum
 
 import numpy as np
 
-from cminject.definitions.base import Device, Particle
-from cminject.definitions.boundaries import GridFieldBasedBoundary
-from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField, MolecularFlowDragForceField
+from cminject.definitions.devices.base import Device
+from cminject.definitions.particles.base import Particle
+from cminject.definitions.boundaries.grid_field_based import GridFieldBasedBoundary
+from cminject.definitions.fields.fluid_flow import StokesDragForceField, MolecularFlowDragForceField
 
 
 class FlowType(Enum):

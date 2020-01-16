@@ -1,39 +1,11 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-#
-# This file is part of CMInject
-#
-# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
-# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
-# version.
-#
-# If you use this program for scientific work, you should correctly reference it; see LICENSE file for details.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
-# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along with this program. If not, see
-# <http://www.gnu.org/licenses/>.
 import numba
 import numpy as np
-from cminject.definitions.base import PropertyUpdater, Particle
-from cminject.definitions.fields.fluid_flow_fields import StokesDragForceField, MolecularFlowDragForceField
-from cminject.definitions.particles import SphericalParticle, ThermallyConductiveSphericalParticle
-from scipy.constants import pi, Boltzmann
+from cminject.definitions.particles.spherical import SphericalParticle
+from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
+from scipy.constants import Boltzmann, pi
 
-
-class TrajectoryPropertyUpdater(PropertyUpdater):
-    """
-    A simple property updater to append to the trajectory of the particle after each time step.
-    """
-    def update(self, particle: Particle, time: float) -> bool:
-        particle.trajectory.append(
-            np.concatenate([[time], particle.position])
-        )
-        return False
-
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        pass
+from .base import PropertyUpdater
+from cminject.definitions.fields.fluid_flow import StokesDragForceField, MolecularFlowDragForceField
 
 
 class BrownianMotionPropertyUpdater(PropertyUpdater):
@@ -104,7 +76,7 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
 
 class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
     """
-    Models brownian motion based on the fluctuation-dissipation-theorem 
+    Models brownian motion based on the fluctuation-dissipation-theorem
     and a numerical representation of the delta function
     """
     def set_number_of_dimensions(self, number_of_dimensions: int):
@@ -135,35 +107,9 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
                 particle.position[2] = vr_sign * np.sqrt(new_vx**2 + (a[1] * self.dt)**2)
                 particle.position[3] = particle.position[3] + (a[2] * self.dt)
             else:
-                a = np.random.normal(0.0, 1.0, self.number_of_dimensions) * np.sqrt(s0 / self.dt) / particle.mass                
+                a = np.random.normal(0.0, 1.0, self.number_of_dimensions) * np.sqrt(s0 / self.dt) / particle.mass
                 position = particle.spatial_position + (0.5 * a * self.dt**2)
                 velocity = particle.velocity + (a * self.dt)
                 particle.position = np.concatenate([position, velocity])
 
         return True
-
-
-class ParticleTemperaturePropertyUpdater(PropertyUpdater):
-    def __init__(self, field: MolecularFlowDragForceField, dt: float):
-        self.field = field
-        self.dt = dt
-        self.number_of_dimensions = None
-
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        self.number_of_dimensions = number_of_dimensions
-
-    def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
-        pressure = self.field.interpolate(particle.spatial_position)[self.number_of_dimensions]
-        h = self.field.m_gas / (2 * Boltzmann * self.field.temperature)
-        h_ = self.field.m_gas / (2 * Boltzmann * particle.temperature)
-        deltaE = 4 * pressure * np.sqrt(np.pi) * particle.radius**2 * (np.sqrt(h)/h_ - 1/np.sqrt(h))
-        deltaT = deltaE / (particle.specific_heat * particle.mass)
-
-        particle.temperature += deltaT * self.dt
-        return False
-
-
-### Local Variables:
-### fill-column: 100
-### truncate-lines: t
-### End:

@@ -20,16 +20,17 @@
 
 import argparse
 
-from cminject.definitions import PropertyUpdater, Particle
-from cminject.definitions.setups import Setup
-from cminject.definitions.detectors import SimpleZDetector
-from cminject.definitions.devices.desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice, \
-    UniformBrownianMotionPropertyUpdater
-from cminject.definitions.particles import ThermallyConductiveSphericalParticle
-from cminject.definitions.sources import VariableDistributionSource
+from cminject.definitions.property_updaters.base import PropertyUpdater
+from cminject.definitions.particles.base import Particle
+from cminject.definitions.detectors.simple_z import SimpleZDetector
+from cminject.definitions.devices.desyatnikov_photophoresis_device import\
+    DesyatnikovPhotophoresisDevice, UniformBrownianMotionPropertyUpdater
+from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
+from cminject.definitions.sources.variable_distributions import VariableDistributionSource
 from cminject.experiment import Experiment
 from cminject.utils.args import dist_description, SetupArgumentParser, auto_time_step
 
+from .base import Setup
 
 M_GAS_AIR = 5.6e-26
 

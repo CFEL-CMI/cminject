@@ -22,10 +22,17 @@ import warnings
 from typing import List, Tuple, Optional
 
 import numpy as np
-from cminject.definitions.base import Particle, Source, Device, Detector, ZBounded, \
-    PropertyUpdater, infinite_interval, ResultStorage
 from scipy.integrate import ode
 
+from cminject.definitions.base import ZBounded
+from cminject.definitions.devices.base import Device
+from cminject.definitions.detectors.base import Detector
+from cminject.definitions.particles.base import Particle
+from cminject.definitions.property_updaters.base import PropertyUpdater
+from cminject.definitions.result_storages.base import ResultStorage
+from cminject.definitions.sources.base import Source
+
+from cminject.definitions.util import infinite_interval
 from cminject.utils.args import auto_time_step
 
 

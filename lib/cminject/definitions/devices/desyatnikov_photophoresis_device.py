@@ -18,15 +18,19 @@
 from typing import List, Tuple, Union
 
 import numpy as np
-from cminject.definitions.property_updaters import BrownianMotionPropertyUpdater
+from cminject.definitions.property_updaters.brownian_motion import BrownianMotionPropertyUpdater
 from scipy.constants import Boltzmann
 
-from cminject.definitions import Device, Field, PropertyUpdater
-from cminject.definitions.boundaries import CuboidBoundary
-from cminject.definitions.fields import StokesDragForceField
-from cminject.definitions.fields.laser_fields import DesyatnikovPhotophoreticLaserField
-from cminject.definitions.fields.function_field import FunctionField
-from cminject.definitions.particles import ThermallyConductiveSphericalParticle
+from .base import Device
+from cminject.definitions.fields.base import Field
+from cminject.definitions.property_updaters.base import PropertyUpdater
+
+from cminject.definitions.boundaries.cuboid import CuboidBoundary
+from cminject.definitions.fields.fluid_flow import StokesDragForceField
+from cminject.definitions.fields.photophoresis import DesyatnikovPhotophoreticLaserField
+from cminject.definitions.fields.function_based import FunctionField
+
+from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
 
 
 # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

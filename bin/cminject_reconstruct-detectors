@@ -20,7 +20,7 @@ import logging
 
 import h5py
 
-from cminject.definitions.result_storage import HDF5ResultStorage
+from cminject.definitions.result_storages.hdf5 import HDF5ResultStorage
 from cminject.utils.interpolation import reconstruct_detector_hits
 
 program_description = """
