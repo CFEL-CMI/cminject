@@ -213,7 +213,8 @@ class TrajectoryVisualizer(Visualizer):
                  fig: plt.Figure = None, ax: plt.Axes = None,
                  colored: bool = False, colorbar: bool = True,
                  make_x_absolute: bool = False,
-                 traj_kwargs: Dict[Any, Any] = None, scatter_kwargs: Dict[Any, Any] = None,
+                 traj_kwargs: Dict[Any, Any] = None,
+                 scatter: bool = False, scatter_kwargs: Dict[Any, Any] = None,
                  **kwargs):
         super().__init__(*args, **kwargs)
         self.n_samples = n_samples
@@ -224,6 +225,7 @@ class TrajectoryVisualizer(Visualizer):
         self.colored = colored
         self.make_x_absolute = make_x_absolute
         self.traj_kwargs = traj_kwargs or {}
+        self.scatter = scatter
         self.scatter_kwargs = scatter_kwargs or {}
 
     def visualize(self) -> Tuple[Figure, Axes]:
@@ -255,11 +257,10 @@ class TrajectoryVisualizer(Visualizer):
         ax.set_ylabel('y')
 
         # Plot all trajectories that are present
-        trajectories = storage.get_trajectories(self.n_samples)
-        if self.make_x_absolute:
-            for traj in trajectories:
-                traj[1] = np.abs(traj[1])
+        print("Getting trajectories...")
+        trajectories = storage.get_trajectories_iterator(self.n_samples)
 
+        print("Showing trajectories...")
         if trajectories:
             if self.colored:
                 self.plot_traj_colored(
@@ -271,25 +272,18 @@ class TrajectoryVisualizer(Visualizer):
                 )
 
         # Plot all particle initial and final positions
-        if self.n_samples is None:
+        if self.n_samples is None and self.scatter:
+            print("Showing initial and final positions...")
             initial, final = storage.get_initial_and_final_positions()
             self.plot_positions(initial, final, ax, dimensions, **self.scatter_kwargs)
 
         # Plot detector hits
-        detectors = storage.get_detectors()
-        self.plot_detector_hits(detectors, ax, dimensions, **self.scatter_kwargs)
+        if self.scatter:
+            print("Showing detected positions...")
+            detectors = storage.get_detectors()
+            self.plot_detector_hits(detectors, ax, dimensions, **self.scatter_kwargs)
 
-        # Set the x/y/(z) limits to contain all trajectories
-        if trajectories:
-            all_positions = np.concatenate(trajectories, axis=1)[1:dimensions + 1]
-            X = all_positions[0]
-            Y = all_positions[1]
-            ax.set_xlim((np.min(X), np.max(X)))
-            ax.set_ylim((np.min(Y), np.max(Y)))
-            if dimensions == 3:
-                Z = all_positions[2]
-                ax.set_zlim((np.min(Z), np.max(Z)))
-
+        ax.autoscale_view(True, True)
         fig.tight_layout()
         return fig, ax
 
@@ -308,8 +302,7 @@ class TrajectoryVisualizer(Visualizer):
         """
         lines = []
 
-        for i in range(len(trajectories)):
-            traj = trajectories[i]
+        for traj in trajectories:
             lines.append(ax.plot(*traj[1:dimensions+1], **plot_kwargs))
 
         ax.autoscale_view(True, True)
@@ -336,8 +329,7 @@ class TrajectoryVisualizer(Visualizer):
         VMAG = None
         SEGMENTS = None
 
-        for i in range(len(trajectories)):
-            traj = trajectories[i]
+        for traj in trajectories:
             t = traj[0]
             p = traj[1:dimensions+1]
 
