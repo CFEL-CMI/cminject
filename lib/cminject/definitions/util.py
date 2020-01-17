@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -74,3 +74,8 @@ class ParticleDetectorHit(object):
         :return: The position of the hit.
         """
         return self.full_properties[:self.number_of_dimensions]
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:

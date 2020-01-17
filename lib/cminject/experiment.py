@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
+
 import logging
 import multiprocessing
 import os
@@ -349,7 +350,6 @@ class Experiment:
         Z_BOUNDARY = self.z_boundary
         NUMBER_OF_DIMENSIONS = self.number_of_dimensions
         BASE_SEED = self.seed
-
 
 ### Local Variables:
 ### fill-column: 100

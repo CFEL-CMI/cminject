@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# This file is part of CMInject.
-# It is a reference implementation of a subset of possible experimental setups, together with command line argument
-# parsing. Its purpose is to allow those simulations to be run without additional code needing to be written, and to
-# showcase how the setup is created so people can extend it or write more complex setups.
+# This file is part of CMInject
 #
 # This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
 # License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
@@ -156,7 +153,6 @@ class DesyatnikovPhotophoresisSetup(Setup):
             raise ValueError("The length of the position description must be 2!")
         if len(args.velocity) != 2:
             raise ValueError("The length of the velocity description must be 2!")
-
 
 ### Local Variables:
 ### fill-column: 100

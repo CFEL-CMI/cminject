@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -18,3 +18,8 @@
 __all__ = ['DesyatnikovPhotophoresisDevice', 'FluidFlowFieldDevice']
 from .desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice
 from .fluid_flow_field_device import FluidFlowFieldDevice
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:

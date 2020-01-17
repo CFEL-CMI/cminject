@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -51,7 +51,6 @@ def numpy_method_cache(*args, **kwargs):
         return wrapper
 
     return decorator
-
 
 ### Local Variables:
 ### fill-column: 100

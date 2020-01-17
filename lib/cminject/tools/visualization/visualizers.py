@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -409,7 +409,6 @@ class TrajectoryVisualizer(Visualizer):
 
         ax.scatter(initial[0], initial[1], s=3, c='black', **initial_kwargs)
         ax.scatter(final[0], final[1], s=3, c='green', **final_kwargs)
-
 
 ### Local Variables:
 ### fill-column: 100

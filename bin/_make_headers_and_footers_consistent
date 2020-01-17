@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+
+"""
+Makes headers and footers for all source files in the repo consistent.
+Prints the filenames of all files that cannot automatically be fixed.
+
+Not intended to be a proper executable to be used by end-users, only for
+easily maintaining the repository.
+"""
+
+__HEADER__ = '''#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# This file is part of CMInject
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
+# version.
+#
+# If you use this program for scientific work, you should correctly reference it; see LICENSE file for details.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program. If not, see
+# <http://www.gnu.org/licenses/>.
+
+'''
+
+__FOOTER__ = '''
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:'''
+
+if __name__ == '__main__':
+    import glob
+    import os
+    import re
+    import copy
+
+    os.chdir(os.path.join(os.path.dirname(__file__), '../'))
+
+    wrongheader = set()
+    wrongfooter = set()
+    idk = set()
+    for filename in glob.glob('**/*.py', recursive=True) + glob.glob('bin/cminject*'):
+        with open(filename, 'r+') as file:
+            header_changed, footer_changed = False, False
+            contents = file.read().strip()
+            oc = copy.copy(contents)
+
+            if contents.startswith("#!/usr/bin/env python") and not contents.startswith("#!/usr/bin/env python3"):
+                contents = contents.replace("#!/usr/bin/env python", "#!/usr/bin/env python3")
+                header_changed = True
+
+            if not contents.startswith(__HEADER__):
+                if re.match(r"\A" + re.escape(__HEADER__.strip()), contents):
+                    header_changed = True
+                    contents = contents.replace(__HEADER__.strip(), __HEADER__[:-1], 1)
+                elif contents.startswith('#'):
+                    idk.add(filename)
+                    continue
+                else:
+                    header_changed = True
+                    contents = __HEADER__ + contents
+
+                if header_changed:
+                    wrongheader.add(filename)
+            if not contents.endswith(__FOOTER__):
+                if re.match(re.escape(__FOOTER__.strip()) + r"\Z", contents):
+                    footer_changed = True
+                    contents = contents.replace(__FOOTER__.strip(), __FOOTER__[1:], 1)
+                elif contents.split('\n')[-1].startswith('#'):
+                    idk.add(filename)
+                    continue
+                else:
+                    footer_changed = True
+                    contents = contents + __FOOTER__
+
+                if footer_changed:
+                    wrongfooter.add(filename)
+
+            if header_changed or footer_changed:
+                contents = re.sub(r"(\r?\n)*" + re.escape(__HEADER__) + r"(\r?\n)*",
+                                  __HEADER__.strip() + '\n\n',
+                                  contents)
+                contents = re.sub(r"(\r?\n)*" + re.escape(__FOOTER__) + r"(\r?\n)*",
+                                  '\n\n' + __FOOTER__.strip() + '\n', # newline at end of file
+                                  contents)
+
+                print(f"Auto-fixing {filename}...")
+                file.seek(0)
+                file.write(contents)
+
+    if not (wrongfooter or wrongheader or idk):
+        print("All good, nothing to do automatically or manually!")
+    else:
+        print()
+        print(f"Files with wrong header: {len(wrongheader)}")
+        print(f"Files with wrong footer: {len(wrongfooter)}")
+        print(f"Files with both wrong: {len(wrongheader.intersection(wrongfooter))}")
+        print(f"Files that could not be automatically fixed: {len(idk)}")
+        for idk_file in idk:
+            print('\t' + idk_file)

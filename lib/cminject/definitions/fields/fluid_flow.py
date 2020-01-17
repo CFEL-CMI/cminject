@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
+
 import logging
 import warnings
 from abc import ABC
@@ -279,7 +280,6 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
         force_vector = f_spec + 1.8 / 3 * pressure * pi**(3/2) * h/np.sqrt(h_) * particle.radius**2 * relative_velocity
         acceleration = force_vector / particle.mass
         return acceleration
-
 
 ### Local Variables:
 ### fill-column: 100

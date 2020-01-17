@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -40,3 +40,8 @@ class CuboidBoundary(SimpleZBoundary):
         return np.all(
             (self.intervals[:, 0] <= position) * (position <= self.intervals[:, 1])
         )
+
+### Local Variables:
+### fill-column: 100
+### truncate-lines: t
+### End:

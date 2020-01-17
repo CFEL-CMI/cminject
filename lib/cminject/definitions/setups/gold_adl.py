@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -218,7 +218,6 @@ class GoldADLSetup(Setup):
         parser.add_argument('-B', '--brownian', help='Enable brownian motion', action='store_true')
 
         return parser
-
 
 ### Local Variables:
 ### fill-column: 100

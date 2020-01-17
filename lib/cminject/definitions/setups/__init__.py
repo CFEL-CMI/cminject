@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -21,7 +21,6 @@ from .base import Setup
 from .one_flow_field import OneFlowFieldSetup
 from .desyatnikov_photophoresis import DesyatnikovPhotophoresisSetup
 from .gold_adl import GoldADLSetup
-
 
 ### Local Variables:
 ### fill-column: 100

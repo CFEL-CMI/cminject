@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # This file is part of CMInject
@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
+
 import logging
 import re
 import warnings
@@ -314,7 +315,6 @@ def hdf5_to_data_grid(filename: str) -> Tuple[List[np.array], np.array]:
     :return: A 4-tuple of numpy arrays: (x, y, z, data_grid).
     """
     return data_frame_to_data_grid(hdf5_to_data_frame(filename))
-
 
 ### Local Variables:
 ### fill-column: 100
