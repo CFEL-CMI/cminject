@@ -27,6 +27,7 @@ from cminject.definitions.base import Particle, Source, Device, Detector, ZBound
 from scipy.integrate import ode
 
 from cminject.utils.args import auto_time_step
+from tqdm import tqdm
 
 
 def spatial_derivatives(time: float, position_and_velocity: np.array,
@@ -274,7 +275,8 @@ class Experiment:
 
     def run(self,
             single_threaded: bool = False, chunksize: int = None, processes: int = os.cpu_count(),
-            loglevel: str = "warning") -> List[Particle]:
+            loglevel: str = "warning",
+            progressbar: bool = False) -> List[Particle]:
         """
         Run the Experiment. A list of resulting Particle instances is returned.
 
@@ -288,6 +290,7 @@ class Experiment:
             so check the documentation there for any further info. Equal to the number of CPU cores by default.
         :param loglevel: The loglevel to run the program with. One of {DEBUG, INFO, WARNING, ERROR, CRITICAL} --
             see Python's builtin logging module for more explanation regarding these levels.
+        :param progressbar: Show simulation progress in a readable progress bar (by tqdm).
         :return: A list of resulting Particle instances. Things like detector hits and trajectories should be stored on
             them and can be read off each Particle.
         """
@@ -302,7 +305,10 @@ class Experiment:
             logging.info(f"Running in parallel using {processes} processes with chunksize {chunksize}.")
             pool = multiprocessing.Pool(processes=processes, initializer=self._initialize_globals, initargs=())
             try:
-                particles = list(pool.imap_unordered(simulate_particle, self.particles, chunksize=chunksize))
+                iterator = pool.imap_unordered(simulate_particle, self.particles, chunksize=chunksize)
+                if progressbar:
+                    iterator = tqdm(iterator, total=len(self.particles))
+                particles = list(iterator)
             finally:
                 pool.close()
                 pool.join()

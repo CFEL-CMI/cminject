@@ -171,7 +171,8 @@ def main():
         single_threaded=args.single_threaded,
         chunksize=args.chunksize,
         processes=args.processes,
-        loglevel=args.loglevel
+        loglevel=args.loglevel,
+        progressbar=True
     )
     logging.info("Done running experiment. Storing results...")
 
