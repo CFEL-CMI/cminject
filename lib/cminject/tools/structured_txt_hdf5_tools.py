@@ -284,7 +284,18 @@ def txt_to_hdf5_stark(field_name: str, grad_name: str, outfile_name: str, dimens
     else:
         headers_f = ['f_norm']
         column_index_f = [3]
-
+    """ Flipping the matrix of the field and gradient to be
+    in an increasing order with respect to the y variable
+    Note: I need to edit this in case we have a z-dimension, i.e. fringe field
+    """
+    # creating an indicator matrix
+    a = np.arange(0, bins_x*bins_y)
+    a = np.reshape(a, (bins_x, bins_y))
+    indicator = np.zeros((bins_x*bins_y,), dtype = int)
+    cnt = 0
+    for x in np.nditer(a, order = 'F'):
+        indicator[cnt] = x
+        cnt += 1
     # saving the data to an hdf5 file
     with h5sparse.File(outfile_name, 'w') as hp:
         hp.create_dataset('index/0', data = index_x)
@@ -293,13 +304,19 @@ def txt_to_hdf5_stark(field_name: str, grad_name: str, outfile_name: str, dimens
             group1 = hp.create_group('data/' + headers_f[f])
             group1.attrs['unit'] = 'v/m'
             group1.attrs['column_index'] = column_index_f[f]
-            dat1 = group1.create_dataset('data', data = field[:, f])
+            data = field[:,f]
+            flipped = np.zeros(np.shape(data), dtype = float)
+            flipped[indicator[0:]] = data[0:]
+            dat1 = group1.create_dataset('data', data = flipped)
 
         for g in range(0, np.shape(gradient)[1]):
             group2 = hp.create_group('data/' + headers_g[g])
             group2.attrs['unit'] = 'v/m^2'
             group2.attrs['column_index'] = column_index_g[g]
-            dat2 = group2.create_dataset('data', data = gradient[:, g])
+            data = gradient[:, g]
+            flipped = np.zeros(np.shape(data), dtype = float)
+            flipped[indicator[0:]] = data[0:]
+            dat2 = group2.create_dataset('data', data = flipped)
         """
         code to flip the way the field is saved
         val_arr = np.array(values[headers[i][0]], dtype=np.float)
