@@ -25,9 +25,9 @@ import os
 import importlib
 from typing import Type
 
-from cminject.definitions.property_updaters import TrajectoryPropertyUpdater
-from cminject.definitions.result_storage import HDF5ResultStorage
-from cminject.definitions import Setup
+from cminject.definitions.property_updaters.track_trajectory import TrajectoryPropertyUpdater
+from cminject.definitions.result_storages.hdf5 import HDF5ResultStorage
+from cminject.definitions.setups.base import Setup
 from cminject.utils.args import natural_number
 
 

@@ -37,6 +37,7 @@ if __name__ == '__main__':
     parser.add_argument('-T', help='Plot the trajectories.', action='store_true')
     parser.add_argument('-Tn', help='(Only used when -t is given) Only plot n randomly sampled trajectories. '
                                     'Useful for quick qualitative analysis of large files.', type=int, metavar='n')
+    parser.add_argument('-Ts', help='Show scatter plots at each detector.', action='store_true')
     parser.add_argument('-Tc',
                         help='Plot colored trajectories, as line segments encoding particle velocity. '
                              'Shows more information, but is more computationally expensive to render.',
@@ -61,7 +62,7 @@ if __name__ == '__main__':
         visualizer = TrajectoryVisualizer(
             filename=args.file, n_samples=args.Tn,
             colored=args.Tc, make_x_absolute=args.Txabs,
-            scatter_kwargs={'alpha': 0.3},
+            scatter=args.Ts, scatter_kwargs={'alpha': 0.3},
         )
         fig, axes = visualizer.visualize()
         fig.show()

@@ -2,8 +2,10 @@ from typing import Callable, Tuple
 
 import numpy as np
 
-from cminject.definitions import Field, Particle
-from cminject.definitions.base import infinite_interval
+from cminject.definitions.particles.base import Particle
+from cminject.definitions.util import infinite_interval
+
+from .base import Field
 
 
 class FunctionField(Field):

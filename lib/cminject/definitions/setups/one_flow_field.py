@@ -20,13 +20,14 @@
 
 import argparse
 
-from cminject.definitions.detectors import SimpleZDetector
+from cminject.definitions.detectors.simple_z import SimpleZDetector
 from cminject.definitions.devices.fluid_flow_field_device import FluidFlowFieldDevice, FlowType
-from cminject.definitions.particles import SphericalParticle
-from cminject.definitions.property_updaters import BrownianMotionPropertyUpdater, \
-    BrownianMotionMolecularFlowPropertyUpdater
+from cminject.definitions.particles.spherical import SphericalParticle
+from cminject.definitions.property_updaters.brownian_motion import\
+    BrownianMotionPropertyUpdater, BrownianMotionMolecularFlowPropertyUpdater
 from cminject.definitions.setups import Setup
-from cminject.definitions.sources import VariableDistributionSource
+from cminject.definitions.sources.variable_distributions import VariableDistributionSource
+
 from cminject.experiment import Experiment
 from cminject.utils.args import dist_description, SetupArgumentParser
 

@@ -15,13 +15,19 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-__all__ = ['fluid_flow', 'photophoresis', 'regular_grid_interpolation']
-from .regular_grid_interpolation import RegularGridInterpolationField
-from .fluid_flow import StokesDragForceField, DragForceInterpolationField,\
-    MolecularFlowDragForceField
-from .photophoresis import DesyatnikovPhotophoreticLaserField
+from typing import Tuple
 
-### Local Variables:
-### fill-column: 100
-### truncate-lines: t
-### End:
+from .base import Boundary
+from cminject.definitions.util import infinite_interval
+
+
+class InfiniteBoundary(Boundary):
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        pass
+
+    @property
+    def z_boundary(self) -> Tuple[float, float]:
+        return infinite_interval
+
+    def is_particle_inside(self, position: float, time: float) -> bool:
+        return True

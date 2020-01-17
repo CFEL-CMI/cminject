@@ -21,7 +21,7 @@ import logging
 import sys
 
 import numpy as np
-from cminject.definitions.result_storage import HDF5ResultStorage
+from cminject.definitions.result_storages.hdf5 import HDF5ResultStorage
 
 program_description = """
 Analyzes the asymmetry of the 2D distributions measured at each detector in a

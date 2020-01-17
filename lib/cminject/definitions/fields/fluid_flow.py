@@ -22,10 +22,13 @@ from typing import Tuple
 import h5py
 import numba
 import numpy as np
-from cminject.definitions.fields.regular_grid_interpolation_field import RegularGridInterpolationField
-from cminject.definitions.particles import SphericalParticle, ThermallyConductiveSphericalParticle
 from scipy.constants import pi, Boltzmann
 from scipy.special import erf
+
+from cminject.definitions.particles.spherical import SphericalParticle
+from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
+
+from .regular_grid_interpolation import RegularGridInterpolationField
 
 
 class DragForceInterpolationField(RegularGridInterpolationField, ABC):

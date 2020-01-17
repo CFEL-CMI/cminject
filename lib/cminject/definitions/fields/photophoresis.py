@@ -20,11 +20,14 @@ from typing import Union, Tuple
 
 import numba
 import numpy as np
-from cminject.definitions.base import Field, empty_interval
-from cminject.definitions.fields import DragForceInterpolationField
-from cminject.definitions.particles import ThermallyConductiveSphericalParticle
 from scipy.constants import pi, Avogadro, R
 from scipy.integrate import dblquad
+
+from cminject.definitions.util import empty_interval
+from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
+
+from .fluid_flow import DragForceInterpolationField
+from .base import Field
 
 
 class VortexBeamPhotophoreticForceField(Field, ABC):
