@@ -277,10 +277,13 @@ def txt_to_hdf5_stark(field_name: str, grad_name: str, outfile_name: str, dimens
 
     # Create names for the coloumns of the data we have
     headers_g = ['ex', 'ey', 'ez']
+    column_index_g = [0, 1, 2]
     if np.shape(field)[1] == 3:
         headers_f = ['fx', 'fy', 'fz']
+        column_index_f = [3,4,5]
     else:
         headers_f = ['f_norm']
+        column_index_f = [3]
 
     # saving the data to an hdf5 file
     with h5sparse.File(outfile_name, 'w') as hp:
@@ -289,14 +292,22 @@ def txt_to_hdf5_stark(field_name: str, grad_name: str, outfile_name: str, dimens
         for f in range(0, np.shape(field)[1]):
             group1 = hp.create_group('data/' + headers_f[f])
             group1.attrs['unit'] = 'v/m'
+            group1.attrs['column_index'] = column_index_f[f]
             dat1 = group1.create_dataset('data', data = field[:, f])
 
         for g in range(0, np.shape(gradient)[1]):
             group2 = hp.create_group('data/' + headers_g[g])
             group2.attrs['unit'] = 'v/m^2'
+            group2.attrs['column_index'] = column_index_g[g]
             dat2 = group2.create_dataset('data', data = gradient[:, g])
-
-
+        """
+        code to flip the way the field is saved
+        val_arr = np.array(values[headers[i][0]], dtype=np.float)
+        if flip_indices:
+            # Transpose the whole array to match "normal" X/Y/Z/... iteration order. The order that the dimensions
+            # increment in is inverted in the txt file format, so transpose it here.
+            val_arr = val_arr.reshape(tuple(reversed(index_n))).transpose().reshape((np.prod(index_n),))
+        """
 
 def _save_to_hdf5(attributes, dimensions, headers, index, metadata, outfile_name, values):
     # Use h5sparse to save (lots of) space when storing (lots of) NaN or 0.0 values
@@ -392,6 +403,16 @@ def hdf5_to_data_grid(filename: str) -> Tuple[List[np.array], np.array]:
     """
     return data_frame_to_data_grid(hdf5_to_data_frame(filename))
 
+if __name__ == '__main__':
+
+    e_file = '../../../../gt.grad.txt'
+    f_file = '../../../../Ec.norm.txt'
+    txt_to_hdf5_stark(f_file, e_file, 'test')
+    #d = {'J': 2, 'Ka': 2, 'Kc': 2, 'M': 2, 'Isomer':0}
+    #pos = np.array([1,2,3])
+    #p = Molecule(34., d)
+    #f = B_StarkField(f_file, e_file)
+    #f.energy_interpolate(p)
 
 ### Local Variables:
 ### fill-column: 100

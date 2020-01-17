@@ -73,7 +73,7 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
     def properties_description(self) -> List[str]:
         return super().properties_description + ['T']
 
-class molecule():
+class Molecule():
     """
     A molecule that has a mass and a quantum state charchterized by the quantum numbers:
     J, Ka, Kc, m, Isomer
@@ -86,15 +86,15 @@ class molecule():
     @property
     def properties(self) -> np.array:
         return np.array([
-
             self.time_of_flight,
-            self.radius,
             self.mass
         ])
 
 if __name__ == "__main__":
-    d = {'J': 1, 'ka': 2, 'kc': 3, 'm': 2, 'isomer':2}
-    mol = molecule(34, d)
+    d = {'J': 2, 'Ka': 2, 'Kc': 2, 'M': 2, 'Isomer':0}
+
+    print('m'+str(d['J']))
+    mol = Molecule(34, d)
     print(mol.mass)
     print(mol.q_n)
 
