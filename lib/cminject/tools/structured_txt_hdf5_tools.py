@@ -300,23 +300,26 @@ def txt_to_hdf5_stark(field_name: str, grad_name: str, outfile_name: str, dimens
     with h5sparse.File(outfile_name, 'w') as hp:
         hp.create_dataset('index/0', data = index_x)
         hp.create_dataset('index/1', data = index_y)
+        group = hp.create_group('data')
         for f in range(0, np.shape(field)[1]):
-            group1 = hp.create_group('data/' + headers_f[f])
-            group1.attrs['unit'] = 'v/m'
-            group1.attrs['column_index'] = column_index_f[f]
+            #group1 = hp.create_group('data/' + )
             data = field[:,f]
             flipped = np.zeros(np.shape(data), dtype = float)
             flipped[indicator[0:]] = data[0:]
-            dat1 = group1.create_dataset('data', data = flipped)
+            dat1 = group.create_dataset(headers_f[f], data = flipped)
+            dat1.attrs['unit'] = 'v/m'
+            dat1.attrs['column_index'] = column_index_f[f]
 
         for g in range(0, np.shape(gradient)[1]):
-            group2 = hp.create_group('data/' + headers_g[g])
-            group2.attrs['unit'] = 'v/m^2'
-            group2.attrs['column_index'] = column_index_g[g]
+            #group2 = hp.create_group('data/' + )
             data = gradient[:, g]
+
             flipped = np.zeros(np.shape(data), dtype = float)
             flipped[indicator[0:]] = data[0:]
-            dat2 = group2.create_dataset('data', data = flipped)
+            dat2 = group.create_dataset(headers_g[g], data = flipped)
+            dat2.attrs['unit'] = 'v/m^2'
+            dat2.attrs['column_index'] = column_index_g[g]
+
         """
         code to flip the way the field is saved
         val_arr = np.array(values[headers[i][0]], dtype=np.float)
@@ -370,7 +373,11 @@ def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
             col = h5f['data'][column_name]
             column_headers.append(column_name)
             column_indices.append(col.attrs['column_index'])
-            column_values.append(col[:].toarray())
+
+            values = col[()]
+            if not isinstance(values, np.ndarray):
+                values = values.toarray()
+            column_values.append(values)
 
         # Reorder the column data and headers according to the (inverse) permutation gathered from the metadata
         column_indices = np.argsort(column_indices)  # argsort constructs the inverse permutation
