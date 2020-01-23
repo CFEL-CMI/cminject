@@ -12,8 +12,7 @@ class B_StarkField(RegularGridInterpolationField):
         super().__init__(filename=f_filename)
         self.energy_file = e_filename
         self.molecule = particle
-        #self.memory = {}
-        #...
+        self.memory = {}
 
     def calculate_acceleration(self, time: float) -> np.array:
 
@@ -29,16 +28,25 @@ class B_StarkField(RegularGridInterpolationField):
     def energy_interpolate(self) -> float:
         voltage, _ = self.get_local_properties()
         particle_qn = self.molecule.q_n
-        print(self.molecule.q_n['J']) #pass the number to this method
-        path = '_' + str(self.molecule.q_n['J']) + '/_' + str(self.molecule.q_n['Ka']) + '/_' + str(self.molecule.q_n['Kc']) + '/_' + str(self.molecule.q_n['M']) + '/_' + str(self.molecule.q_n['Isomer'])
-        with hp.File(self.energy_file, 'r') as stark:
-            dc = stark.get(path + '/dcfield')
-            dc = np.asarray(dc)
-            enr = stark.get(path + '/dcstarkenergy')
-            enr = np.asarray(enr)
-            mu_eff = np.gradient(enr, dc)
-            mueff_interp = sc.interpolate.interp1d(dc,mueff) # should I do it like this? Wathc interp object
-
+        # retrieve the values of the dictionary
+        J = self.molecule.q_n['J']
+        Ka = self.molecule.q_n['Ka']
+        Kc = self.molecule.q_n['Kc']
+        M = self.molecule.q_n['M']
+        Iso = self.molecule.q_n['Isomer']
+        path = '_' + str(J) + '/_' + str(Ka) + '/_' + str(Kc) + '/_' + str(M) + '/_' + str(Iso)
+        if path in self.memory.keys():
+            mueff_interp = self.memory[path]
+        else:
+            with hp.File(self.energy_file, 'r') as stark:
+                # note that in cmi-stark the data is not stored as np arrays, so I need to edit this code a bit
+                dc = stark.get(path + '/dcfield')
+                dc = np.asarray(dc)
+                enr = stark.get(path + '/dcstarkenergy')
+                enr = np.asarray(enr)
+                mu_eff = np.gradient(enr, dc)
+                mueff_interp = sc.interpolate.interp1d(dc,mu_eff) # should I do it like this? Wathc interp object
+            self.memory[path] = mueff_interp
         return mueff_interp(voltage)
         # calculate gradient
 
