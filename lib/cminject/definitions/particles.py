@@ -78,10 +78,11 @@ class Molecule(Particle):
     A molecule that has a mass and a quantum state charchterized by the quantum numbers:
     J, Ka, Kc, m, Isomer
     """
-    def __init__(self, mass: float, q_n: dict, *args, **kwargs):
+    def __init__(self, mass: float, q_n: dict, e_filename: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.mass = mass
         self.q_n = q_n
+        self.energy_filename = e_filename
 
     @property
     def properties(self) -> np.array:
