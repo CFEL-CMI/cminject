@@ -94,6 +94,27 @@ class GridFieldBasedBoundary(Boundary):
     def is_particle_inside(self, position: np.array, time: float) -> bool:
         return self.field.is_particle_inside(position, time)
 
+class StarkBoundary(Boundary):
+    # still need to edit this to take into account the rods of the field
+    # Probably I can contruct this class by inheriting GridFieldBasedBoundary and SimpleZBoundary
+    def set_number_of_dimensions(self, number_of_dimensions: int):
+        d = number_of_dimensions
+
+    def __init__(self, field: RegularGridInterpolationField, z_minmax: Tuple[float, float]):
+        z_min, z_max = z_minmax
+        if z_min > z_max:
+            raise ValueError("z_min must be < z_max!")
+        self.z_min = z_min
+        self.z_max = z_max
+        self.field = field
+
+    @property
+    def z_boundary(self) -> Tuple[float, float]:
+        return self._z_boundary
+
+    def is_particle_inside(self, position: np.array, time: float) -> bool:
+
+        return  self.field.is_particle_inside(position, time) & self.z_min <= position <= self.z_max
 
 ### Local Variables:
 ### fill-column: 100
