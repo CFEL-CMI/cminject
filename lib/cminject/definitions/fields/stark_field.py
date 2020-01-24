@@ -8,13 +8,11 @@ import sys
 
 class B_StarkField(RegularGridInterpolationField):
 
-    def __init__(self, f_filename: str, e_filename: str, particle: Molecule):
+    def __init__(self, f_filename: str):
         super().__init__(filename=f_filename)
-        self.energy_file = e_filename
-        self.molecule = particle
         self.memory = {}
 
-    def calculate_acceleration(self, time: float) -> np.array:
+    def calculate_acceleration(self, particle: Molecule, time: float) -> np.array:
 
         #voltage = ...
         #interp = self.get_particle_interpolator(particle.stark_file, particle.q, particle.j, ...)
@@ -22,23 +20,24 @@ class B_StarkField(RegularGridInterpolationField):
         #...
         #pass
         # construct a path of the quantum state of the particle:
-        _, grad = self.get_local_properties()
-        return -1*(1/particle.mass)*self.energy_interpolate()*grad #I'm assuming mass is already in kilogram
+        voltage, grad = self.get_local_properties(particle.position)
+        print(voltage, grad)
+        return -1*(1/particle.mass)*self.energy_interpolate(particle.energy_filename, particle.q_n, voltage)*grad #I'm assuming mass is already in kilogram
 
-    def energy_interpolate(self) -> float:
-        voltage, _ = self.get_local_properties()
-        particle_qn = self.molecule.q_n
+    def energy_interpolate(self, energy_filename, particle_qn, voltage) -> float:
         # retrieve the values of the dictionary
-        J = self.molecule.q_n['J']
-        Ka = self.molecule.q_n['Ka']
-        Kc = self.molecule.q_n['Kc']
-        M = self.molecule.q_n['M']
-        Iso = self.molecule.q_n['Isomer']
+        J = particle_qn['J']
+        Ka = particle_qn['Ka']
+        Kc = particle_qn['Kc']
+        M = particle_qn['M']
+        Iso = particle_qn['Isomer']
         path = '_' + str(J) + '/_' + str(Ka) + '/_' + str(Kc) + '/_' + str(M) + '/_' + str(Iso)
-        if path in self.memory.keys():
-            mueff_interp = self.memory[path]
+        key = energy_filename + path
+        print(key)
+        if key in self.memory.keys():
+            mueff_interp = self.memory[key]
         else:
-            with hp.File(self.energy_file, 'r') as stark:
+            with hp.File(energy_filename, 'r') as stark:
                 # note that in cmi-stark the data is not stored as np arrays, so I need to edit this code a bit
                 dc = stark.get(path + '/dcfield')
                 dc = np.asarray(dc)
@@ -46,15 +45,13 @@ class B_StarkField(RegularGridInterpolationField):
                 enr = np.asarray(enr)
                 mu_eff = np.gradient(enr, dc)
                 mueff_interp = sc.interpolate.interp1d(dc,mu_eff) # should I do it like this? Wathc interp object
-            self.memory[path] = mueff_interp
+            self.memory[key] = mueff_interp
         return mueff_interp(voltage)
-        # calculate gradient
 
     def field_interpolate(self, particle_position: np.array) -> np.array:
         return self._interpolator(particle_position)
 
-    def get_local_properties(self) -> Tuple[float, np.array]:
-        particle_position = self.molecule.position
+    def get_local_properties(self, particle_position) -> Tuple[float, np.array]:
         data = self.field_interpolate(particle_position)
         grad = data[0:3]
         norm = data[3]          # we are only considering the norm of the field for now
@@ -72,9 +69,9 @@ if __name__ == '__main__':
     position = np.zeros((6,))
     start_time = 0.5
     pos = np.array([1,2,3])
-    p = Molecule(34., d, identifier, start_time, position)
-    f = B_StarkField(f_file, e_file, p)
-    f.energy_interpolate()
+    p = Molecule(34., d, e_file, identifier, start_time, position)
+    f = B_StarkField(f2_file)
+    f.calculate_acceleration(p, start_time)
 
     #indic = [x[0] for x in np.nditer(a, order = 'F')]
     #print(indic)
