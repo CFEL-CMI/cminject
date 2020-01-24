@@ -21,7 +21,6 @@ class B_StarkField(RegularGridInterpolationField):
         #pass
         # construct a path of the quantum state of the particle:
         voltage, grad = self.get_local_properties(particle.position)
-        print(voltage, grad)
         return -1*(1/particle.mass)*self.energy_interpolate(particle.energy_filename, particle.q_n, voltage)*grad #I'm assuming mass is already in kilogram
 
     def energy_interpolate(self, energy_filename, particle_qn, voltage) -> float:
@@ -33,7 +32,6 @@ class B_StarkField(RegularGridInterpolationField):
         Iso = particle_qn['Isomer']
         path = '_' + str(J) + '/_' + str(Ka) + '/_' + str(Kc) + '/_' + str(M) + '/_' + str(Iso)
         key = energy_filename + path
-        print(key)
         if key in self.memory.keys():
             mueff_interp = self.memory[key]
         else:
