@@ -95,6 +95,10 @@ class GridFieldBasedBoundary(Boundary):
         return self.field.is_particle_inside(position, time)
 
 class StarkBoundary(Boundary):
+    """
+    We need to construct a Stark Boundary because the field files expected from Comsol are two dimensional, while the
+    experiment is done in 3 dimensions. The z-dimensions are obtained from the user. 
+    """
     # still need to edit this to take into account the rods of the field
     # Probably I can contruct this class by inheriting GridFieldBasedBoundary and SimpleZBoundary
     def set_number_of_dimensions(self, number_of_dimensions: int):
