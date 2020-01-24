@@ -20,8 +20,8 @@ class B_StarkField(RegularGridInterpolationField):
         #...
         #pass
         # construct a path of the quantum state of the particle:
-        voltage, grad = self.get_local_properties(particle.position)
-        return -1*(1/particle.mass)*self.energy_interpolate(particle.energy_filename, particle.q_n, voltage)*grad #I'm assuming mass is already in kilogram
+        voltage, grad = self.get_local_properties(particle.position[0:2])
+        return np.concatenate([-1*(1/particle.mass)*self.energy_interpolate(particle.energy_filename, particle.q_n, voltage)*grad[0:2], np.array([0.])]) #I'm assuming mass is already in kilogram
 
     def energy_interpolate(self, energy_filename, particle_qn, voltage) -> float:
         # retrieve the values of the dictionary
@@ -42,7 +42,7 @@ class B_StarkField(RegularGridInterpolationField):
                 enr = stark.get(path + '/dcstarkenergy')
                 enr = np.asarray(enr)
                 mu_eff = np.gradient(enr, dc)
-                mueff_interp = sc.interpolate.interp1d(dc,mu_eff) # should I do it like this? Wathc interp object
+                mueff_interp = sc.interpolate.interp1d(dc,mu_eff, fill_value = 'extrapolate') # should I do it like this? Wathc interp object
             self.memory[key] = mueff_interp
         return mueff_interp(voltage)
 
@@ -68,9 +68,8 @@ if __name__ == '__main__':
     start_time = 0.5
     pos = np.array([1,2,3])
     p = Molecule(34., d, e_file, identifier, start_time, position)
-    f = B_StarkField(f2_file)
-    f.calculate_acceleration(p, start_time)
-
+    f = B_StarkField(f_file)
+    m = f.calculate_acceleration(p, start_time)
     #indic = [x[0] for x in np.nditer(a, order = 'F')]
     #print(indic)
     #assert f.get_particle_interpolator(p) = ...
