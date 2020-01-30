@@ -20,8 +20,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from lib.cminject.definitions.base import NDimensional, ZBounded
-
+from cminject.definitions.base import NDimensional, ZBounded
 from cminject.definitions.boundaries.base import Boundary
 from cminject.definitions.fields.base import Field
 from cminject.definitions.particles.base import Particle
