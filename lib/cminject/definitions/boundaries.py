@@ -20,6 +20,7 @@ from typing import Tuple, List
 import numpy as np
 from cminject.definitions.base import Boundary, infinite_interval
 from cminject.definitions.fields.regular_grid_interpolation_field import RegularGridInterpolationField
+from cminject.definitions.fields.stark_field import B_StarkField
 
 
 class SimpleZBoundary(Boundary):
@@ -97,14 +98,14 @@ class GridFieldBasedBoundary(Boundary):
 class StarkBoundary(Boundary):
     """
     We need to construct a Stark Boundary because the field files expected from Comsol are two dimensional, while the
-    experiment is done in 3 dimensions. The z-dimensions are obtained from the user. 
+    experiment is done in 3 dimensions. The z-dimensions are obtained from the user.
     """
     # still need to edit this to take into account the rods of the field
     # Probably I can contruct this class by inheriting GridFieldBasedBoundary and SimpleZBoundary
     def set_number_of_dimensions(self, number_of_dimensions: int):
         d = number_of_dimensions
 
-    def __init__(self, field: RegularGridInterpolationField, z_minmax: Tuple[float, float]):
+    def __init__(self, field: B_StarkField, z_minmax: Tuple[float, float]):
         z_min, z_max = z_minmax
         if z_min > z_max:
             raise ValueError("z_min must be < z_max!")
