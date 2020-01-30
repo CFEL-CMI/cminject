@@ -24,10 +24,10 @@ class StarkExp(Setup):
             z_minmax=args.z_minmax)
         )]
 
+        detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
+        sources = [VariableDistributionSource(main_args.nof_particles, position=args.position, velocity=args.velocity,
+                                                  mass=args.mass, subclass=Molecule)]
 
-        #detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
-        #sources = [VariableDistributionSource(main_args.nof_particles, position=args.position, velocity=args.velocity,
-                                              radius=args.radius, rho=args.density, subclass=SphericalParticle)]
 
         return Experiment(devices=devices, detectors=detectors, sources=sources, property_updaters=property_updaters,
                           time_interval=(t_start, t_end), time_step=dt, seed=main_args.seed,
@@ -39,7 +39,7 @@ class StarkExp(Setup):
         parser.add_argument('-f', '--field-Gradient-filename', help='the norm and gradient of the Stark field (hdf5 format)', type=str, required=True)
 
         parser.add_argument('-D', '--dimensions', help='# of spatial dimensions',
-                            type=int, required=True)
+                            type=int, required=True)  # should be two or three? should I omit it?
 
         parser.add_argument('-p', '--position',
                             help='Distribution description for the position.',
@@ -48,10 +48,13 @@ class StarkExp(Setup):
         parser.add_argument('-v', '--velocity',
                             help='Distribution description for the velocity.',
                             nargs='*', type=dist_description, required=True)
+
         parser.add_argument('-T', '--temperature',
                             help='Tempreture of the molecular beam in Kelvin.',
                             type=int, required=True)
-
+        """
+        where and how to include this piece of info?
+        """
         parser.add_argument('-j', '--Jmax',
                             help='Up to what Jmax shall the simulation be carried?',
                             type=int, required=True)
@@ -60,5 +63,7 @@ class StarkExp(Setup):
                             help='z_start and z_final of the z-dimension',
                             type=Tuple[float, float], required=True)
 
+        parser.add_argument('-d', '--detectors', help='The Z positions of the detectors', nargs='+',
+                            type=float, required=True)
 
         return parser
