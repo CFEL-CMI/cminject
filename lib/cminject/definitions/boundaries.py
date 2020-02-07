@@ -105,21 +105,23 @@ class StarkBoundary(Boundary):
     def set_number_of_dimensions(self, number_of_dimensions: int):
         d = number_of_dimensions
 
-    def __init__(self, field: B_StarkField, z_minmax: Tuple[float, float]):
+    def __init__(self, field: B_StarkField, z_minmax: Tuple[float, float], field_limit: float):
         z_min, z_max = z_minmax
         if z_min > z_max:
             raise ValueError("z_min must be < z_max!")
         self.z_min = z_min
         self.z_max = z_max
         self.field = field
+        self.field_limit = field_limit
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
         return self._z_boundary
 
     def is_particle_inside(self, position: np.array, time: float) -> bool:
-
-        return  self.field.is_particle_inside(position, time) & self.z_min <= position <= self.z_max
+        voltage, _ = self.field.get_local_properties(position[0:2])
+        # IF the field is less or equal than the field limit we are on an electrode.
+        return  self.field.is_particle_inside(position, time) & self.z_min <= position <= self.z_max & voltage >= self.field_limit
 
 ### Local Variables:
 ### fill-column: 100
