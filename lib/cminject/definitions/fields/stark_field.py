@@ -9,7 +9,7 @@ import sys
 class B_StarkField(RegularGridInterpolationField):
     """
     Units of the variables:
-    Estark: Joul. The field in cmistark: volt/cm 
+    Estark: Joul. The field in cmistark: volt/cm
     Gradient of the electric field: volt/cm^2
     Mass: atomic unit
     Resulting acceleration is in cm/s^2
@@ -45,8 +45,10 @@ class B_StarkField(RegularGridInterpolationField):
                 # note that in cmi-stark the data is not stored as np arrays, so I need to edit this code a bit
                 dc = stark.get(path + '/dcfield')
                 dc = np.asarray(dc)
+                dc = dc[0] # needed because data is stored as VLarray in cmi-stark output. If it was stored as numpy arrays this step is not needed.
                 enr = stark.get(path + '/dcstarkenergy')
                 enr = np.asarray(enr)
+                enr = enr[0]
                 mu_eff = np.gradient(enr, dc)
                 mueff_interp = sc.interpolate.interp1d(dc,mu_eff, fill_value = 'extrapolate') # should I do it like this? Wathc interp object
             self.memory[key] = mueff_interp
