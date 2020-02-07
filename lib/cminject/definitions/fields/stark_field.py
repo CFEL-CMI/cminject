@@ -7,6 +7,13 @@ from typing import Tuple
 import sys
 
 class B_StarkField(RegularGridInterpolationField):
+    """
+    Units of the variables:
+    Estark: Joul. The field in cmistark: volt/cm 
+    Gradient of the electric field: volt/cm^2
+    Mass: atomic unit
+    Resulting acceleration is in cm/s^2
+    """
 
     def __init__(self, f_filename: str):
         super().__init__(filename=f_filename)
@@ -14,14 +21,13 @@ class B_StarkField(RegularGridInterpolationField):
 
     def calculate_acceleration(self, particle: Molecule, time: float) -> np.array:
 
-        #voltage = ...
-        #interp = self.get_particle_interpolator(particle.stark_file, particle.q, particle.j, ...)
-        #E = interp(voltage)
-        #...
-        #pass
-        # construct a path of the quantum state of the particle:
+        au_kg = (1.660538782e-27)  #converting mass from atomic unit to kilogram
+        icm_j = 1.98630e-23 # convert form inverse centimiters to joul
+        icm_j_cm = 1.98630e-19 # joul=kg. m^(2)/s^(2). this is to express joul in centimeter squared
+        mass = mass*au_kg
+
         voltage, grad = self.get_local_properties(particle.position[0:2])
-        return np.concatenate([-1*(1/particle.mass)*self.energy_interpolate(particle.energy_filename, particle.q_n, voltage)*grad[0:2], np.array([0.])]) #I'm assuming mass is already in kilogram
+        return np.concatenate([-1*(1/particle.mass)*icm_j_cm*self.energy_interpolate(particle.energy_filename, particle.q_n, voltage)*grad[0:2], np.array([0.])]) #I'm assuming mass is already in kilogram
 
     def energy_interpolate(self, energy_filename, particle_qn, voltage) -> float:
         # retrieve the values of the dictionary
