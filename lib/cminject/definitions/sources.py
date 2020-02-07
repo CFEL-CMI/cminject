@@ -138,11 +138,13 @@ class VariableDistributionSource(Source):
         return particles
 
 class MolDistributionSource(VariableDistributionSource):
-
+    """
+    Similar properties to the parent class but also includes Boltzmann distribution.
+    """
     def __init__(self,  number_of_particles: int,
                 position: List[Distribution],
                 velocity: List[Distribution],
-                radius: Distribution,
+                radius: Distribution = 0,
                 rho: float = 0,
                 seed=None,
                 randomly_rotate_around_z: bool = False,
@@ -154,6 +156,10 @@ class MolDistributionSource(VariableDistributionSource):
                 **subclass_kwargs)):
 
         super().__init__(number_of_particles, position, velocity, radius, rho, seed, randomly_rotate_around_z, subclass, **subclass_kwargs)
+        self.energy_filename = energy_filename
+        self.temperature = temperature
+        self.mass = mass
+        self.jmax = jmax
 
     def BoltzmannAssigner(self, paths, ZeroFieldEnergies):
         """
@@ -168,18 +174,16 @@ class MolDistributionSource(VariableDistributionSource):
         Populations = []
         sum = 0
         for path, energy in zip(paths, ZeroFieldEnergies):
-            pop = math.exp(-e_0/(tempreture*boltz))
-            Populations.append(pop)
-            sum = sum+pop
-            probs.extend([pop])
-        const = 1/sum
-        probs = np.array(probs)*const
-        ParticlesAssigned = np.ceil(probs*self.number_of_particles)
+            pop = math.exp(-energy/(self.temperature*boltz))
+            sum = sum + pop
+            Populations.extend([pop])
+        probabs = np.array(Populations)*(1/sum)
+        ParticlesAssigned = np.ceil(probabs*self.number_of_particles)
 
         return ParticlesAssigned
 
     def PathFinder(self):
-        energy_filename = self.subclass.energy_filename
+        energy_filename = self.energy_filename
         paths = []
         ZeroFieldEnergies = []
         qstates = [] # to store the quantum state of each file we want
@@ -219,6 +223,7 @@ class MolDistributionSource(VariableDistributionSource):
                 # energies in cmi_stark are not stored as numpy arrays. Should edit this later.
                 energy = gl.get(path)
                 energy = np.asarray(energy)
+                energy = energy[0] # cuz it's stored as VLarray
                 energy_0 = energy[0] # We're assuming the first point corresponds to a zero field.
                 ZeroFieldEnergies.append(energy_0)
         return paths, ZeroFieldEnergies, np.array(qstates)
