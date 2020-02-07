@@ -286,7 +286,8 @@ def txt_to_hdf5_stark(field_name: str, grad_name: str, outfile_name: str, dimens
         column_index_f = [3]
     """ Flipping the matrix of the field and gradient to be
     in an increasing order with respect to the y variable
-    Note: I need to edit this in case we have a z-dimension, i.e. fringe field
+    Note: I need to edit this in case we have a z-dimension, i.e. fringe field. Apparently I have already
+    considered this :3
     """
     # creating an indicator matrix
     a = np.arange(0, bins_x*bins_y)
