@@ -5,7 +5,7 @@ from cminject.definitions.devices.Stark_deflector import StarkDeflector
 from cminject.definitions.particles import Molecule
 
 from cminject.definitions.setups import Setup
-from cminject.definitions.sources import VariableDistributionSource
+from cminject.definitions.sources import MolDistributionSource
 from cminject.experiment import Experiment
 from cminject.utils.args import dist_description, SetupArgumentParser
 
@@ -25,8 +25,8 @@ class StarkExp(Setup):
         )]
 
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
-        sources = [VariableDistributionSource(main_args.nof_particles, position=args.position, velocity=args.velocity,
-                                                  mass=args.mass, subclass=Molecule)]
+        sources = [MolDistributionSource(main_args.nof_particles, position=args.position, velocity=args.velocity, temperature=temperature,
+                                         jmax = Jmax, mass=args.mass, energy_filename=energy_filename)]
 
 
         return Experiment(devices=devices, detectors=detectors, sources=sources, property_updaters=property_updaters,
@@ -39,6 +39,9 @@ class StarkExp(Setup):
         parser.add_argument('-f', '--field-Gradient-filename', help='the norm and gradient of the Stark field (hdf5 format)', type=str, required=True)
 
         parser.add_argument('-fl', '--field-limit', help='Maximum value of the norm of the electric field to be considered as a point on an electrod',
+                            type=int, required=True)  # should be two or three? should I omit it?
+
+        parser.add_argument('-enr', '--energy-filename', help='Energies of the molecule as a function of the norm of the field (hdf5 format)',
                             type=int, required=True)  # should be two or three? should I omit it?
 
         parser.add_argument('-D', '--dimensions', help='# of spatial dimensions',
