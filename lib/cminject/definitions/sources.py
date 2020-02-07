@@ -20,9 +20,9 @@ from typing import List, Type, Dict, Union
 import numpy as np
 from cminject.definitions.base import Source
 from cminject.definitions.particles import SphericalParticle
-from cmiinject.definitions.particles import Molecule
+from cminject.definitions.particles import Molecule
 import h5py as hp
-
+import sys
 Distribution = Union[Dict, float]  # An appropriate type for variable distribution descriptions
 # I think The class VariableDistributionSource should be edited to accept other kind of particles.
 
@@ -144,16 +144,16 @@ class MolDistributionSource(VariableDistributionSource):
     def __init__(self,  number_of_particles: int,
                 position: List[Distribution],
                 velocity: List[Distribution],
-                radius: Distribution = 0,
-                rho: float = 0,
-                seed=None,
-                randomly_rotate_around_z: bool = False,
-                subclass: subclass: Type[Molecule] = Molecule,
                 temperature: float,
                 jmax : int,
                 mass: float,
                 energy_filename: str,
-                **subclass_kwargs)):
+                radius: Distribution = 0,
+                rho: float = 0,
+                seed=None,
+                randomly_rotate_around_z: bool = False,
+                subclass: Type[Molecule] = Molecule,
+                **subclass_kwargs):
 
         super().__init__(number_of_particles, position, velocity, radius, rho, seed, randomly_rotate_around_z, subclass, **subclass_kwargs)
         self.energy_filename = energy_filename
@@ -174,11 +174,12 @@ class MolDistributionSource(VariableDistributionSource):
         Populations = []
         sum = 0
         for path, energy in zip(paths, ZeroFieldEnergies):
-            pop = math.exp(-energy/(self.temperature*boltz))
+            pop = np.exp(-energy/(self.temperature*boltz))
             sum = sum + pop
             Populations.extend([pop])
         probabs = np.array(Populations)*(1/sum)
-        ParticlesAssigned = np.ceil(probabs*self.number_of_particles)
+        ParticlesAssigned = np.floor(probabs*self.number_of_particles)
+        ParticlesAssigned = ParticlesAssigned.astype(int)
 
         return ParticlesAssigned
 
@@ -206,14 +207,14 @@ class MolDistributionSource(VariableDistributionSource):
                     elif c == '_':
                         dash_indices.append(i)
 
-                J = int(name[1:indices[0]])
+                J = int(name[1:slash_indices[0]])
 
                 if J<=jmax:
-                    paths.append(energy_filename)
-                    Ka = int(name[dash_indices[1]+1, slash_indices[1]])
-                    Kc = int(name[dash_indices[2]+1, slash_indices[2]])
-                    M = int(name[dash_indices[3]+1, slash_indices[3]])
-                    Isomer = int(name[dash_indices[4]+1, slash_indices[4]])
+                    paths.append(name)
+                    Ka = int(name[dash_indices[1]+1: slash_indices[1]])
+                    Kc = int(name[dash_indices[2]+1: slash_indices[2]])
+                    M = int(name[dash_indices[3]+1: slash_indices[3]])
+                    Isomer = int(name[dash_indices[4]+1: slash_indices[4]])
                     d = [J, Ka, Kc, M, Isomer]
                     qstates.append(d)
         with hp.File(energy_filename, 'r') as gl:
@@ -229,17 +230,18 @@ class MolDistributionSource(VariableDistributionSource):
         return paths, ZeroFieldEnergies, np.array(qstates)
 
     def generate_particles(self, start_time: float = 0.0):
-        position = np.array([self._generate(pdist) for pdist in self.position]).transpose()
         if self.randomly_rotate_around_z:
             position = self._rotate_around_z(position)
         velocity = np.array([self._generate(vdist) for vdist in self.velocity]).transpose()
         particles = []
+
         # Get the paths, free-field energies and quantum states of quantum states that have j < jmax
-        paths, ZeroFieldEnergies, qstates = self.PathFinder()
         # Assign weights to each quantum state
+        paths, ZeroFieldEnergies, qstates = self.PathFinder()
+        position = np.array([self._generate(pdist) for pdist in self.position]).transpose()
         ParticlesAssigned = self.BoltzmannAssigner(paths, ZeroFieldEnergies)
         m_qstates = np.repeat(qstates, ParticlesAssigned, axis = 0)
-        for i, q_state in zip(range(self.number_of_particles), m_qstates):
+        for i, q_state in zip(range(ParticlesAssigned.sum()), m_qstates):
             # I need to construct the q_n several times depending on ParticlesAssigned
             d = {'J': q_state[0], 'Ka': q_state[1], 'Kc': q_state[2], 'M': q_state[3], 'Isomer':q_state[4]}
 
@@ -255,6 +257,17 @@ class MolDistributionSource(VariableDistributionSource):
             particles.append(inst)
         return particles
 
+if __name__ == "__main__":
+    #d = {'J': 2, 'Ka': 2, 'Kc': 2, 'M': 2, 'Isomer':0}
+    num = 1000
+    position = [0,0,0]
+    velo = [0,0,0]
+    temperature = 1
+    jmax = 2
+    mass = 5
+    energy_filename = e_file = '../../../../WD_cmi_stark.stark'
+    source = MolDistributionSource(num, position, velo, temperature, jmax, mass, energy_filename)
+    source.generate_particles()
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
