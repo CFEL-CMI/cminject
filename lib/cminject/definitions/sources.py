@@ -164,7 +164,6 @@ class MolDistributionSource(VariableDistributionSource):
     def BoltzmannAssigner(self, paths, ZeroFieldEnergies):
         """
         I still need to consider:
-        1- The case in which the zero energy is 0
         2- nuclear statistics
         3- Add a maximum zero-field energy to consider
         4- Add tolerance
