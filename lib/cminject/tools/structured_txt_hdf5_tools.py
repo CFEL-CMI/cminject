@@ -307,7 +307,7 @@ def txt_to_hdf5_stark(field_name: str, grad_name: str, outfile_name: str, dimens
             flipped = np.zeros(np.shape(data), dtype = float)
             flipped[indicator[0:]] = data[0:]
             dat1 = group.create_dataset(headers_f[f], data = flipped)
-            dat1.attrs['unit'] = 'v/m'
+            dat1.attrs['unit'] = 'v/cm'
             dat1.attrs['column_index'] = column_index_f[f]
 
         for g in range(0, np.shape(gradient)[1]):
@@ -317,7 +317,7 @@ def txt_to_hdf5_stark(field_name: str, grad_name: str, outfile_name: str, dimens
             flipped = np.zeros(np.shape(data), dtype = float)
             flipped[indicator[0:]] = data[0:]
             dat2 = group.create_dataset(headers_g[g], data = flipped)
-            dat2.attrs['unit'] = 'v/m^2'
+            dat2.attrs['unit'] = 'v/cm^2'
             dat2.attrs['column_index'] = column_index_g[g]
 
         """
