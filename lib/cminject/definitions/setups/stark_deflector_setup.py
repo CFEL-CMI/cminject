@@ -21,7 +21,7 @@ class StarkExp(Setup):
 
         devices = [StarkDeflector(
             filename=args.field_Gadient_filename,
-            z_minmax=args.z_minmax)
+            z_minmax=args.z_minmax, field_limit=field_limit)
         )]
 
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
@@ -37,6 +37,9 @@ class StarkExp(Setup):
     def get_parser()-> SetupArgumentParser:
         parser = SetupArgumentParser()
         parser.add_argument('-f', '--field-Gradient-filename', help='the norm and gradient of the Stark field (hdf5 format)', type=str, required=True)
+
+        parser.add_argument('-fl', '--field-limit', help='Maximum value of the norm of the electric field to be considered as a point on an electrod',
+                            type=int, required=True)  # should be two or three? should I omit it?
 
         parser.add_argument('-D', '--dimensions', help='# of spatial dimensions',
                             type=int, required=True)  # should be two or three? should I omit it?
