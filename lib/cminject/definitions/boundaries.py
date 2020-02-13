@@ -125,7 +125,7 @@ class StarkBoundary(Boundary):
 
 class Ring(Boundary):
     """
-    The boundary of a Skimmer
+    The boundary of a skimmer
     """
     def __init__(self, radius: float, position: np.array):
         self.radius = radius
