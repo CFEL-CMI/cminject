@@ -123,6 +123,20 @@ class StarkBoundary(Boundary):
         # IF the field is less or equal than the field limit we are on an electrode.
         return  self.field.is_particle_inside(position, time) & self.z_min <= position <= self.z_max & voltage >= self.field_limit
 
+class Skimmer(Boundary):
+
+    def __init__(self, radius: float, position: np.array):
+        self.radius = radius
+        self.position = position
+
+    @property
+    def z_boundary(self) -> float:
+        return self.position[-1]
+
+    def is_particle_inside(self, particle_position: np.array, time: float) -> bool:
+        return np.linalg.norm(self.position[0:2]-particle_position[0:2]) <= self.radius
+
+
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
