@@ -60,7 +60,7 @@ class B_StarkField(RegularGridInterpolationField):
     def get_local_properties(self, particle_position) -> Tuple[float, np.array]:
         data = self.field_interpolate(particle_position)
         grad = data[0:3]
-        field = data[3:]          # we are only considering the norm of the field for now
+        field = data[3:]
         norm = np.linalg.norm(field)
         return norm, grad
 
