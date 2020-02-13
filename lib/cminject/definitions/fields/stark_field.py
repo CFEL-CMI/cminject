@@ -41,6 +41,11 @@ class B_StarkField(RegularGridInterpolationField):
         if key in self.memory.keys():
             mueff_interp = self.memory[key]
         else:
+            """
+            Aggresive memory optimization: If quantum state hasn't been seen before, delete the stored interpolation objects, because we assume particles are ordered
+            with respect to their quantum state. See: sources/ MolDistributionSource
+            """
+            self.memory.clear()
             with hp.File(energy_filename, 'r') as stark:
                 # note that in cmi-stark the data is not stored as np arrays, so I need to edit this code a bit
                 dc = stark.get(path + '/dcfield')
