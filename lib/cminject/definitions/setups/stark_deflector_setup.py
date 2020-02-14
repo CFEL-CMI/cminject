@@ -1,7 +1,7 @@
 import numpy as np
 import argparse
 
-from cminject.definitions.devices.Stark_deflector import StarkDeflector
+from cminject.definitions.devices.stark_deflector import StarkDeflector
 from cminject.definitions.particles import Molecule
 
 from cminject.definitions.setups import Setup
@@ -22,7 +22,7 @@ class StarkExp(Setup):
         devices = [StarkDeflector(
             filename=args.field_Gadient_filename,
             z_minmax=args.z_minmax, field_limit=field_limit)
-        )]
+        ]
 
         detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
         sources = [MolDistributionSource(main_args.nof_particles, position=args.position, velocity=args.velocity, temperature=temperature,
