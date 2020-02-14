@@ -8,7 +8,7 @@ from cminject.definitions.setups import Setup
 from cminject.definitions.sources import MolDistributionSource
 from cminject.experiment import Experiment
 from cminject.utils.args import dist_description, SetupArgumentParser
-
+from typing import Tuple
 
 class StarkExp(Setup):
     """
