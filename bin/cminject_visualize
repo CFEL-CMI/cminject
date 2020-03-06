@@ -63,6 +63,7 @@ if __name__ == '__main__':
             filename=args.file, n_samples=args.Tn,
             colored=args.Tc, make_x_absolute=args.Txabs,
             scatter=args.Ts, scatter_kwargs={'alpha': 0.3},
+            traj_kwargs={'marker': '.'}
         )
         fig, axes = visualizer.visualize()
         fig.show()
