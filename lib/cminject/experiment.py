@@ -32,10 +32,15 @@ from cminject.definitions.particles.base import Particle
 from cminject.definitions.property_updaters.base import PropertyUpdater
 from cminject.definitions.result_storages.base import ResultStorage
 from cminject.definitions.sources.base import Source
+from cminject.definitions.particle_status import *
 
 from cminject.definitions.util import infinite_interval
 from cminject.utils.args import auto_time_step
 from tqdm import tqdm
+
+
+class ImpossiblePropagationException(Exception):
+    pass
 
 
 def spatial_derivatives(time: float, position_and_velocity: np.array,
@@ -59,8 +64,8 @@ def spatial_derivatives(time: float, position_and_velocity: np.array,
     return np.concatenate((position_and_velocity[number_of_dimensions:], total_acceleration))
 
 
-def is_particle_lost(particle_position: np.array, time: float,
-                     z_boundary: Tuple[float, float], devices: List[Device]):
+def get_particle_simulation_state(particle_position: np.array, time: float,
+                                  z_boundary: Tuple[float, float], devices: List[Device]) -> int:
     """
     Decides whether a particle should be considered lost.
 
@@ -73,23 +78,113 @@ def is_particle_lost(particle_position: np.array, time: float,
     particle_z_pos = particle_position[-1]
     if particle_z_pos < z_boundary[0] or particle_z_pos > z_boundary[1]:
         # Particles that aren't within the experiment's total Z boundary are considered lost
-        return True
+        return PARTICLE_STATUS_OUTSIDE_EXPERIMENT
     else:
         for device in devices:
             device_z_boundary = device.z_boundary
             is_inside = device.is_particle_inside(particle_position, time)
             if is_inside:
                 # Particles inside devices are not considered lost
-                return False
+                return PARTICLE_STATUS_OK
             if not is_inside and device_z_boundary[0] <= particle_z_pos <= device_z_boundary[1]:
                 # Particles that are outside devices *but* within their Z boundary are considered lost
-                return True
+                return PARTICLE_STATUS_LOST
         # Particles that are not inside any device but also not within any device's Z boundary are not considered
         # lost (as long as they are within the experiment's total Z boundary, see beginning of function)
-        return False
+        return PARTICLE_STATUS_BETWEEN_DEVICES
 
 
 DEVICES, DETECTORS, PROPERTY_UPDATERS, TIME_INTERVAL, Z_BOUNDARY, NUMBER_OF_DIMENSIONS, BASE_SEED = [None] * 7
+Z_LOWER, Z_UPPER = None, None
+PARTICLE_STATES_CONSIDERED_AS_LOST = [PARTICLE_STATUS_LOST, PARTICLE_STATUS_OUTSIDE_EXPERIMENT]
+
+
+def postprocess_integration_step(particle: Particle, integral: ode, position_changed: bool) -> None:
+    """
+    Does post-processing after an integration step, which consists of:
+      - running all property updaters, possibly re-instantiating the integrator when they change the particle position
+      - running all detectors, asking them to try and detect the particle
+
+    :param particle: The particle which experienced an integration step
+    :param integral: The integral (scipy.integrate.ode) instance.
+    :param position_changed:
+        Whether the position of the particle had been changed relative to the integral result,
+        _before_ this function was called.
+    """
+    # - Run all property updaters for the particle with the current integral time
+    for property_updater in PROPERTY_UPDATERS:
+        position_changed |= property_updater.update(particle, integral.t)
+    # - If some property updater changed the position, reset the integrator's initial value
+    #   NOTE: doing this is slow and should be reserved for cases where motion cannot be modeled differently
+    if position_changed:
+        integral.set_initial_value(particle.position, integral.t)
+
+    # - Have each detector try to detect the particle
+    for detector in DETECTORS:
+        detector.try_to_detect(particle)
+
+
+def postprocess_integration(particle: Particle, integral: ode, t_end: float) -> None:
+    # Run the updaters and detectors one last time after simulation completed
+    for property_updater in PROPERTY_UPDATERS:
+        property_updater.update(particle, integral.t)
+    for detector in DETECTORS:
+        detector.try_to_detect(particle)
+
+    # Log some additional info if loglevel is low enough
+    if logging.root.level <= logging.INFO:
+        if particle.lost:
+            z_position = particle.spatial_position[NUMBER_OF_DIMENSIONS - 1]
+            if Z_BOUNDARY[0] <= z_position <= Z_BOUNDARY[1]:
+                reason = 'hit boundary within the experiment'
+            else:
+                reason = f'left experiment Z boundary (at {z_position:.2g})'
+        elif integral.t >= t_end:
+            reason = 'whole timespan simulated'
+        else:
+            reason = 'unknown reason'
+
+        logging.debug(f"Last particle position: {particle.position}")
+        logging.info(f"\tDone simulating particle {particle.identifier}: {reason}.")
+
+
+def propagate_field_free(particle: Particle) -> None:
+    """
+    Propagates a particle assuming it is in a field-free region, up until the next valid point in Z direction.
+      - "Z direction" is always the last dimension, assumed to be the main propagation axis.
+      - "the next valid point" is calculated from the z_boundary properties of all devices and detectors.
+      - Propagation is done according to a simple rule-of-three calculation.
+
+    :param particle: The Particle instance to propagate.
+    :raises ImpossiblePropagationException: if asked to propagate the particle in an impossible way, e.g.
+        propagating until the next point in positive Z when the particle's v_Z is negative.
+    """
+    z, vz = particle.spatial_position[NUMBER_OF_DIMENSIONS - 1], particle.velocity[NUMBER_OF_DIMENSIONS - 1]
+    if vz > 0:
+        if z <= Z_LOWER[0]:
+            raise ImpossiblePropagationException(
+                f"Cannot propagate field-free from {z} until {Z_LOWER[0]} with positive v_z."
+            )
+        idx = np.searchsorted(Z_LOWER, z, side='right')
+        next_z = Z_LOWER[idx]
+    elif vz < 0:
+        if z >= Z_UPPER[-1]:
+            raise ImpossiblePropagationException(
+                f"Cannot propagate field-free from {z} until {Z_UPPER[-1]} with negative v_z."
+            )
+        idx = len(Z_UPPER)-1 - np.searchsorted(-Z_UPPER[::-1], -z, side='right')  # TODO hmm... maybe preprocess
+        next_z = Z_UPPER[idx]
+    else:  # vz == 0
+        raise ImpossiblePropagationException("Cannot propagate field-free with v=0.")
+
+    prevpos = np.copy(particle.position)
+    delta_t = abs(next_z - z) / abs(vz)
+    particle.position = np.concatenate([
+        particle.spatial_position + delta_t * particle.velocity,
+        particle.velocity
+    ])
+    logging.info(f"Field-free propagation from {z} until {next_z} with velocities={particle.velocity} and "
+                 f"delta_t={delta_t}.\nBefore: {prevpos}. After: {particle.position}.")
 
 
 def simulate_particle(particle: Particle) -> Particle:
@@ -136,57 +231,38 @@ def simulate_particle(particle: Particle) -> Particle:
     logging.info(f"\tSimulating particle {particle.identifier}...")
 
     # TODO:
-    """
-    when loop was broken due to the integration not being successful, we need to somehow continue to simulate
-    the particle another way, e.g. with another integrator (how? which?)
-    """
+    # when loop was broken due to the integration not being successful, we need to somehow continue to simulate
+    # the particle another way, e.g. with another integrator (how? which?)
     while integral.successful() and integral.t < t_end and not particle.lost:
-        # Check conditions for having lost particle.
-        if not is_particle_lost(particle.position[:NUMBER_OF_DIMENSIONS], integral.t, Z_BOUNDARY, DEVICES):
-            # If particle is not lost:
-            # - Store the position and velocity calculated by the integrator on the particle
-            integral_result = integral.y
-            particle.position = integral_result
-            particle.time_of_flight = integral.t
+        # Store the position and velocity calculated by the integrator on the particle
+        integral_result = integral.y
+        particle.position = integral_result
+        particle.time_of_flight = integral.t
+        postprocess_integration_step(particle, integral, position_changed=False)
 
-            # - Run all property updaters for the particle with the current integral time
-            prop_updater_changed_position = False
-            for property_updater in PROPERTY_UPDATERS:
-                prop_updater_changed_position |= property_updater.update(particle, integral.t)
+        # Check what 'simulation state' the particle is in wrt. the devices, experiment Z boundary, and integral time
+        simulation_state = get_particle_simulation_state(
+            particle.position[:NUMBER_OF_DIMENSIONS], integral.t, Z_BOUNDARY, DEVICES
+        )
 
-            # - Have each detector try to detect the particle
-            for detector in DETECTORS:
-                detector.try_to_detect(particle)
-
-            # If some property updater changed the position, reset the integrator's initial value
-            # NOTE: doing this is slow and should be reserved for cases where motion cannot be modeled differently
-            if prop_updater_changed_position:
-                integral.set_initial_value(particle.position, integral.t)
-            # Propagate by integrating until the next time step
-            integral.integrate(integral.t + dt)
-        else:
-            # If particle is lost, store this and (implicitly) break the loop
+        if simulation_state in PARTICLE_STATES_CONSIDERED_AS_LOST:
+            # Store that particle is lost and exit the loop
             particle.lost = True
+            break
+        elif simulation_state is PARTICLE_STATUS_BETWEEN_DEVICES:
+            try:
+                propagate_field_free(particle)
+            except ImpossiblePropagationException as e:
+                logging.error(f"Impossible propagation for particle {particle.identifier}: {e}")
+                particle.lost = True
+                break
+            # Since we just "simulated" an integration step, we have to run the postprocessing again
+            postprocess_integration_step(particle, integral, position_changed=True)
 
-    # Run the updaters and detectors one last time after simulation completed
-    for property_updater in PROPERTY_UPDATERS:
-        property_updater.update(particle, integral.t)
-    for detector in DETECTORS:
-        detector.try_to_detect(particle)
+        # Propagate by integrating until the next time step
+        integral.integrate(integral.t + dt)
 
-    if particle.lost:
-        z_position = particle.spatial_position[NUMBER_OF_DIMENSIONS - 1]
-        if Z_BOUNDARY[0] <= z_position <= Z_BOUNDARY[1]:
-            reason = 'hit boundary within the experiment'
-        else:
-            reason = f'left experiment Z boundary (at {z_position:.2g})'
-    elif integral.t >= t_end:
-        reason = 'whole timespan simulated'
-    else:
-        reason = 'unknown reason'
-
-    logging.debug(f"Last particle position: {particle.position}")
-    logging.info(f"\tDone simulating particle {particle.identifier}: {reason}.")
+    postprocess_integration(particle, integral, t_end)
     return particle
 
 
@@ -224,6 +300,7 @@ class Experiment:
         self.detectors = detectors
         self.property_updaters = property_updaters or []
         self.result_storage = result_storage
+        self.loglevel = logging.WARNING
 
         # Store the number of dimensions and set it on all relevant objects
         self.number_of_dimensions = number_of_dimensions
@@ -267,6 +344,9 @@ class Experiment:
         # Initialise the min/max Z values amongst all detectors, and amongst all devices
         self.detectors_z_boundary = self._gather_z_boundary(self.detectors)
         self.devices_z_boundary = self._gather_z_boundary(self.devices)
+        self.z_lower, self.z_upper = self._gather_z_lower_upper([
+            x.z_boundary for x in self.detectors + self.devices
+        ])
 
         # Initialise the min/max Z boundary of the whole experiment
         if z_boundary is not None:
@@ -302,16 +382,15 @@ class Experiment:
         :return: A list of resulting Particle instances. Things like detector hits and trajectories should be stored on
             them and can be read off each Particle.
         """
-        logging.basicConfig(format='%(levelname)s:[%(filename)s/%(funcName)s] %(message)s',
-                            level=getattr(logging, loglevel.upper()))
+        self.loglevel = loglevel
 
+        self._initialize()
         if single_threaded:
             logging.info("Running single-threaded.")
-            self._initialize_globals()
             particles = list(map(simulate_particle, self.particles))
         else:
             logging.info(f"Running in parallel using {processes} processes with chunksize {chunksize}.")
-            pool = multiprocessing.Pool(processes=processes, initializer=self._initialize_globals, initargs=())
+            pool = multiprocessing.Pool(processes=processes, initializer=self._initialize, initargs=())
             try:
                 iterator = pool.imap_unordered(simulate_particle, self.particles, chunksize=chunksize)
                 if progressbar:
@@ -341,13 +420,37 @@ class Experiment:
             max_z = max(max_z, obj_max_z)
         return min_z, max_z
 
+    @staticmethod
+    def _gather_z_lower_upper(z_boundaries):
+        arr = np.array(z_boundaries)
+        lower = np.array(list(sorted(arr[:, 0])))
+        upper = np.array(list(sorted(arr[:, 1], reverse=True)))
+        logging.debug(f"Lower Z boundaries: {lower}")
+        logging.debug(f"Upper Z boundaries: {upper}")
+        return lower, upper
+
+    def _initialize(self):
+        self._initialize_globals()
+
+        curproc = multiprocessing.current_process()
+        if isinstance(curproc, (multiprocessing.context.ForkProcess, multiprocessing.context.SpawnProcess)):
+            mp_id = '/'.join(map(str, multiprocessing.current_process()._identity))
+            logformat = '%(levelname)s:[%(filename)s/%(funcName)s@' + mp_id + '] %(message)s'
+        else:
+            logformat = '%(levelname)s:[%(filename)s/%(funcName)s] %(message)s'
+
+        # we do the logging initialization in this function so it is done in each runner thread as well
+        logging.basicConfig(format=logformat, level=getattr(logging, self.loglevel.upper()))
+
     def _initialize_globals(self):
-        global DEVICES, DETECTORS, PROPERTY_UPDATERS, TIME_INTERVAL, Z_BOUNDARY, NUMBER_OF_DIMENSIONS, BASE_SEED
+        global DEVICES, DETECTORS, PROPERTY_UPDATERS, TIME_INTERVAL, NUMBER_OF_DIMENSIONS, BASE_SEED
+        global Z_BOUNDARY, Z_LOWER, Z_UPPER
         DEVICES = self.devices
         DETECTORS = self.detectors
         PROPERTY_UPDATERS = self.property_updaters
         TIME_INTERVAL = self.time_interval
         Z_BOUNDARY = self.z_boundary
+        Z_LOWER, Z_UPPER = self.z_lower, self.z_upper
         NUMBER_OF_DIMENSIONS = self.number_of_dimensions
         BASE_SEED = self.seed
 
