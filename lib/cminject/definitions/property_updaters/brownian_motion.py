@@ -45,33 +45,6 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
         self.dt = dt
         self.number_of_dimensions = None
 
-    @staticmethod
-    @numba.jit(nopython=True)
-    def _generate_random_3d_vec():
-        r = np.random.normal(0.0, 1.0)
-        phi, two_theta = np.random.uniform(0, 2 * np.pi, 2)
-        theta = two_theta / 2
-        r_cos_theta = r * np.cos(theta)
-        ax = r_cos_theta * np.cos(phi)
-        ay = r_cos_theta * np.sin(phi)
-        az = r * np.sin(theta)
-        a = np.array([ax, ay, az])
-        return a
-
-    @staticmethod
-    @numba.jit(nopython=True)
-    def _generate_new_pos_2d(pos, a, dt):
-        pos3d = np.array([pos[0], 0, pos[1]])
-        vel3d = np.array([pos[2], 0, pos[3]])
-        pos3d_ = pos3d + (0.5 * a * dt ** 2)
-        vel3d_ = vel3d + (a * dt)
-
-        psign = np.sign(pos3d_[0])
-        vsign = np.sign(vel3d_[0])
-        position = np.array([psign * np.sqrt(pos3d_[0] ** 2 + pos3d_[1] ** 2), pos3d_[2],
-                             vsign * np.sqrt(vel3d_[0] ** 2 + vel3d_[1] ** 2), vel3d_[2]])
-        return position
-
     def update(self, particle: SphericalParticle, time: float) -> bool:
         data = self.field.interpolate(particle.spatial_position)
         pressure = data[self.number_of_dimensions]
@@ -79,14 +52,11 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
             cunningham = self.field.calc_slip_correction(pressure, particle.radius)
             s0 = 216 * self.field.dynamic_viscosity * Boltzmann * self.field.temperature /\
                  (pi**2 * (2 * particle.radius)**5 * particle.rho**2 * cunningham)
-            a = self._generate_random_3d_vec() * np.sqrt(pi * s0 / self.dt)
+            a = np.random.normal(0.0, 1.0, self.number_of_dimensions) * np.sqrt(pi * s0 / self.dt)
 
-            if self.number_of_dimensions == 3:
-                position = particle.spatial_position + (0.5 * a * self.dt**2)
-                velocity = particle.velocity + (a * self.dt)
-                particle.position = np.concatenate((position, velocity))
-            elif self.number_of_dimensions == 2:
-                particle.position = self._generate_new_pos_2d(particle.position, a, self.dt)
+            position = particle.spatial_position + (0.5 * a * self.dt**2)
+            velocity = particle.velocity + (a * self.dt)
+            particle.position = np.concatenate((position, velocity))
             return True
         return False
 
