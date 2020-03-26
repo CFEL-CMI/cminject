@@ -1,42 +1,88 @@
 .. _user-guide:
 
-CMInject's User guide
-=====================
+###################
+CMInject User guide
+###################
 
 Welcome to the User guide for CMInject! CMInject is a Python3 framework for defining and running
 nanoparticle trajectory simulations.
 
 .. contents::
 
+************
 Installation
-------------
+************
 
-When using a virtual environment (e.g. with Anaconda), CMInject and its collection of executables
-can be installed by running ``python3 setup.py install``.
+We recommend using `Anaconda`_, if possible, because of its easy setup and performance-optimized package distributions.
 
-.. warning::
-  For running this ``python3 setup.py install``, you need to already have the ``Cython`` and
-  ``numpy`` Python packages installed. Otherwise, use ``pip`` or ``conda`` to install them first.
+For Anaconda users
+------------------
+- Set up a new Anaconda environment for CMInject::
 
-.. note::
-  If you are not in a virtual environment, and don't have write access to the global Python
-  installation, you should use ``python3 setup.py install --user``.
+    conda create -n cminject python=3.8
 
-.. note::
-  After installation, you should have all executables (e.g. ``cminject``) available in your
-  Terminal. If installation succeeded, but you still can't run ``cminject``, you should first try
-  opening a new terminal, and if that doesn't help, you should investigate where the executables
-  were installed (the installation process typically prints this information) and add this directory
-  to your PATH environment variable.
+- Activate the Anaconda environment::
 
-.. note::
-  If you plan on also developing for CMInject, it's best to run ``python setup.py develop``.
-  Doing this will prevent you from having to run ``python setup.py install`` again after every
-  change you make.
+    conda activate cminject
+
+- Install Cython and numpy (required for installation)::
+
+    conda install Cython numpy
+
+- Install CMInject:
+
+  - If you plan on developing CMInject (see `setup.py develop`_)::
+
+      python setup.py develop
+
+  - If you plan on only using CMInject::
+
+      python setup.py install
 
 
-Running cminject
-----------------
+For Python users without Anaconda
+---------------------------------
+
+- Create a virtual environment with `venv`_ in a directory of your choice::
+
+    python3 -m venv /some/dir
+
+- Activate the virtual environment (run the applicable **Command**):
+
+  +------------+-----------------+------------------------------------+
+  | Platform   | Shell           | Command                            |
+  +============+=================+====================================+
+  | POSIX      | bash/zsh        | source /some/dir/bin/activate      |
+  |            +-----------------+------------------------------------+
+  |            | fish            + . /some/dir/bin/activate.fish      |
+  |            +-----------------+------------------------------------+
+  |            | csh/tcsh        + source /some/dir/bin/activate.csh  |
+  |            +-----------------+------------------------------------+
+  |            | PowerShell Core + source /some/dir/bin/Activate.ps1  |
+  +------------+-----------------+------------------------------------+
+  | Windows    | cmd.exe         | some\\dir\\Scripts\\activate.bat   |
+  |            +-----------------+------------------------------------+
+  |            | PowerShell      | some\\dir\\Scripts\\Activate.ps1   |
+  +------------+-----------------+------------------------------------+
+
+- Install Cython and numpy (required for installation)::
+
+    pip install Cython numpy
+
+- Install CMInject:
+
+  - If you plan on developing CMInject (see `setup.py develop`_)::
+
+      python setup.py develop
+
+  - If you plan on only using CMInject::
+
+      python setup.py install
+
+****************
+Running CMInject
+****************
+
 ``cminject`` is the program for running simulations. Let's look at an example call of it,
 split into lines for readability::
 
@@ -74,7 +120,7 @@ exactly one flow field. This and other available setups are listed in :ref:`list
 .. note::
   Different setups can have different sets of parameters. To look at the parameters for a different
   setup, you can run, for example,
-  ``cminject -s cminject.definitions.setups.desyatnikov\_photophoresis -h``.
+  ``cminject -s cminject.definitions.setups.desyatnikov_photophoresis -h``.
 
 Other options exist and can be listed by running ``cminject -h``. The output file ``output.h5`` can
 be viewed with ``cminject_visualize`` or further analyzed with ``cminject_analyze-asymmetry``, and
@@ -194,3 +240,14 @@ which prints, for example, the following output::
     μx = -2.867e-05	 μy = -3.195e-04
 
 This output can instead be printed as machine-readable CSV by passing the ``--csv`` flag parameter.
+
+
+**********
+References
+**********
+
+.. target-notes::
+
+.. _`setup.py develop`: https://setuptools.readthedocs.io/en/latest/setuptools.html#develop-deploy-the-project-source-in-development-mode
+.. _venv: https://docs.python.org/3/library/venv.html
+.. _Anaconda: https://www.anaconda.com/distribution/

@@ -73,7 +73,7 @@ cminject.definitions.property\_updaters: Particle property updater definitions
 cminject.definitions.result\_storage: Result storage definitions
 ----------------------------------------------------------------
 
-.. automodule:: cminject.definitions.result_storage
+.. automodule:: cminject.definitions.result_storages
     :members:
     :undoc-members:
     :show-inheritance:

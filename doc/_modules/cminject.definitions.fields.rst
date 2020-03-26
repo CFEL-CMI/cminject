@@ -1,26 +1,26 @@
 cminject.definitions.fields: Physical acceleration fields
 =========================================================
 
-cminject.definitions.fields.fluid\_flow\_fields: Different fields for fluid flow
---------------------------------------------------------------------------------
+cminject.definitions.fields.fluid\_flow: Different fields for fluid flow
+------------------------------------------------------------------------
 
-.. automodule:: cminject.definitions.fields.fluid_flow_fields
+.. automodule:: cminject.definitions.fields.fluid_flow
     :members:
     :undoc-members:
     :show-inheritance:
 
-cminject.definitions.fields.laser\_fields module: Photophoretic laser fields
+cminject.definitions.fields.photophoresis module: Photophoretic laser fields
 ----------------------------------------------------------------------------
 
-.. automodule:: cminject.definitions.fields.laser_fields
+.. automodule:: cminject.definitions.fields.photophoresis
     :members:
     :undoc-members:
     :show-inheritance:
 
-cminject.definitions.fields.regular\_grid\_interpolation\_field: A base module for fields based on regular grid interpolation
+cminject.definitions.fields.regular\_grid\_interpolation: A base module for fields based on regular grid interpolation
 -----------------------------------------------------------------------------------------------------------------------------
 
-.. automodule:: cminject.definitions.fields.regular_grid_interpolation_field
+.. automodule:: cminject.definitions.fields.regular_grid_interpolation
     :members:
     :undoc-members:
     :show-inheritance:
