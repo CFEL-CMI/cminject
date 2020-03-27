@@ -12,26 +12,45 @@ to be both:
 
 The minimum required Python version to use it is 3.6.
 
+## Installation
 
-## Dependencies and Installation
-The software can be installed by running `./user_install.sh`, which does everything necessary by installing the
-dependencies for `setup.py`, building the Cython extensions contained in the software, and installing the software
-with its dependencies.
+Below is a quickstart installation for Anaconda users, copied from CMInject's Sphinx documentation.
+For other installation instructions and more, please generate the documentation (see section
+_Generating docs_ below) and read the _Installation_ section in the _User Guide_.
 
-If you'd prefer not to run this script for whatever reason (e.g. if you have dependencies installed in a different way
-or need to change the way the Cython extensions are built), the more general way to install is:
+### For Anaconda users
 
-- Installing `Cython` and `numpy`, via pip/pipenv/macports/..., to be available for `setup.py`
-- Building the Cython extensions via `python setup.py build_ext --inplace` (refer to setuptools/Cython docs)
-- Installing the software and its other dependencies via `python setup.py install`, or `python setup.py develop`
-  if changes to the library code are to be made (refer to setuptools docs)
+- Set up a new Anaconda environment for CMInject:
+
+    `conda create -n cminject python=3.8`
+
+- Activate the Anaconda environment::
+
+    `conda activate cminject`
+
+- Install Cython and numpy (required for installation):
+
+    `conda install Cython numpy`
+
+- Install CMInject:
+
+  - If you plan on developing CMInject:
+
+      `python setup.py develop`
+
+  - If you plan on only using CMInject:
+
+      `python setup.py install`
 
 
 ## Generating docs
-After installing the dependencies as described in the *Dependencies and Installation* section above,
-you can generate the docs in HTML format by running `python setup.py build_sphinx` from the project
-root folder. The generated HTML can then be viewed by opening `build/sphinx/html/index.html`.
 
+- If you have already installed CMInject (see _Installation_ section above), simply run `python setup.py build_sphinx`.
+- Otherwise, run `sphinx-build doc build/sphinx/html`. Note that you need to
+  [have Sphinx installed](https://www.sphinx-doc.org/en/master/usage/installation.html) to do so
+  (`conda install sphinx` for Anaconda users, `pip install sphinx` for everyone else).
+
+The generated HTML documentation can then be viewed by opening `build/sphinx/html/index.html` in a browser.
 
 ## Overview of an experiment Setup
 To define a new experiment Setup, a user creates a subclass of `cminject.definitions.base.Setup`, and must then

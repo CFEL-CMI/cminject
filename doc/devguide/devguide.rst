@@ -1,7 +1,7 @@
 .. _developer-guide:
 
-CMInject's Developer Guide
-==========================
+CMInject Developer Guide
+========================
 
 This developer's guide gives a short overview of the steps required to develop
 CMInject and the potential starting points for adding changes. For an overview

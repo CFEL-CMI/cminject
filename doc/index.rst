@@ -16,6 +16,12 @@ and so it is meant to be all of the following:
 - a collection of executables and library code for processing, analyzing and
   visualizing simulation results
 
+If you intend on (only) using CMInject for defining and running your own virtual
+experiments, please refer to the :ref:`user-guide`. If you intend on adding
+experiments that other people can use as well, or developing CMInject further,
+please refer to the :ref:`developer-guide`.
+
+
 .. toctree::
    :maxdepth: 3
    :caption: Contents:

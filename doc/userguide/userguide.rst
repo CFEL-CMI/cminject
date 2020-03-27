@@ -39,7 +39,6 @@ For Anaconda users
 
       python setup.py install
 
-
 For Python users without Anaconda
 ---------------------------------
 
@@ -82,7 +81,6 @@ For Python users without Anaconda
 ****************
 Running CMInject
 ****************
-
 ``cminject`` is the program for running simulations. Let's look at an example call of it,
 split into lines for readability::
 
@@ -135,17 +133,14 @@ more virtual detectors can be inserted into the results file after simulation wi
   ``cminject`` only accepts an HDF5 file as a flow field (i.e., the ``-f`` argument).
   See `cminject_txt-to-hdf5` for information on how to convert TXT files to such HDF5 files.
 
-
 List of utility programs
 ------------------------
-
 There are other programs to further process, analyze and visualize simulation results stored
 by ``cminject``. This section gives a list of all these programs contained in CMInject and
 describes each of them.
 
 cminject_txt-to-hdf5
 ~~~~~~~~~~~~~~~~~~~~
-
 ``cminject_txt-to-hdf5`` was written to convert TXT files describing a field as a regular grid,
 like flow field files, to HDF5 files. For example, the COMSOL Multiphysics software writes
 out such TXT files. The reason this is useful is that large TXT files are very slow to read in in
@@ -157,10 +152,8 @@ by CMInject's code, so you don't need to pass them when running the program. A t
 attributes to store is ``-fG`` and ``-ft``, which store the gas type and temperature the field
 was defined with.
 
-
 cminject_visualize
 ~~~~~~~~~~~~~~~~~~
-
 ``cminject_visualize`` visualizes result files. After you've run a simulation with
 ``cminject [...] -o resultfile.h5``, you can visualize this result file by running
 ``cminject_visualize``. There are currently two options for visualizing results available:
@@ -189,10 +182,8 @@ cminject_visualize
 
     .. image:: img/vishist_r-z_r-vr.png
 
-
 cminject_reconstruct-detectors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 ``cminject_reconstruct-detectors`` adds detectors at arbitrary z positions to an existing result
 file. For this reconstruction to work, it's required that the given result file has stored the
 trajectories; otherwise, there is nothing to reconstruct detectors from.
@@ -212,10 +203,8 @@ An example call is as follows::
   key ``reconstructed_detectors``. Tools like ``cminject_visualize`` currently don't work with them,
   so analyses of the reconstructed data must be conducted manually.
 
-
 cminject_analyze-asymmetry
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 ``cminject_analyze-asymmetry`` prints out information about the asymmetry of a 2D distribution at
 each stored detector. The output format can either be nicely formatted text to be human-readable, or
 CSV with the ``--csv`` parameter, for further data processing. An example call::
@@ -241,11 +230,9 @@ which prints, for example, the following output::
 
 This output can instead be printed as machine-readable CSV by passing the ``--csv`` flag parameter.
 
-
 **********
 References
 **********
-
 .. target-notes::
 
 .. _`setup.py develop`: https://setuptools.readthedocs.io/en/latest/setuptools.html#develop-deploy-the-project-source-in-development-mode
