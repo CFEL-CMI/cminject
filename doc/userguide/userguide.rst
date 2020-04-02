@@ -152,6 +152,20 @@ by CMInject's code, so you don't need to pass them when running the program. A t
 attributes to store is ``-fG`` and ``-ft``, which store the gas type and temperature the field
 was defined with.
 
+.. warning::
+  If the TXT file you are converting was generated for axisymmetric data, it might only contain
+  entries for positive coordinates (e.g., the r in r/z coordinates). Since ``cminject`` does not
+  know about this fact, particles might well cross into "negative r" and be considered 'lost'
+  since they are, coordinate-wise, outside of the field. In this case, please use the ``-m`` option
+  for ``cminject_txt-to-hdf5``, which mirrors the available data around the axis of symmetry and
+  thus allows simulations to work as expected.
+
+  Note that after doing this and running a simulation, you might want to work only with the
+  absolute value of the simulated r positions, e.g.::
+
+      r = resulthdf5['particles/0']['trajectory'][0]
+      r = np.abs(r)
+
 cminject_visualize
 ~~~~~~~~~~~~~~~~~~
 ``cminject_visualize`` visualizes result files. After you've run a simulation with
