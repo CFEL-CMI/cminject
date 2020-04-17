@@ -15,14 +15,14 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import numba
 import numpy as np
+from cminject.definitions.fields.fluid_flow import StokesDragForceField, MolecularFlowDragForceField
+from cminject.definitions.particles.base import Particle
 from cminject.definitions.particles.spherical import SphericalParticle
 from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
 from scipy.constants import Boltzmann, pi
 
 from .base import PropertyUpdater
-from cminject.definitions.fields.fluid_flow import StokesDragForceField, MolecularFlowDragForceField
 
 
 class BrownianMotionPropertyUpdater(PropertyUpdater):

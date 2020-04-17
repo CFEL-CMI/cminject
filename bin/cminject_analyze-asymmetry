@@ -21,6 +21,7 @@ import logging
 import sys
 
 import numpy as np
+
 from cminject.definitions.result_storages.hdf5 import HDF5ResultStorage
 
 program_description = """

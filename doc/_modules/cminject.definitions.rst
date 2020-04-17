@@ -1,105 +1,53 @@
-cminject.definitions: Physical object definitions
-=================================================
+cminject.definitions package
+============================
 
 Subpackages
 -----------
 
 .. toctree::
 
-    cminject.definitions.devices
-    cminject.definitions.fields
-    cminject.definitions.setups
+   cminject.definitions.boundaries
+   cminject.definitions.detectors
+   cminject.definitions.devices
+   cminject.definitions.fields
+   cminject.definitions.particles
+   cminject.definitions.property_updaters
+   cminject.definitions.result_storages
+   cminject.definitions.setups
+   cminject.definitions.sources
 
-.. _base-classes:
+Submodules
+----------
 
-cminject.definitions.base: Abstract base classes
-------------------------------------------------
+cminject.definitions.base module
+--------------------------------
 
 .. automodule:: cminject.definitions.base
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-cminject.definitions.boundaries: Experiment boundary definitions
-----------------------------------------------------------------
+cminject.definitions.particle\_status module
+--------------------------------------------
 
-.. automodule:: cminject.definitions.boundaries
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. automodule:: cminject.definitions.particle_status
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-cminject.definitions.detectors: Detector definitions
-----------------------------------------------------
+cminject.definitions.util module
+--------------------------------
 
-.. automodule:: cminject.definitions.detectors
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-cminject.definitions.devices: Device definitions
-------------------------------------------------
-
-.. automodule:: cminject.definitions.devices
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    :noindex:
-
-cminject.definitions.fields: Field definitions
-----------------------------------------------
-
-.. automodule:: cminject.definitions.fields
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    :noindex:
-
-cminject.definitions.particles: Particle definitions
-----------------------------------------------------
-
-.. automodule:: cminject.definitions.particles
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-cminject.definitions.property\_updaters: Particle property updater definitions
-------------------------------------------------------------------------------
-
-.. automodule:: cminject.definitions.property_updaters
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-cminject.definitions.result\_storage: Result storage definitions
-----------------------------------------------------------------
-
-.. automodule:: cminject.definitions.result_storages
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-cminject.definitions.setups: Setup definitions
-----------------------------------------------
-
-.. automodule:: cminject.definitions.setups
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    :noindex:
-
-cminject.definitions.sources: Particle source definitions
----------------------------------------------------------
-
-.. automodule:: cminject.definitions.sources
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. automodule:: cminject.definitions.util
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 
 Module contents
 ---------------
 
 .. automodule:: cminject.definitions
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

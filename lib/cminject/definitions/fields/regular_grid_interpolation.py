@@ -20,7 +20,7 @@ from typing import Tuple
 
 import numpy as np
 
-from cminject.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
+from cminject.utils.structured_txt_to_hdf5 import hdf5_to_data_grid
 from cminject.utils.interpolation import get_regular_grid_interpolator
 
 from .base import Field

@@ -28,6 +28,7 @@ from cminject.definitions.particles.base import Particle
 from cminject.definitions.util import ParticleDetectorHit
 
 from .base import ResultStorage
+from ...utils.result_analysis.distribution_analysis import get_x_percent_position
 
 
 class HDF5ResultStorage(ResultStorage):
@@ -238,6 +239,27 @@ class HDF5ResultStorage(ResultStorage):
                 return [(float(z), dataset[z][:]) for z in dataset.keys()]
             else:
                 return []
+
+    def get_focus_curve(self, percentage=70):
+        detectors = self.get_detectors()
+        zs = np.array([detector[1][self.get_dimensions() - 1][0] for detector in detectors])
+        pns = np.array([2 * get_x_percent_position(data=detector[1][0], x=percentage)
+                        for detector in detectors])
+
+        return np.vstack((zs, pns))
+
+    def plot_focus_curve(self, ax=None, percentage=70, zfac=1e3, xfac=1e6, **plot_kwargs):
+        import matplotlib.pyplot as plt
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.gca()
+
+        zs, pns = self.get_focus_curve(percentage=percentage)
+        plot = ax.plot(zs * zfac, pns * xfac, '-o', **plot_kwargs)
+
+        ax.set_xlabel(f'z distance [m/{zfac:.0g}]')
+        ax.set_ylabel(f'x distance [m/{xfac:.0g}] from center until {percentage:3.0f}%')
+        return plot
 
 ### Local Variables:
 ### fill-column: 100

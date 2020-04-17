@@ -20,7 +20,8 @@ import logging
 
 import matplotlib.pyplot as plt
 
-from cminject.tools.visualization.visualizers import DetectorHistogramVisualizer, TrajectoryVisualizer
+from cminject.utils.result_visualization.visualizers import DetectorHistogramVisualizer, \
+    TrajectoryVisualizer
 
 program_description = """
 Visualizes a simulation result HDF5 file in one or multiple ways.
@@ -62,8 +63,7 @@ if __name__ == '__main__':
         visualizer = TrajectoryVisualizer(
             filename=args.file, n_samples=args.Tn,
             colored=args.Tc, make_x_absolute=args.Txabs,
-            scatter=args.Ts, scatter_kwargs={'alpha': 0.3},
-            traj_kwargs={'marker': '.'}
+            scatter=args.Ts, scatter_kwargs={'alpha': 0.3}
         )
         fig, axes = visualizer.visualize()
         fig.show()

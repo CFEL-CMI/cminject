@@ -34,11 +34,11 @@ from mpl_toolkits.mplot3d.art3d import Line3D
 
 class Visualizer(ABC):
     """
-    A generic class that should be implemented to do different kinds of visualization of results.
+    A generic class that should be implemented to do different kinds of result_visualization of results.
 
     *Always* based on a filename and not on in-memory objects, due to the philosophy that everything you'll visualize
     is part of your result, so it should be stored as data in your result file, and you should be able to construct
-    a visualization based solely on that result data. This is also more sensible for sharing data and visualizations
+    a result_visualization based solely on that result data. This is also more sensible for sharing data and visualizations
     with other people and looking at previously done visualizations again.
     """
     def __init__(self, filename: str):
@@ -47,7 +47,7 @@ class Visualizer(ABC):
     @abstractmethod
     def visualize(self, *args, **kwargs) -> Any:
         """
-        A highly generic method to construct a visualization based on the filename passed at construction.
+        A highly generic method to construct a result_visualization based on the filename passed at construction.
 
         Note that it's not conceptually required that calling this method shows anything on screen, see e.g.
         the docstring for MatplotlibVisualizer as to why this is.

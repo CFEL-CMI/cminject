@@ -1,30 +1,30 @@
-.. _apidoc:
-
-The cminject Python package
-===========================
+cminject package
+================
 
 Subpackages
 -----------
 
 .. toctree::
 
-    cminject.definitions
-    cminject.tools
-    cminject.utils
+   cminject.definitions
+   cminject.utils
 
-cminject.experiment: The runner code for experiments
-----------------------------------------------------
+Submodules
+----------
+
+cminject.experiment module
+--------------------------
 
 .. automodule:: cminject.experiment
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 
 Module contents
 ---------------
 
 .. automodule:: cminject
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

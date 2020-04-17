@@ -133,6 +133,37 @@ more virtual detectors can be inserted into the results file after simulation wi
   ``cminject`` only accepts an HDF5 file as a flow field (i.e., the ``-f`` argument).
   See `cminject_txt-to-hdf5` for information on how to convert TXT files to such HDF5 files.
 
+********************************************
+Running CMInject on the DESY Maxwell cluster
+********************************************
+
+For users at DESY, this is a list of instructions about how to define and submit CMInject jobs
+onto the `Maxwell`_ cluster. We will be using Anaconda for ease of use, so refer to
+`MaxwellAnaconda`_ if you have more specific questions about using Anaconda on Maxwell.
+
+1. Log onto a Maxwell login node (``ssh max-wgs``) and create an anaconda environment:
+
+  - ``source /etc/profile.d/modules.sh``
+  - ``module load anaconda3``
+  - Now run all the steps in the installation section `For Anaconda users`_, creating a virtual
+    environment named "cminject" on Maxwell.
+
+2. In each cluster script you want to submit, insert the following lines at the beginning of the
+code::
+
+      source /etc/profile.d/modules.sh
+      module load anaconda3
+      source activate cminject
+
+This makes all the CMInject executables available within the script. You can now simply run
+``cminject`` in this script.
+
+.. note::
+  Currently, CMInject only parallelizes on a single node. Please add the following to the cluster
+  script heading to ensure this is handled correctly::
+
+      #SBATCH --nodes=1
+
 List of utility programs
 ------------------------
 There are other programs to further process, analyze and visualize simulation results stored
@@ -252,3 +283,5 @@ References
 .. _`setup.py develop`: https://setuptools.readthedocs.io/en/latest/setuptools.html#develop-deploy-the-project-source-in-development-mode
 .. _venv: https://docs.python.org/3/library/venv.html
 .. _Anaconda: https://www.anaconda.com/distribution/
+.. _Maxwell: https://confluence.desy.de/display/IS/Maxwell+for+Everyone
+.. _MaxwellAnaconda: https://confluence.desy.de/display/IS/Working+with+Anaconda+Python

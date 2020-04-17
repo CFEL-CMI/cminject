@@ -53,25 +53,27 @@ scripts = [
     'bin/cminject_txt-to-hdf5',
     'bin/cminject_visualize',
     'bin/cminject_reconstruct-detectors',
-    'bin/cminject_analyze-asymmetry'
+    'bin/cminject_analyze-asymmetry',
+    'bin/cminject_analyze-beam'
 ]
 
 install_requires = [
-    'scipy>=1.3.0',
-    'numpy>=1.16.0',
-    'numba>=0.44.0',
-    'pandas>=0.24.0',
-    'matplotlib>=3.1.0',
-    'h5py>=2.9.0',
-    'h5sparse>=0.1.0',
-    'sphinx>=2.1.2',
-    'sphinx_rtd_theme~=0.4.3',
-    'tqdm>=4.41.1'
+    'scipy~=1.3',
+    'numpy~=1.16',
+    'numba~=0.44',
+    'pandas~=0.24',
+    'matplotlib~=3.1',
+    'h5py~=2.9',
+    'h5sparse~=0.1',
+    'sphinx~=2.1',
+    'sphinx_rtd_theme~=0.4',
+    'tqdm~=4.41',
+    'scikit-learn~=0.22'
 ]
 
 extensions = [
-    Extension('cminject.utils.cython_interpolation',
-              ['lib/cminject/utils/cython_interpolation.pyx'],
+    Extension('cminject.utils.interpolation.cython_interpolation',
+              ['lib/cminject/utils/interpolation/cython_interpolation.pyx'],
               include_dirs=[numpy.get_include(), '.'])
 ]
 

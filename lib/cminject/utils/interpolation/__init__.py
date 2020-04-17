@@ -16,15 +16,12 @@
 # <http://www.gnu.org/licenses/>.
 
 import logging
-from typing import List, Tuple
+from typing import Tuple, List
 
 import numpy as np
+from cminject.utils.interpolation.cython_interpolation import interp2D, interp3D
 from scipy.interpolate import RegularGridInterpolator, interp1d
 
-from cminject.utils.cython_interpolation import interp2D, interp3D
-
-
-# --- For n-linear interpolation on a regular grid
 
 class Interp2D:
     """
@@ -141,8 +138,6 @@ def get_regular_grid_interpolator(grid, data):
         return InterpND(grid, data)
 
 
-# --- For interpolation along particle trajectories
-
 def split_at_inflections(a: np.array) -> Tuple[List[np.array], np.array]:
     """
     Splits a np.array into multiple pieces based on where the pairwise differences of the elements change sign,
@@ -223,6 +218,7 @@ def reconstruct_detector_hits(trajectories: List[np.array], xdims: List[int], zd
         d = d[~np.isnan(d).any(axis=1)].transpose()
         ds.append(d)
     return ds
+
 
 ### Local Variables:
 ### fill-column: 100

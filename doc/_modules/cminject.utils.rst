@@ -1,47 +1,47 @@
-cminject.utils: Reusable helper code
-====================================
+cminject.utils package
+======================
 
-cminject.utils.args: Utilities for argparse argument handling
--------------------------------------------------------------
+Subpackages
+-----------
+
+.. toctree::
+
+   cminject.utils.interpolation
+   cminject.utils.result_analysis
+   cminject.utils.result_visualization
+
+Submodules
+----------
+
+cminject.utils.args module
+--------------------------
 
 .. automodule:: cminject.utils.args
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-
-
-cminject.utils.interpolation: Utilities for interpolation
----------------------------------------------------------
-
-.. automodule:: cminject.utils.interpolation
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-cminject.utils.cython_interpolation: Cython implementations for cminject.utils.interpolation
---------------------------------------------------------------------------------------------
-
-.. automodule:: cminject.utils.cython_interpolation
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-cminject.utils.perf: Utilities for improving performance
---------------------------------------------------------
+cminject.utils.perf module
+--------------------------
 
 .. automodule:: cminject.utils.perf
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cminject.utils.structured\_txt\_to\_hdf5 module
+-----------------------------------------------
+
+.. automodule:: cminject.utils.structured_txt_to_hdf5
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 
 Module contents
 ---------------
 
 .. automodule:: cminject.utils
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

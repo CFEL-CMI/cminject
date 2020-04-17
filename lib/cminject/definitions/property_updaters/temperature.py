@@ -19,6 +19,8 @@ import numpy as np
 from scipy.constants import Boltzmann
 
 from cminject.definitions.fields.fluid_flow import MolecularFlowDragForceField
+from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
+
 from .base import PropertyUpdater
 
 
