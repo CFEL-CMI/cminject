@@ -1,16 +1,18 @@
 # CMInject: A framework for particle injection trajectory simulations
 
-CMInject is a Python 3 framework that can be used to define and run particle trajectory simulations
-for sample injection. It can run 1D, 2D and 3D simulations based on the ODE describing Newton's
+CMInject is a Python framework that can be used to define and run particle trajectory simulations
+for sample injection. It can run 1D, 2D, and 3D simulations based on the ODE describing Newton's
 equation of motion, given that all parts in a simulation setup allow this dimensionality.
 
 It is meant to be used by different groups of people and match different needs, and so it is meant
 to be both:
 
 - a library that provides a generic way to define and run whole simulation setups, and
-- a collection of such setups (coming soon).
+- a collection of standard setups for immediate use.
 
 The minimum required Python version to use it is 3.6.
+
+CMInject is free software, see the [licensing conditions](LICENSE.md) for details.
 
 
 ## Installation
@@ -56,6 +58,11 @@ python setup.py build_sphinx
 ```
 The generated HTML documentation can then be viewed by opening `./build/sphinx/html/index.html` in a
 browser.
+
+
+
+TODO: The rest of this file should be removed, I (JK) think -- instead, provide short links to the
+most relevant entry points of the Sphinx documentation.
 
 
 ## Overview of an experiment Setup
