@@ -22,6 +22,7 @@
 name = 'cminject'
 version = '1.0.dev0'
 release = version
+copyright = 'Muhamed Amin, Simon Welker, and the CFEL Controlled Molecule Imaging group'
 
 import sys
 
@@ -106,7 +107,8 @@ build_sphinx_options = {
     'project': ('setup.py', name),
     'version': ('setup.py', version),
     'release': ('setup.py', release),
-    'source_dir': ('setup.py', 'doc')
+    'source_dir': ('setup.py', 'doc'),
+    'copyright': ('setup.py', copyright)
 }
 
 
