@@ -1,19 +1,27 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8; fill-column: 100; truncate-lines: t -*-
 #
 # This file is part of CMInject
 #
-# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
-# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
-# version.
+# Copyright (C) 2018,2020 CFEL Controlled Molecule Imaging group
 #
-# If you use this program for scientific work, you should correctly reference it; see LICENSE file for details.
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
-# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+# If you use this program for scientific work, you should correctly reference it; see the LICENSE.md
+# file for details.
 #
-# You should have received a copy of the GNU General Public License along with this program. If not, see
-# <http://www.gnu.org/licenses/>.
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program. If not,
+# see <http://www.gnu.org/licenses/>.
+
+name = 'cminject'
+version = '1.0.dev0'
+release = version
 
 import sys
 
@@ -34,12 +42,12 @@ except ImportError:
 
 long_description = """CMI Injector -- Simulating particles' trajectories in different forcefields
 
-Developed by Muhamed Amin, Simon Welker and the Controlled Molecule Imaging Group at the Center for
+Developed by Muhamed Amin, Simon Welker, and the Controlled Molecule Imaging group at the Center for
 Free-Electron Laser Science, Deutsches Elektronen-Synchrotron DESY and Universität Hamburg, Hamburg,
 Germany.
 
-Original author:    Muhamed Amin <muhamed.amin@cfel.de>
-Current maintainer: Muhamed Amin <muhamed.amin@cfel.de>
+Original author:    Muhamed Amin <muhamed.amin@cfel.de> and the CMI COMOTION team
+Current maintainer: Simon Welker <simon.welker@cfel.de> and the Controlled Molecule Imaging group
 """
 
 if sys.version_info < (3, 6):
@@ -75,9 +83,24 @@ extensions = [
               include_dirs=[numpy.get_include(), '.'])
 ]
 
-name = 'cminject'
-version = '0.1'
-release = '0.1.0'
+classifiers = [
+    'Development Status :: 5 - Production/Stable',
+    'Environment :: Console',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: Microsoft :: Windows',
+    'Operating System :: POSIX',
+    'Operating System :: POSIX :: Linux',
+    'Operating System :: Unix',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Topic :: Scientific/Engineering',
+    'Topic :: Software Development :: Libraries',
+]
 
 build_sphinx_options = {
     'project': ('setup.py', name),
@@ -86,40 +109,24 @@ build_sphinx_options = {
     'source_dir': ('setup.py', 'doc')
 }
 
-setup(
-    name=name,
-    version=release,
-    description='A framework for particle injection trajectory simulations in different force fields',
-    long_description=long_description,
-    author='Simon Welker, Muhamed Amin, and the CFEL-CMI group',
-    author_email='simon.welker@cfel.de',
-    maintainer='CFEL-CMI group',
-    maintainer_email='cminject@cfel.de',  # need to set up an email list with that name ;-)
-    url='https://stash.desy.de/projects/CMIFLY/repos/cmi-injector/browse',
-    package_dir=package_dir,
-    packages=packages,
-    scripts=scripts,
-    python_requires='>=3.7',
-    install_requires=install_requires,
-    setup_requires=['Cython>=0.29.10', 'numpy>=1.16.0'],
-    ext_modules=cythonize(extensions),
-    command_options={
-        'build_sphinx': build_sphinx_options,
-    },
-    classifiers=[
-        'Development Status :: 4 - Beta',
-        'Environment :: Console',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
-        'Operating System :: MacOS :: MacOS X',
-        'Operating System :: Microsoft :: Windows',
-        'Operating System :: POSIX',
-        'Operating System :: Unix',
-        'Programming Language :: Python',
-    ],
-)
 
-### Local Variables:
-### fill-column: 100
-### truncate-lines: t
-### End:
+
+setup(name=name,
+      version = release,
+      description = 'A framework for particle injection trajectory simulations in different force fields',
+      long_description=long_description,
+      author = 'Simon Welker, Muhamed Amin, and the CFEL Controlled Molecule Imaging group',
+      author_email = 'simon.welker@cfel.de',
+      maintainer = 'CFEL Controlled Molecule Imaging group',
+      maintainer_email = 'cminject@desy.de',  # need to set up an email list with that name ;-)
+      url = 'https://stash.desy.de/projects/CMIFLY/repos/cmi-injector/browse', # put on github and adjust
+      package_dir = package_dir,
+      packages = packages,
+      scripts = scripts,
+      python_requires = '>=3.7',
+      install_requires = install_requires,
+      setup_requires = ['Cython>=0.29.10', 'numpy>=1.16.0'], # do we really need this? seem to recall it is deprecated
+      ext_modules = cythonize(extensions),
+      command_options = {'build_sphinx': build_sphinx_options,},
+      classifiers = classifiers,
+)
