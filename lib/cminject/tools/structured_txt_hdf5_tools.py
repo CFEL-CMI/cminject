@@ -266,7 +266,11 @@ def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
             col = h5f['data'][column_name]
             column_headers.append(column_name)
             column_indices.append(col.attrs['column_index'])
-            column_values.append(col[:].toarray())
+
+            val = col[:]
+            if not isinstance(val, np.ndarray):
+                val = val.toarray()
+            column_values.append(val)
 
         # Reorder the column data and headers according to the (inverse) permutation gathered from the metadata
         column_indices = np.argsort(column_indices)  # argsort constructs the inverse permutation

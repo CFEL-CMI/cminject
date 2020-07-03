@@ -19,48 +19,10 @@
 The most fundamental of definitions, for deriving other base classes from.
 """
 
-__all__ = ['NDimensional', 'ZBounded']
+__all__ = ['ZBounded']
 
 from abc import ABC, abstractmethod
 from typing import Tuple
-
-
-class NDimensional(ABC):
-    """
-    A mixin for objects that are N-dimensional, or at least (may) act different depending on the number of spatial
-    dimensions of the simulation setup they are used within.
-
-    This method is abstract to force every relevant object in the experimental setup to store and respond appropriately
-    to the dimensionality of the whole simulation. If your concrete implementation for any class that's derived from
-    this does not care about dimensionality at all, simply implement `set_number_of_dimensions` and have it do nothing,
-    i.e. just `pass` as an implementation.
-    """
-    @abstractmethod
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        """
-        A method to change this object's data/state/implementation/... to conform to the choice of the simulation
-        setup's number of spatial dimensions.
-
-        What this means concretely really depends on the object type and implementation, but for example,
-        after a `set_number_of_dimensions(2)` call:
-
-        - A Source will now generate particles with a 2D distribution instead of a 3D distribution
-        - A Field will now calculate a 2D acceleration instead of a 3D acceleration
-
-        You can expect this method to be only called once, when the experiment is preparing to be run.
-        From then on, the dimensionality of the object should be considered fixed.
-
-        .. note::
-            If your object can only handle certain numbers of dimensions (e.g. only 3D, or only 2D and 3D), it is
-            good practice to raise a ValueError exception when this method is called with a dimensionality value
-            your object can not work with. This will make it clear why the simulation setup does not make sense as
-            it is, and how it must be changed before it can be run.
-
-        :param number_of_dimensions: The number of spatial dimensions of the setup this object should work within.
-        :return: Nothing.
-        """
-        pass
-
 
 class ZBounded(ABC):
     """

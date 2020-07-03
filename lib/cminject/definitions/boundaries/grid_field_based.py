@@ -24,12 +24,6 @@ from cminject.definitions.fields.regular_grid_interpolation import RegularGridIn
 
 
 class GridFieldBasedBoundary(Boundary):
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        d = number_of_dimensions
-        fd = self.field.number_of_dimensions
-        if d != fd:
-            raise ValueError(f"Dimensionality {d} does not match associated field's dimensionality {fd}!")
-
     def __init__(self, field: RegularGridInterpolationField):
         self.field = field
 

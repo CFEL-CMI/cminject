@@ -31,13 +31,6 @@ class SphericalParticle(Particle):
         self.radius = radius
         self.rho = rho
         self.mass = self.rho * 4 / 3 * np.pi * (self.radius ** 3)
-        self.number_of_dimensions = None
-
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        if number_of_dimensions in [1, 2, 3]:
-            super().set_number_of_dimensions(number_of_dimensions)
-        else:
-            raise ValueError("SphericalParticles can only be simulated in 1-, 2-, and 3D space.")
 
     @property
     def properties(self) -> np.array:

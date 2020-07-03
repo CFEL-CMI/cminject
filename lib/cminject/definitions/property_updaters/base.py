@@ -17,11 +17,10 @@
 
 from abc import ABC, abstractmethod
 
-from cminject.definitions.base import NDimensional
 from cminject.definitions.particles.base import Particle
 
 
-class PropertyUpdater(NDimensional, ABC):
+class PropertyUpdater(ABC):
     """
     An object to update a Particle's properties based on its current state. Can do arbitrary calculations to determine
     the values the properties should be set to.

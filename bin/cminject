@@ -159,9 +159,9 @@ def main():
         experiment.property_updaters += [TrajectoryPropertyUpdater()]
 
     # Log some basic info and start running.
-    t_start, t_end, dt = experiment.time_interval
     logging.info(f"Simulating in {experiment.number_of_dimensions}D space, "
-                 f"from t0={t_start} to {t_end} with dt={dt}.")
+                 f"from t0={experiment.time_interval[0]} to {experiment.time_interval[1]} "
+                 f"with dt={experiment.time_step}.")
     logging.info(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
     logging.info("Running experiment...")
     experiment.run(

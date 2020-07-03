@@ -16,17 +16,17 @@
 # <http://www.gnu.org/licenses/>.
 
 from abc import ABC
-from typing import Tuple
+from typing import Tuple, Any
 
 import numpy as np
 
 from cminject.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
 from cminject.utils.interpolation import get_regular_grid_interpolator
-
+from cminject.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
 from .base import Field
 
 
-class RegularGridInterpolationField(Field, ABC):
+class RegularGridInterpolationField(Field, ConfigSubscriber, ABC):
     """
     A generic base class for fields that calculate a force based on interpolation within some n-dimensional
     regular grid. This class provides an `interpolate` method; the actual calculation of acceleration has to be
@@ -61,19 +61,22 @@ class RegularGridInterpolationField(Field, ABC):
         self.grid_boundary = np.array(list(zip(minima, maxima)))
         super().__init__(*args, **kwargs)
 
+        GlobalConfig().subscribe(self, ConfigKey.NUMBER_OF_DIMENSIONS)
+
+    def config_change(self, key: ConfigKey, value: Any):
+        if key is ConfigKey.NUMBER_OF_DIMENSIONS:
+            if value != self.number_of_dimensions:
+                raise ValueError(
+                    f"This field was constructed from a {self.number_of_dimensions}-dimensional grid and is "
+                    f"thus incompatible with a {value}-dimensional simulation!"
+                )
+
     @property
     def z_boundary(self) -> Tuple[float, float]:
         return self._z_boundary
 
     def is_particle_inside(self, position: np.array, time: float) -> bool:
         return np.all((position >= self.grid_boundary[:, 0]) * (position <= self.grid_boundary[:, 1]))
-
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        if number_of_dimensions != self.number_of_dimensions:
-            raise ValueError(
-                f"This field was constructed from a {self.number_of_dimensions}-dimensional grid and is "
-                f"thus incompatible with a {number_of_dimensions}-dimensional simulation!"
-            )
 
 ### Local Variables:
 ### fill-column: 100

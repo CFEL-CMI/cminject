@@ -33,10 +33,6 @@ from .base import Field
 class VortexBeamPhotophoreticForceField(Field, ABC):
     z_boundary = empty_interval
 
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        if number_of_dimensions != 2:
-            raise ValueError("Photophoretic force fields can currently only handle a 2D simulation setup.")
-
     def __init__(self, beam_power: float, beam_waist_radius: float, beam_lambda: float = 523e-9):
         self.beam_power = beam_power
         self.beam_lambda = beam_lambda

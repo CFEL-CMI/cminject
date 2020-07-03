@@ -209,6 +209,8 @@ class TrajectoryVisualizer(Visualizer):
     Useful to get a general idea of where the particles started and went, but not very useful for data analysis:
     the plots can get rather chaotic and slow (especially in 3D).
     """
+
+    # TODO FIXME new data shape must be handled!!
     def __init__(self, *args, n_samples: int = None,
                  fig: plt.Figure = None, ax: plt.Axes = None,
                  colored: bool = False, colorbar: bool = True,
@@ -234,34 +236,36 @@ class TrajectoryVisualizer(Visualizer):
         :return: A 2-tuple of (the plt.Figure instance, the plt.Axes instance created to plot)
         """
         storage = HDF5ResultStorage(self.filename, mode='r')
-        dimensions = storage.get_dimensions()
+        with storage:
+            dimensions = storage.get_dimensions()
 
-        if dimensions not in [2, 3]:
-            raise ValueError("Can only plot 2D/3D!")
+            if dimensions not in [2, 3]:
+                raise ValueError("Can only plot 2D/3D!")
 
-        # Construct the figure and axis
-        ax = self.ax
-        fig = self.fig
-        if fig is None:
-            fig = plt.figure()
-        if ax is None:
-            if dimensions == 3:
-                # this import is not 'unused', it's a magic import that makes all the 3D stuff below possible
-                # noinspection PyUnresolvedReferences
-                from mpl_toolkits.mplot3d import Axes3D
-                ax = fig.add_subplot(111, projection='3d')
-                ax.set_zlabel('z')
-            else:
-                ax = fig.add_subplot(111)
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
+            # Construct the figure and axis
+            ax = self.ax
+            fig = self.fig
+            if fig is None:
+                fig = plt.figure()
+            if ax is None:
+                if dimensions == 3:
+                    # this import is not 'unused', it's a magic import that makes all the 3D stuff below possible
+                    # noinspection PyUnresolvedReferences
+                    from mpl_toolkits.mplot3d import Axes3D
+                    ax = fig.add_subplot(111, projection='3d')
+                    ax.set_zlabel('z')
+                else:
+                    ax = fig.add_subplot(111)
+            ax.set_xlabel('x')
+            ax.set_ylabel('y')
 
-        # Plot all trajectories that are present
-        print("Getting trajectories...")
-        trajectories = storage.get_trajectories_iterator(self.n_samples)
+            # Plot all trajectories that are present
+            print("Getting trajectories...")
+            trajectories = storage.get_trajectories()
+            # TODO n_samples ??
 
-        print("Showing trajectories...")
-        if trajectories:
+            print("Showing trajectories...")
+            #if trajectories.any():
             if self.colored:
                 self.plot_traj_colored(
                     trajectories, ax, dimensions, colorbar=self.colorbar, **self.traj_kwargs
@@ -271,21 +275,21 @@ class TrajectoryVisualizer(Visualizer):
                     trajectories, ax, dimensions, **self.traj_kwargs
                 )
 
-        # Plot all particle initial and final positions
-        if self.n_samples is None and self.scatter:
-            print("Showing initial and final positions...")
-            initial, final = storage.get_initial_and_final_positions()
-            self.plot_positions(initial, final, ax, dimensions, **self.scatter_kwargs)
+            # Plot all particle initial and final positions
+            if self.n_samples is None and self.scatter:
+                print("Showing initial and final positions...")
+                initial, final = storage.get_initial_and_final_positions()
+                self.plot_positions(initial, final, ax, dimensions, **self.scatter_kwargs)
 
-        # Plot detector hits
-        if self.scatter:
-            print("Showing detected positions...")
-            detectors = storage.get_detectors()
-            self.plot_detector_hits(detectors, ax, dimensions, **self.scatter_kwargs)
+            # Plot detector hits
+            if self.scatter:
+                print("Showing detected positions...")
+                detectors = storage.get_detectors()
+                self.plot_detector_hits(detectors, ax, dimensions, **self.scatter_kwargs)
 
-        ax.autoscale_view(True, True)
-        fig.tight_layout()
-        return fig, ax
+            ax.autoscale_view(True, True)
+            fig.tight_layout()
+            return fig, ax
 
     @staticmethod
     def plot_traj_monochrome(trajectories: np.array, ax: plt.Axes, dimensions: int, **plot_kwargs)\

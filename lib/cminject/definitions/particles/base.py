@@ -20,10 +20,10 @@ from typing import Any, List, Dict
 
 import numpy as np
 
-from cminject.definitions.base import NDimensional
+from cminject.global_config import ConfigSubscriber, ConfigKey, GlobalConfig
 
 
-class Particle(NDimensional, ABC):
+class Particle(ConfigSubscriber, ABC):
     """
     Describes a particle whose trajectory we want to simulate.
     It is first and foremost a data container, and it and its subclasses should be written and used as such.
@@ -61,6 +61,12 @@ class Particle(NDimensional, ABC):
         self.mass: float = 0.0
         self.time_of_flight: float = start_time
         self.number_of_dimensions = None
+
+        GlobalConfig().subscribe(self, ConfigKey.NUMBER_OF_DIMENSIONS)
+
+    def config_change(self, key: ConfigKey, value: Any):
+        if key is ConfigKey.NUMBER_OF_DIMENSIONS:
+            self.number_of_dimensions = value
 
     @property
     @abstractmethod
@@ -138,15 +144,6 @@ class Particle(NDimensional, ABC):
         The velocity of the particle.
         """
         return self.position[self.number_of_dimensions:]
-
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        if self.position.size != 2 * number_of_dimensions:
-            raise ValueError(
-                f"Particle {self} is incompatible with {number_of_dimensions} dimensions: "
-                f"Phase space position is 2*{self.position.size / 2} dimensional."
-            )
-        else:
-            self.number_of_dimensions = number_of_dimensions
 
     def __str__(self):
         return f"<{self.__class__.__name__} #{self.identifier}>"

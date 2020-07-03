@@ -15,17 +15,18 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from typing import List, Type, Union, Dict
+from typing import List, Type, Union, Dict, Any
 
 import numpy as np
 
 from cminject.definitions.particles.spherical import SphericalParticle
+from cminject.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
 from .base import Source
 
 Distribution = Union[float, Dict[str, float]]
 
 
-class VariableDistributionSource(Source):
+class VariableDistributionSource(Source, ConfigSubscriber):
     """
     A Source for particles that allows variable distributions for each dimension of the initial phase space.
     A "Distribution" is a dictionary describing a specific kind of distribution, with a 'kind' key that must match
@@ -67,13 +68,15 @@ class VariableDistributionSource(Source):
                 f"Given position description was {len(self.position)}-dimensional, "
                 f"velocity description was {len(self.velocity)}-dimensional."
             )
+        GlobalConfig().subscribe(self, ConfigKey.NUMBER_OF_DIMENSIONS)
 
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        if number_of_dimensions != self.number_of_dimensions:
-            raise ValueError(
-                f"Incompatible number of dimensions: {number_of_dimensions}, "
-                f"the position description passed at construction was {self.number_of_dimensions}-dimensional."
-            )
+    def config_change(self, key: ConfigKey, value: Any):
+        if key is ConfigKey.NUMBER_OF_DIMENSIONS:
+            if value != self.number_of_dimensions:
+                raise ValueError(
+                    f"Incompatible number of dimensions for {self}: {value}, "
+                    f"the position description passed at construction was {self.number_of_dimensions}-dimensional."
+                )
 
     def _generate(self, dist: Distribution):
         if type(dist) is float:
@@ -133,9 +136,6 @@ class VariableDistributionSource(Source):
             )
             particles.append(inst)
         return particles
-
-
-Distribution = Union[Dict, float]  # An appropriate type for variable distribution descriptions
 
 ### Local Variables:
 ### fill-column: 100

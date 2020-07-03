@@ -19,11 +19,11 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from cminject.definitions.base import NDimensional, ZBounded
+from cminject.definitions.base import ZBounded
 from cminject.definitions.particles.base import Particle
 
 
-class Field(NDimensional, ZBounded, ABC):
+class Field(ZBounded, ABC):
     """
     A Field interacting with Particle objects.
     """

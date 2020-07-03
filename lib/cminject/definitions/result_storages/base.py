@@ -16,7 +16,7 @@
 # <http://www.gnu.org/licenses/>.
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Iterable, Dict, Optional
 
 from cminject.definitions.particles.base import Particle
 
@@ -33,6 +33,36 @@ class ResultStorage(ABC):
 
         :param particles: The list of particles, each in the state of after running a simulation.
         """
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    @abstractmethod
+    def get_dimensions(self) -> int:
+        pass
+
+    @abstractmethod
+    def get_identifiers(self) -> Iterable[str]:
+        pass
+
+    @abstractmethod
+    def get_initial_positions(self) -> Optional[Iterable]:
+        pass
+
+    @abstractmethod
+    def get_final_positions(self) -> Optional[Iterable]:
+        pass
+
+    @abstractmethod
+    def get_trajectories(self) -> Optional[Iterable]:
+        pass
+
+    @abstractmethod
+    def get_detectors(self) -> Optional[Dict[str, Iterable]]:
         pass
 
 ### Local Variables:

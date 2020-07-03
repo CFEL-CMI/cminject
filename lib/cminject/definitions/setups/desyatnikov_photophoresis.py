@@ -37,9 +37,6 @@ class MarkAsLostWhenVZIsPositivePropertyUpdater(PropertyUpdater):
     Marks particles as lost when their z coordinate and v_z are both positive.
     Since the beam only drives particles away from the source position in this area, we can consider the particles lost.
     """
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        pass
-
     def update(self, particle: Particle, time: float) -> bool:
         if particle.spatial_position[-1] > 0.0 and particle.velocity[-1] > 0.0:
             particle.lost = True

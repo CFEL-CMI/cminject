@@ -22,9 +22,6 @@ from cminject.definitions.util import infinite_interval
 
 
 class InfiniteBoundary(Boundary):
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        pass
-
     @property
     def z_boundary(self) -> Tuple[float, float]:
         return infinite_interval

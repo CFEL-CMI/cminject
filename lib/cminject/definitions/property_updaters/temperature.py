@@ -14,22 +14,27 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
+from typing import Any
 
 import numpy as np
 from scipy.constants import Boltzmann
 
+from cminject.definitions.property_updaters.base import PropertyUpdater
 from cminject.definitions.fields.fluid_flow import MolecularFlowDragForceField
-from .base import PropertyUpdater
+from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
+from cminject.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
 
 
-class ParticleTemperaturePropertyUpdater(PropertyUpdater):
+class ParticleTemperaturePropertyUpdater(PropertyUpdater, ConfigSubscriber):
     def __init__(self, field: MolecularFlowDragForceField, dt: float):
         self.field = field
         self.dt = dt
         self.number_of_dimensions = None
+        GlobalConfig().subscribe(self, [ConfigKey.NUMBER_OF_DIMENSIONS])
 
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        self.number_of_dimensions = number_of_dimensions
+    def config_change(self, key: ConfigKey, value: Any):
+        if key is ConfigKey.NUMBER_OF_DIMENSIONS:
+            self.number_of_dimensions = value
 
     def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
         pressure = self.field.interpolate(particle.spatial_position)[self.number_of_dimensions]

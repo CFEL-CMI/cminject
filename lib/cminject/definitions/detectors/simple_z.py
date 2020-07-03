@@ -20,9 +20,10 @@ from typing import Optional, Dict, Any, Tuple
 import numpy as np
 
 from .base import Detector
+from cminject.global_config import ConfigSubscriber, GlobalConfig, ConfigKey
 
 
-class SimpleZDetector(Detector):
+class SimpleZDetector(Detector, ConfigSubscriber):
     def _hit_position(self, position_velocity: np.array) -> Optional[np.array]:
         raise Exception("This should never be called, the implementation should be swapped out by the constructor!")
 
@@ -31,52 +32,56 @@ class SimpleZDetector(Detector):
         self._z_boundary = (z_position, z_position)
         self.particle_distances: Dict[Any, float] = {}
 
-        self.number_of_dimensions = 0
-
+        self._hit_position = None
+        self._number_of_dimensions = None
         super().__init__(identifier=identifier)
 
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        if number_of_dimensions == 3:
-            self._hit_position = self._hit_position3
-        elif number_of_dimensions == 2:
-            self._hit_position = self._hit_position2
-        else:
-            raise ValueError(f"{self.__class__.__name__}'s Dimensionality has to be in [2, 3].")
+        GlobalConfig().subscribe(self, ConfigKey.NUMBER_OF_DIMENSIONS)
 
-        self.number_of_dimensions = number_of_dimensions
+    def config_change(self, key: ConfigKey, value: Any):
+        if key is ConfigKey.NUMBER_OF_DIMENSIONS:
+            number_of_dimensions = value
+            self._number_of_dimensions = number_of_dimensions
 
-    def _has_particle_reached_detector(self, particle_identifier: int, position_velocity: np.array) -> bool:
-        if position_velocity[self.number_of_dimensions - 1] == self.z_position:
+            if number_of_dimensions == 3:
+                self._hit_position = self._hit_position3
+            elif number_of_dimensions == 2:
+                self._hit_position = self._hit_position2
+            else:
+                raise ValueError(f"{self.__class__.__name__} requires 2 or 3 spatial dimensions.")
+
+    def _has_particle_reached_detector(self, identifier: str, ps_position: np.array) -> bool:
+        if ps_position[self._number_of_dimensions - 1] == self.z_position:
             return True
 
         reached = False
-        prev_distance = self.particle_distances.get(particle_identifier, None)
-        curr_distance = position_velocity[self.number_of_dimensions - 1] - self.z_position
+        prev_distance = self.particle_distances.get(identifier, None)
+        curr_distance = ps_position[self._number_of_dimensions - 1] - self.z_position
         if prev_distance and np.sign(curr_distance) != np.sign(prev_distance):
             reached = True
-        self.particle_distances[particle_identifier] = curr_distance
+        self.particle_distances[identifier] = curr_distance
         return reached
 
-    def _hit_position3(self, position_velocity: np.array) -> Optional[np.array]:
-        if position_velocity[self.number_of_dimensions-1] == self.z_position:
-            return position_velocity
+    def _hit_position3(self, ps_position: np.array) -> Optional[np.array]:
+        if ps_position[2] == self.z_position:
+            return ps_position
 
-        x, y, z, u, v, w = position_velocity
+        x, y, z, u, v, w = ps_position
         d = abs(z) - abs(self.z_position)
         t = d / abs(w)
         x = x - u * t
         y = y - v * t
         return np.array([x, y, self.z_position, u, v, w])
 
-    def _hit_position2(self, position_velocity: np.array) -> Optional[np.array]:
-        if position_velocity[self.number_of_dimensions - 1] == self.z_position:
-            return position_velocity
+    def _hit_position2(self, ps_position: np.array) -> Optional[np.array]:
+        if ps_position[1] == self.z_position:
+            return ps_position
 
-        r, z, vr, vz = position_velocity
+        x, z, vx, vz = ps_position
         d = abs(z) - abs(self.z_position)
         t = d / abs(vz)
-        r = r - vr * t
-        return np.array([r, self.z_position, vr, vz])
+        x = x - vx * t
+        return np.array([x, self.z_position, vx, vz])
 
     @property
     def z_boundary(self) -> Tuple[float, float]:

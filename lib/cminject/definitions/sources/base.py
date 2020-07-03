@@ -18,16 +18,19 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from cminject.definitions.base import NDimensional
 from cminject.definitions.particles.base import Particle
 
 
-class Source(NDimensional, ABC):
+class Source(ABC):
     """
     A source of particles, to generate an initial position (and property) distribution.
 
     One can implement sources following different distributions and generating different particle types by subclassing
     this class and implementing generate_particles however they want.
+
+    .. warning::
+      Any implementation of Source should only generate exactly one type of particle, i.e. its generate_particles
+      method should never return a list of particles where the (most specific) type of any two particles is different.
     """
     @abstractmethod
     def generate_particles(self, start_time: float = 0.0) -> List[Particle]:

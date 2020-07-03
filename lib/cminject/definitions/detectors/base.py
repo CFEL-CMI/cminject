@@ -20,12 +20,12 @@ from typing import Optional
 
 import numpy as np
 
-from cminject.definitions.base import NDimensional, ZBounded
+from cminject.definitions.base import ZBounded
 from cminject.definitions.particles.base import Particle
 from cminject.definitions.util import ParticleDetectorHit
 
 
-class Detector(NDimensional, ZBounded, ABC):
+class Detector(ZBounded, ABC):
     """
     Can tell whether a Particle has hit it, and _if_ it has hit it, can also tell where this occurred.
 

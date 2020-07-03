@@ -19,10 +19,10 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from cminject.definitions.base import NDimensional, ZBounded
+from cminject.definitions.base import ZBounded
 
 
-class Boundary(NDimensional, ZBounded, ABC):
+class Boundary(ZBounded, ABC):
     """
     Can tell whether a Particle is inside of it or not.
 

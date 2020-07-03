@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
+from typing import Any
 
 import numba
 import numpy as np
@@ -21,11 +22,12 @@ from cminject.definitions.particles.spherical import SphericalParticle
 from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
 from scipy.constants import Boltzmann, pi
 
-from .base import PropertyUpdater
 from cminject.definitions.fields.fluid_flow import StokesDragForceField, MolecularFlowDragForceField
+from cminject.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
+from .base import PropertyUpdater
 
 
-class BrownianMotionPropertyUpdater(PropertyUpdater):
+class BrownianMotionPropertyUpdater(PropertyUpdater, ConfigSubscriber):
     """
     Models brownian motion for a Stokes drag force field based on the paper:
     A. Li, G. Ahmadi, Dispersion and deposition of spherical particles from point sources in a turbulent channel flow,
@@ -35,15 +37,17 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
         This property updater assumes that when the number of spatial dimensions is 2, the problem is radially
         symmetrical. If you need an x/y 2D simulation rather than a r/z simulation, derive a new class.
     """
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        if number_of_dimensions not in [2, 3]:
-            raise ValueError(f"{self.__class__.__name__} only works in 2D and 3D!")
-        self.number_of_dimensions = number_of_dimensions
-
-    def __init__(self, field: StokesDragForceField, dt: float):
+    def __init__(self, field: StokesDragForceField):
         self.field = field
-        self.dt = dt
         self.number_of_dimensions = None
+        self.dt = None
+        GlobalConfig().subscribe(self, [ConfigKey.NUMBER_OF_DIMENSIONS, ConfigKey.TIME_STEP])
+
+    def config_change(self, key: ConfigKey, value: Any):
+        if key is ConfigKey.NUMBER_OF_DIMENSIONS:
+            self.number_of_dimensions = value
+        elif key is ConfigKey.TIME_STEP:
+            self.dt = value
 
     def update(self, particle: SphericalParticle, time: float) -> bool:
         data = self.field.interpolate(particle.spatial_position)
@@ -61,18 +65,23 @@ class BrownianMotionPropertyUpdater(PropertyUpdater):
         return False
 
 
-class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater):
+class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater, ConfigSubscriber):
     """
     Models brownian motion based on the fluctuation-dissipation-theorem
     and a numerical representation of the delta function
     """
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        self.number_of_dimensions = number_of_dimensions  # TODO validate against field dimensions
-
-    def __init__(self, field: MolecularFlowDragForceField, dt: float):
+    def __init__(self, field: MolecularFlowDragForceField):
         self.field = field
-        self.dt = dt
-        self.number_of_dimensions = None
+        self.number_of_dimensions = 2
+        self.dt = None
+        GlobalConfig().subscribe(self, [ConfigKey.NUMBER_OF_DIMENSIONS, ConfigKey.TIME_STEP])
+
+    def config_change(self, key: ConfigKey, value: Any):
+        if key is ConfigKey.NUMBER_OF_DIMENSIONS:
+            if value != self.number_of_dimensions:
+                raise ValueError(f"{self} requires a {self.number_of_dimensions}-dimensional simulation")
+        elif key is ConfigKey.TIME_STEP:
+            self.dt = value
 
     def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
         pressure = self.field.interpolate(particle.spatial_position)[self.number_of_dimensions]

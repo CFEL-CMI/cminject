@@ -47,10 +47,6 @@ class SkimmersBoundary(Boundary):
 
         self._z_boundary = (skimmer_min_z, skimmer_length + tube_length)
 
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        if number_of_dimensions != 2:
-            raise ValueError("The number of dimensions shall be 2!")
-
     def is_particle_inside(self, position: np.array, time: float) -> bool:
         r, z = position
         r = np.abs(r)
@@ -191,11 +187,9 @@ class GoldADLSetup(Setup):
         if args.brownian:
             # Add brownian motion property updaters _after_ the Experiment has decided on a time step to use.
             # TODO Might be a good idea to refactor this automatic choice of time step to somewhere else.
-            dt = exp.time_interval[-1]
+            dt = exp.time_step
             bm_updaters = [BrownianMotionPropertyUpdater(field=devices[0].fields[0], dt=dt),
                            BrownianMotionPropertyUpdater(field=devices[1].fields[0], dt=dt)]
-            for updater in bm_updaters:
-                updater.set_number_of_dimensions(exp.number_of_dimensions)
             exp.property_updaters = bm_updaters + exp.property_updaters
 
         return exp

@@ -27,12 +27,9 @@ class TrajectoryPropertyUpdater(PropertyUpdater):
     """
     def update(self, particle: Particle, time: float) -> bool:
         particle.trajectory.append(
-            np.concatenate([[time], particle.position])
+            np.append(particle.position, time)
         )
         return False
-
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        pass
 
 ### Local Variables:
 ### fill-column: 100

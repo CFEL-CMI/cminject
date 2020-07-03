@@ -16,17 +16,18 @@
 # <http://www.gnu.org/licenses/>.
 
 from abc import ABC
-from typing import List, Tuple
+from typing import List, Tuple, Any
 
 import numpy as np
 
-from cminject.definitions.base import NDimensional, ZBounded
+from cminject.definitions.base import ZBounded
 from cminject.definitions.boundaries.base import Boundary
 from cminject.definitions.fields.base import Field
 from cminject.definitions.particles.base import Particle
+from cminject.global_config import GlobalConfig, ConfigKey, ConfigSubscriber
 
 
-class Device(NDimensional, ZBounded, ABC):
+class Device(ZBounded, ConfigSubscriber, ABC):
     """
     A combination of Field instances and a Boundary instance.
     Used to model real-world devices in an experiment setup.
@@ -43,11 +44,11 @@ class Device(NDimensional, ZBounded, ABC):
         self.number_of_dimensions = None
         super().__init__()
 
-    def set_number_of_dimensions(self, number_of_dimensions: int) -> None:
-        for field in self.fields:
-            field.set_number_of_dimensions(number_of_dimensions)
-        self.boundary.set_number_of_dimensions(number_of_dimensions)
-        self.number_of_dimensions = number_of_dimensions
+        GlobalConfig().subscribe(self, ConfigKey.NUMBER_OF_DIMENSIONS)
+
+    def config_change(self, key: ConfigKey, value: Any):
+        if key is ConfigKey.NUMBER_OF_DIMENSIONS:
+            self.number_of_dimensions = value
 
     def calculate_acceleration(self, particle: Particle, time: float) -> np.array:
         # We've chosen to use this implementation as a default, as for n <= 10 fields, it is roughly 10 times faster

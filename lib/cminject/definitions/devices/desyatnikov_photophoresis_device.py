@@ -23,7 +23,6 @@ from scipy.constants import Boltzmann
 
 from .base import Device
 from cminject.definitions.fields.base import Field
-from cminject.definitions.property_updaters.base import PropertyUpdater
 
 from cminject.definitions.boundaries.cuboid import CuboidBoundary
 from cminject.definitions.fields.fluid_flow import StokesDragForceField
@@ -39,9 +38,11 @@ from cminject.definitions.particles.t_conductive_spherical import ThermallyCondu
 # TODO my combined simulations to finish faster without having to implement something new. This isn't good design,
 # TODO it's only for me to be able to finish the thesis.     - Simon
 # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+from ..particles.spherical import SphericalParticle
+
 
 def get_uniform_drag_force(viscosity, velocity, temperature, m_gas, pressure):
-    def uniform_drag_force(particle, time):
+    def uniform_drag_force(particle: SphericalParticle, time: float) -> float:
         knudsen = viscosity / (pressure * particle.radius) * \
                   np.sqrt(np.pi * Boltzmann * temperature / (2 * m_gas))
         s = 1 + knudsen * (1.231 + 0.4695 * np.exp(-1.1783 / knudsen))
@@ -52,13 +53,14 @@ def get_uniform_drag_force(viscosity, velocity, temperature, m_gas, pressure):
     return uniform_drag_force
 
 
-class UniformBrownianMotionPropertyUpdater(PropertyUpdater):
+class UniformBrownianMotionPropertyUpdater(BrownianMotionPropertyUpdater):
     def __init__(self, viscosity, temperature, m_gas, pressure, dt):
         self.viscosity = viscosity
         self.temperature = temperature
         self.m_gas = m_gas
         self.pressure = pressure
         self.dt = dt
+        super().__init__(self.dt)
 
     def update(self, particle: ThermallyConductiveSphericalParticle, time) -> bool:
         if self.pressure >= 0.0:
@@ -68,15 +70,13 @@ class UniformBrownianMotionPropertyUpdater(PropertyUpdater):
 
             s0 = 216 * self.viscosity * Boltzmann * self.temperature /\
                  (np.pi**2 * (2 * particle.radius)**5 * particle.rho**2 * s)
-            a = BrownianMotionPropertyUpdater._generate_random_3d_vec() * np.sqrt(np.pi * s0 / self.dt)
-            particle.position = BrownianMotionPropertyUpdater._generate_new_pos_2d(particle.position, a, self.dt)
+            a = np.random.uniform(0, 1, 2) * np.sqrt(np.pi * s0 / self.dt)
+            position = particle.spatial_position + (0.5 * a * self.dt ** 2)
+            velocity = particle.velocity + (a * self.dt)
+            particle.position = np.concatenate((position, velocity))
             return True
         else:
             return False
-
-    def set_number_of_dimensions(self, number_of_dimensions: int):
-        if number_of_dimensions != 2:
-            raise ValueError("Only available in n=2 dimensions!")
 
 
 class DesyatnikovPhotophoresisDevice(Device):
