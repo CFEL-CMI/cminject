@@ -17,6 +17,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Any, List, Dict
+from functools import cached_property
 
 import numpy as np
 
@@ -36,13 +37,15 @@ class Particle(ConfigSubscriber, ABC):
     - identifier (a unique id),
     - lost (a flag storing whether the particle is considered lost)
     - detector_hits (a dict mapping detector identifiers to hit lists)
+    # TODO more props
     - position (the particle's position)
+    - velocity (the particle's velocity)
     - initial_position (the particle's initial position)
     - velocity (the particle's velocity)
     - mass (the particle's mass)
     - trajectory (a list describing points in the particle's path)
     """
-    def __init__(self, identifier: Any, start_time: float, position: np.array, *args, **kwargs):
+    def __init__(self, identifier: Any, start_time: float, position: np.array, velocity: np.array, *args, **kwargs):
         """
         The constructor for Particle.
 
@@ -53,14 +56,16 @@ class Particle(ConfigSubscriber, ABC):
         """
         self.identifier: int = identifier
         self.lost: bool = False
-        self.position: np.array = np.copy(position)
-        self.initial_position: np.array = np.copy(position)
-        self.trajectory: List[np.array] = []
-        self.detector_hits: Dict[int, List['ParticleDetectorHit']] = {}  # TODO naming is nonagnostic about detectors...
-        self.mass: float = 0.0
-        self.time_of_flight: float = start_time
-        self.number_of_dimensions = len(self.position)
+        self.time: float = start_time
 
+        assert len(position) == len(velocity),\
+            "Position and velocity must have same length but have shapes %s and %s" % (position.shape, velocity.shape)
+        self.number_of_dimensions = len(position)
+        self.phase_space_position: np.array = np.concatenate((position, velocity))  # this copies implicitly
+        self._initial_tracked_properties: np.array = self.as_array('tracked')
+        self.trajectory: List[np.array] = []
+
+        self.detector_hits: Dict[int, List['ParticleDetectorHit']] = {}  # TODO naming is nonagnostic about detectors...
         GlobalConfig().subscribe(self, ConfigKey.NUMBER_OF_DIMENSIONS)
 
     def config_change(self, key: ConfigKey, value: Any):
@@ -69,60 +74,81 @@ class Particle(ConfigSubscriber, ABC):
                 raise ValueError(f"Number of dimensions changed to {value}, but {self} had {self.number_of_dimensions}")
 
     @property
+    def position(self):
+        return self.phase_space_position[:self.number_of_dimensions]
+
+    @position.setter
+    def position(self, value):
+        self.phase_space_position[:self.number_of_dimensions] = value
+
+    @property
+    def velocity(self):
+        return self.phase_space_position[self.number_of_dimensions:]
+
+    @velocity.setter
+    def velocity(self, value):
+        self.phase_space_position[self.number_of_dimensions:] = value
+
+    @property
+    def initial_tracked_properties(self):
+        return self._initial_tracked_properties
+
+    @cached_property
     @abstractmethod
-    def properties(self) -> np.array:
-        """
-        An abstract property that subclasses must implement to return the current properties of this particle:
-        A (n,)-dimensional numpy array of all properties - beyond the usual phase space position (position+velocity) -
-        that describe the particle's current state in a way that is useful to the problem domain.
-
-        The result of this will be calculated and stored on each detector hit automatically,
-        with the phase space position (particle.position) prepended to the front of the array.
-
-        The size of the returned array MUST match the length of the list returned by `properties_description`.
-
-        :return: A numpy array describing the particle's current phase.
-        """
+    def mass(self) -> float:
         pass
 
     @property
     @abstractmethod
-    def properties_description(self) -> List[str]:
-        """
-        A list of strings matching the .properties attribute in length, describing each value in the array
-        in some manner (most likely using standard physical abbreviations like rho, phi, T, k, ...).
-
-        :return: See above.
-        """
-        pass
+    def tracked_properties(self):
+        return [
+            ('position', (np.float64, self.number_of_dimensions)),
+            ('velocity', (np.float64, self.number_of_dimensions)),
+            ('time', np.float64)
+        ]
 
     @property
-    def position_description(self) -> List[str]:
+    @abstractmethod
+    def constant_properties(self):
+        return [
+            ('identifier', np.int32),
+            ('mass', np.float64)
+        ]
+
+    def _get_props(self, which):
+        if which == 'all':
+            return self.tracked_properties + self.constant_properties
+        elif which == 'tracked':
+            return self.tracked_properties
+        elif which == 'constant':
+            return self.constant_properties
+
+    def as_dtype(self, which) -> np.array:
         """
-        A list of strings matching the .position attribute in length, describing each value in the array
-        in some manner (most likely using standard physical abbreviations like x, y, z, vx, vy, vz, ...).
+        Returns the dtype that the array returned by as_array() will have, when called with the same parameters.
 
-        The default implementation returns:
-
-        - ["x", "y", "z", "vx", "vy", "vz"] for 3D simulations
-        - ["r", "z", "vr", "vz"] for 2D simulations
-        - ["z", "vz"] for 1D simulations
-
-        If your particle implementation deviates from this, override the property.
-
-        :return: See above.
+        :param which: The part of this particle's state to return. Refer to the docstring about as_array.
         """
-        if self.number_of_dimensions == 3:
-            return ['x', 'y', 'z', 'vx', 'vy', 'vz']
-        elif self.number_of_dimensions == 2:
-            return ['r', 'z', 'vr', 'vz']
-        elif self.number_of_dimensions == 1:
-            return ['z', 'vz']
-        else:
-            raise AttributeError(
-                f"The default implementation of position_description is undefined for {self.number_of_dimensions} "
-                f"dimensions!"
-            )
+        return np.dtype(self._get_props(which))
+
+    def as_array(self, which) -> np.array:
+        """
+        Returns a NumPy array representation of the current state of this particle. Either the tracked properties,
+        or the constant properties, or all (tracked + constant) can be returned as a single NumPy array with a
+        structured NumPy datatype.
+
+        :param which: The part of this particle's state to return as an array.
+           Must be one of ['tracked', 'constant', 'all'].
+             - 'tracked' will refer to the implementation of tracked_properties,
+             - 'constant' will refer to the implementation of constant_properties,
+             - 'all' will refer to both and concatenate them in order (tracked + constant).
+        """
+        assert which in ['tracked', 'constant', 'all'],\
+            f"which was '{which}' but must be 'tracked', 'constant', or 'all'"
+        props = self._get_props(which)
+        return np.array([
+            tuple(getattr(self, prop[0]) for prop in props)
+        ], dtype=self.as_dtype(which))
 
     @property
     def reached_any_detector(self) -> bool:
@@ -130,20 +156,6 @@ class Particle(ConfigSubscriber, ABC):
         Whether this particle has ever reached any detector.
         """
         return not not self.detector_hits  # `not not` to convert to boolean, to not leak data here
-
-    @property
-    def spatial_position(self) -> np.array:
-        """
-        The purely spatial position of the particle.
-        """
-        return self.position[:self.number_of_dimensions]
-
-    @property
-    def velocity(self) -> np.array:
-        """
-        The velocity of the particle.
-        """
-        return self.position[self.number_of_dimensions:]
 
     def __str__(self):
         return f"<{self.__class__.__name__} #{self.identifier}>"

@@ -24,7 +24,7 @@ from cminject.global_config import ConfigSubscriber, GlobalConfig, ConfigKey
 
 
 class SimpleZDetector(Detector, ConfigSubscriber):
-    def _hit_position(self, position_velocity: np.array) -> Optional[np.array]:
+    def _hit_position(self, phase_space_position: np.array) -> Optional[np.array]:
         raise Exception("This should never be called, the implementation should be swapped out by the constructor!")
 
     def __init__(self, identifier: int, z_position: float):
@@ -50,13 +50,13 @@ class SimpleZDetector(Detector, ConfigSubscriber):
             else:
                 raise ValueError(f"{self.__class__.__name__} requires 2 or 3 spatial dimensions.")
 
-    def _has_particle_reached_detector(self, identifier: str, ps_position: np.array) -> bool:
-        if ps_position[self._number_of_dimensions - 1] == self.z_position:
+    def _has_particle_reached_detector(self, identifier: str, position: np.array) -> bool:
+        if position[-1] == self.z_position:
             return True
 
         reached = False
         prev_distance = self.particle_distances.get(identifier, None)
-        curr_distance = ps_position[self._number_of_dimensions - 1] - self.z_position
+        curr_distance = position[-1] - self.z_position
         if prev_distance and np.sign(curr_distance) != np.sign(prev_distance):
             reached = True
         self.particle_distances[identifier] = curr_distance
@@ -71,7 +71,7 @@ class SimpleZDetector(Detector, ConfigSubscriber):
         t = d / abs(w)
         x = x - u * t
         y = y - v * t
-        return np.array([x, y, self.z_position, u, v, w])
+        return np.array([x, y, self.z_position])
 
     def _hit_position2(self, ps_position: np.array) -> Optional[np.array]:
         if ps_position[1] == self.z_position:
@@ -81,7 +81,7 @@ class SimpleZDetector(Detector, ConfigSubscriber):
         d = abs(z) - abs(self.z_position)
         t = d / abs(vz)
         x = x - vx * t
-        return np.array([x, self.z_position, vx, vz])
+        return np.array([x, self.z_position])
 
     @property
     def z_boundary(self) -> Tuple[float, float]:

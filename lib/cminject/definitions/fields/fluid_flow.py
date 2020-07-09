@@ -121,7 +121,7 @@ class StokesDragForceField(DragForceInterpolationField):
         """
         Calculates the drag force using Stokes' law for spherical particles in continuum
         """
-        pressure, relative_velocity = self.get_local_properties(particle.spatial_position, particle.velocity)
+        pressure, relative_velocity = self.get_local_properties(particle.position, particle.velocity)
         Cc = self.calc_slip_correction(pressure, particle.radius)
         return self._a(pressure, relative_velocity, self.dynamic_viscosity,
                        particle.radius, particle.mass, Cc, self._zero_acceleration)
@@ -254,7 +254,7 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
         Calculates the drag force using Epstein's law for spherical particles
         in molecular flow with corrections for high velocities
         """
-        pressure, relative_velocity = self.get_local_properties(particle.spatial_position, particle.velocity)
+        pressure, relative_velocity = self.get_local_properties(particle.position, particle.velocity)
 
         # Negative pressure or zero pressure is akin to the particle not being in the flow field, force is zero
         # and we can stop considering the particle to be inside this field

@@ -38,7 +38,7 @@ class MarkAsLostWhenVZIsPositivePropertyUpdater(PropertyUpdater):
     Since the beam only drives particles away from the source position in this area, we can consider the particles lost.
     """
     def update(self, particle: Particle, time: float) -> bool:
-        if particle.spatial_position[-1] > 0.0 and particle.velocity[-1] > 0.0:
+        if particle.position[-1] > 0.0 and particle.velocity[-1] > 0.0:
             particle.lost = True
         return False
 
@@ -50,7 +50,7 @@ class DesyatnikovPhotophoresisSetup(Setup):
 
         experiment = Experiment(
             time_interval=main_args.time_interval, time_step=dt,
-            delta_z_end=0.0, seed=main_args.seed, number_of_dimensions=2
+            random_seed=main_args.seed, number_of_dimensions=2
         )
 
         experiment.add_source(VariableDistributionSource(

@@ -46,15 +46,15 @@ class ResultStorage(ABC):
         pass
 
     @abstractmethod
-    def get_identifiers(self) -> Iterable[str]:
+    def get_properties(self) -> Iterable:
         pass
 
     @abstractmethod
-    def get_initial_positions(self) -> Optional[Iterable]:
+    def get_tracked_initial(self) -> Optional[Iterable]:
         pass
 
     @abstractmethod
-    def get_final_positions(self) -> Optional[Iterable]:
+    def get_tracked_final(self) -> Optional[Iterable]:
         pass
 
     @abstractmethod

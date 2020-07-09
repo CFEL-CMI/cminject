@@ -50,17 +50,15 @@ class BrownianMotionPropertyUpdater(PropertyUpdater, ConfigSubscriber):
             self.dt = value
 
     def update(self, particle: SphericalParticle, time: float) -> bool:
-        data = self.field.interpolate(particle.spatial_position)
-        pressure = data[self.number_of_dimensions]
+        pressure = self.field.interpolate(particle.position)[self.number_of_dimensions]
         if pressure >= 0.0:
             cunningham = self.field.calc_slip_correction(pressure, particle.radius)
             s0 = 216 * self.field.dynamic_viscosity * Boltzmann * self.field.temperature /\
                  (pi**2 * (2 * particle.radius)**5 * particle.rho**2 * cunningham)
             a = np.random.normal(0.0, 1.0, self.number_of_dimensions) * np.sqrt(pi * s0 / self.dt)
 
-            position = particle.spatial_position + (0.5 * a * self.dt**2)
-            velocity = particle.velocity + (a * self.dt)
-            particle.position = np.concatenate((position, velocity))
+            particle.position += 0.5 * a * self.dt**2
+            particle.velocity += a * self.dt
             return True
         return False
 
@@ -84,7 +82,7 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater, ConfigSubscrib
             self.dt = value
 
     def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
-        pressure = self.field.interpolate(particle.spatial_position)[self.number_of_dimensions]
+        pressure = self.field.interpolate(particle.position)[self.number_of_dimensions]
         if pressure >= 0.0:
             h = self.field.m_gas / (2 * Boltzmann * self.field.temperature)
             h_ = self.field.m_gas / (2 * Boltzmann * particle.temperature)
@@ -94,21 +92,21 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater, ConfigSubscrib
                 a = np.random.normal(0.0, 1.0, 3) * np.sqrt(s0 / self.dt) / particle.mass
 
                 new_x = particle.position[0] + (0.5 * a[0] * self.dt**2)
-                new_vx = particle.position[2] + (a[0] * self.dt)
+                new_vx = particle.velocity[0] + (a[0] * self.dt)
                 r_sign = np.sign(new_x)
                 vr_sign = np.sign(new_vx)
 
                 particle.position[0] = r_sign * np.sqrt(new_x**2 + (0.5 * a[1] * self.dt**2)**2)
-                particle.position[1] = particle.position[1] + (0.5 * a[2] * self.dt**2)
-                particle.position[2] = vr_sign * np.sqrt(new_vx**2 + (a[1] * self.dt)**2)
-                particle.position[3] = particle.position[3] + (a[2] * self.dt)
+                particle.position[1] += 0.5 * a[2] * self.dt**2
+                particle.velocity[0] = vr_sign * np.sqrt(new_vx**2 + (a[1] * self.dt)**2)
+                particle.velocity[1] += a[2] * self.dt
             else:
                 a = np.random.normal(0.0, 1.0, self.number_of_dimensions) * np.sqrt(s0 / self.dt) / particle.mass
-                position = particle.spatial_position + (0.5 * a * self.dt**2)
-                velocity = particle.velocity + (a * self.dt)
-                particle.position = np.concatenate([position, velocity])
+                particle.position += 0.5 * a * self.dt**2
+                particle.velocity += a * self.dt
 
-        return True
+            return True
+        return False
 
 ### Local Variables:
 ### fill-column: 100

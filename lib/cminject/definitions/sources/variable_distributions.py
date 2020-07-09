@@ -56,7 +56,6 @@ class VariableDistributionSource(Source, ConfigSubscriber):
         self.radius = radius
         self.rho = rho
         self.seed = seed
-        self.randomly_rotate_around_z = randomly_rotate_around_z
         self.subclass = subclass
         self.subclass_kwargs = subclass_kwargs
         self.number_of_dimensions = len(self.position)
@@ -110,17 +109,8 @@ class VariableDistributionSource(Source, ConfigSubscriber):
         else:
             raise ValueError(f"Unknown or unspecified kind in distribution specification: {dist}")
 
-    @staticmethod
-    def _rotate_around_z(positions):
-        size = positions.shape[0]
-        rotated = (positions[:, 0] + positions[:, 1] * 1j) * np.exp(np.random.random(size) * 2 * np.pi * 1j)
-        return np.array([rotated.real, rotated.imag, positions[:, 2]]).transpose()
-
     def generate_particles(self, start_time: float = 0.0):
         position = np.array([self._generate(pdist) for pdist in self.position]).transpose()
-        if self.randomly_rotate_around_z:
-            position = self._rotate_around_z(position)
-
         velocity = np.array([self._generate(vdist) for vdist in self.velocity]).transpose()
         r = self._generate(self.radius)
 
@@ -128,7 +118,8 @@ class VariableDistributionSource(Source, ConfigSubscriber):
         for i in range(self.number_of_particles):
             inst = self.subclass(
                 identifier=i,
-                position=np.concatenate([position[i], velocity[i]]),
+                position=position[i],
+                velocity=velocity[i],
                 start_time=start_time,
                 radius=r[i],
                 rho=self.rho,

@@ -71,9 +71,8 @@ class UniformBrownianMotionPropertyUpdater(BrownianMotionPropertyUpdater):
             s0 = 216 * self.viscosity * Boltzmann * self.temperature /\
                  (np.pi**2 * (2 * particle.radius)**5 * particle.rho**2 * s)
             a = np.random.uniform(0, 1, 2) * np.sqrt(np.pi * s0 / self.dt)
-            position = particle.spatial_position + (0.5 * a * self.dt ** 2)
-            velocity = particle.velocity + (a * self.dt)
-            particle.position = np.concatenate((position, velocity))
+            particle.position += 0.5 * a * self.dt ** 2
+            particle.velocity += a * self.dt
             return True
         else:
             return False

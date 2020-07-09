@@ -97,7 +97,7 @@ def postprocess_integration_step(particle: Particle, integral: ode, position_cha
     # If some property updater changed the position, reset the integrator's initial value
     # NOTE: doing this is slow and should be reserved for cases where motion cannot be modeled differently
     if position_changed:
-        integral.set_initial_value(particle.position, integral.t)
+        integral.set_initial_value(particle.phase_space_position, integral.t)
 
     # Have each detector try to detect the particle
     for detector in DETECTORS:
@@ -114,7 +114,7 @@ def postprocess_particle(particle: Particle, integral: ode, t_end: float) -> Non
     # Log some additional info if loglevel is low enough
     if logging.root.level <= logging.INFO:
         if particle.lost:
-            z_position = particle.spatial_position[NUMBER_OF_DIMENSIONS - 1]
+            z_position = particle.position[-1]
             if Z_BOUNDARY[0] <= z_position <= Z_BOUNDARY[1]:
                 reason = 'hit boundary within the experiment'
             else:
@@ -124,7 +124,7 @@ def postprocess_particle(particle: Particle, integral: ode, t_end: float) -> Non
         else:
             reason = 'unknown reason'
 
-        logging.debug(f"Last particle position: {particle.position}")
+        logging.debug(f"Last particle phase space position: {particle.phase_space_position}")
         logging.info(f"\tDone simulating particle {particle.identifier}: {reason}.")
 
 
@@ -139,7 +139,7 @@ def propagate_field_free(particle: Particle) -> None:
     :raises ImpossiblePropagationException: if asked to propagate the particle in an impossible way, e.g.
         propagating until the next point in positive Z when the particle's v_Z is negative.
     """
-    z, vz = particle.spatial_position[NUMBER_OF_DIMENSIONS - 1], particle.velocity[NUMBER_OF_DIMENSIONS - 1]
+    z, vz = particle.position[-1], particle.velocity[-1]
     if vz > 0:
         if z <= Z_LOWER[0]:
             raise ImpossiblePropagationException(
@@ -157,35 +157,35 @@ def propagate_field_free(particle: Particle) -> None:
     else:  # vz == 0
         raise ImpossiblePropagationException("Cannot propagate field-free with v_z = 0.")
 
-    prevpos = np.copy(particle.position)
+    prev_pos = np.copy(particle.position)
     delta_t = abs(next_z - z) / abs(vz)
-    particle.position = np.concatenate([
-        particle.spatial_position + delta_t * particle.velocity,
+    particle.phase_space_position = np.concatenate([
+        particle.position + delta_t * particle.velocity,
         particle.velocity
     ])
     logging.info(f"Field-free propagation from {z} until {next_z} with velocities={particle.velocity} and "
-                 f"delta_t={delta_t}.\nBefore: {prevpos}. After: {particle.position}.")
+                 f"delta_t={delta_t}.\nBefore: {prev_pos}. After: {particle.position}.")
 
 
-def spatial_derivatives(time: float, position_and_velocity: np.array,
+def spatial_derivatives(time: float, phase_space_position: np.array,
                         particle: Particle, devices: List[Device], number_of_dimensions: int) -> np.array:
     """
     Calculates the derivatives of position and velocity, which will then be integrated over.
     "n" as used below is the number of the simulation's spatial dimensions.
 
     :param time: The current simulation time in seconds
-    :param position_and_velocity: A (2n,) numpy array containing spatial position and velocity of the particle.
+    :param phase_space_position: A (2n,) numpy array containing the phase space position..
     :param particle: The Particle instance.
     :param devices: The list of devices that (might) affect this particle.
     :param number_of_dimensions: The number of dimensions of the space the particle moves in.
     :return: A (2n,) numpy array containing velocity and acceleration of the particle.
     """
-    particle.position = position_and_velocity
+    particle.phase_space_position = phase_space_position
     total_acceleration = np.zeros(number_of_dimensions, dtype=float)
     for device in devices:
-        if device.is_particle_inside(position_and_velocity[:number_of_dimensions], time):
+        if device.is_particle_inside(phase_space_position[:number_of_dimensions], time):
             total_acceleration += device.calculate_acceleration(particle, time)
-    return np.concatenate((position_and_velocity[number_of_dimensions:], total_acceleration))
+    return np.concatenate((phase_space_position[number_of_dimensions:], total_acceleration))
 
 
 def simulate_particle(particle: Particle) -> Particle:
@@ -226,7 +226,7 @@ def simulate_particle(particle: Particle) -> Particle:
     # Construct integrals
     integral = ode(spatial_derivatives)
     integral.set_integrator('lsoda', nsteps=3000)
-    integral.set_initial_value(particle.position, TIME_START)
+    integral.set_initial_value(particle.phase_space_position, TIME_START)
     integral.set_f_params(particle, DEVICES, NUMBER_OF_DIMENSIONS)
     logging.info(f"\tSimulating particle {particle.identifier}...")
 
@@ -236,13 +236,13 @@ def simulate_particle(particle: Particle) -> Particle:
     while integral.successful() and integral.t < TIME_END and not particle.lost:
         # Store the position and velocity calculated by the integrator on the particle
         integral_result = integral.y
-        particle.position = integral_result
-        particle.time_of_flight = integral.t
+        particle.phase_space_position = integral_result
+        particle.time = integral.t
         postprocess_integration_step(particle, integral, position_changed=False)
 
         # Check what 'simulation state' the particle is in wrt. the devices, experiment Z boundary, and integral time
         simulation_state = get_particle_simulation_state(
-            particle.position[:NUMBER_OF_DIMENSIONS], integral.t, Z_BOUNDARY, DEVICES
+            particle.position, integral.t, Z_BOUNDARY, DEVICES
         )
 
         if simulation_state in PARTICLE_STATES_CONSIDERED_AS_LOST:

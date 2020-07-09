@@ -89,7 +89,7 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
             default_pressure, field = self.gas_density
             pressure = 0.0
             try:
-                pressure = field.interpolate(particle.spatial_position)[2]  # pV=nRT
+                pressure = field.interpolate(particle.position)[2]  # pV=nRT
             except IndexError:
                 pass
             pressure = pressure or default_pressure

@@ -26,9 +26,7 @@ class TrajectoryPropertyUpdater(PropertyUpdater):
     A simple property updater to append to the trajectory of the particle after each time step.
     """
     def update(self, particle: Particle, time: float) -> bool:
-        particle.trajectory.append(
-            np.append(particle.position, time)
-        )
+        particle.trajectory.append(particle.as_array('tracked'))
         return False
 
 ### Local Variables:

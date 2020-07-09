@@ -56,7 +56,7 @@ class Detector(ZBounded, ABC):
         :return: True if the particle has reached this detector, False otherwise.
         """
         if self._has_particle_reached_detector(particle.identifier, particle.position):
-            hit_position = self._hit_position(particle.position)
+            hit_position = self._hit_position(particle.phase_space_position)
             hit = ParticleDetectorHit(hit_position=hit_position, particle=particle)
             if self.identifier in particle.detector_hits:
                 particle.detector_hits[self.identifier].append(hit)
@@ -67,19 +67,19 @@ class Detector(ZBounded, ABC):
             return False
 
     @abstractmethod
-    def _has_particle_reached_detector(self, particle_identifier: int, position_velocity: np.array) -> bool:
+    def _has_particle_reached_detector(self, particle_identifier: int, position: np.array) -> bool:
         """Tells whether a Particle has reached this Detector. Must return True/False."""
         pass
 
     @abstractmethod
-    def _hit_position(self, position_velocity: np.array) -> Optional[np.array]:
+    def _hit_position(self, phase_space_position: np.array) -> Optional[np.array]:
         """
         Can return a hit position on this detector for a Particle, but might
         also return None (if the Particle isn't considered having reached this detector).
 
-        :param position_velocity: Position and velocity of the particle.
-        :return: An (n,)-shaped numpy array describing the hit position if there is a hit position to calculate,
-            None otherwise. n is the number of spatial dimensions in the experiment.
+        :param phase_space_position: Position and velocity of the particle.
+        :return: An (n,)-shaped numpy array describing the (spatial) hit position if there is a hit position
+            to calculate, None otherwise. n is the number of spatial dimensions in the experiment.
         """
         pass
 

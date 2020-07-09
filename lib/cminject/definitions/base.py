@@ -24,6 +24,7 @@ __all__ = ['ZBounded']
 from abc import ABC, abstractmethod
 from typing import Tuple
 
+
 class ZBounded(ABC):
     """
     A mixin for objects in an experiment setup that are bounded in the Z direction.

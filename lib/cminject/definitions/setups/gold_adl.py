@@ -29,7 +29,7 @@ from cminject.definitions.particles.t_conductive_spherical import ThermallyCondu
 from cminject.definitions.property_updaters.brownian_motion import BrownianMotionPropertyUpdater
 from cminject.definitions.setups import Setup
 from cminject.definitions.sources.variable_distributions import VariableDistributionSource
-from cminject.global_config import GlobalConfig
+from cminject.global_config import GlobalConfig, ConfigKey
 from cminject.experiment import Experiment
 from cminject.utils.args import SetupArgumentParser
 
@@ -127,7 +127,6 @@ class GoldADLSetup(Setup):
         adl_exit_position = 0.59915  # 0.60015 is where the entire ADL flow field terminates
 
         exp = Experiment(number_of_dimensions=2, time_interval=(0.0, 1.0), time_step=1e-5)
-
         exp.add_source(VariableDistributionSource(
             subclass=ThermallyConductiveSphericalParticle,
             number_of_particles=main_args.nof_particles,
@@ -154,11 +153,15 @@ class GoldADLSetup(Setup):
             skimmer_length=skimmer_length, tube_length=skimmer_tube_length,
             skimmer_min_r=skimmer_min_r, skimmer_max_r=skimmer_max_r, skimmer_min_z=skimmer_min_z
         ))
-        exp.add_device(ADLStackDevice(adl_flow_file, z_offset=adl_offset))
+
+        adl_stack = ADLStackDevice(adl_flow_file, z_offset=adl_offset)
+        exp.add_device(adl_stack)
+        exp.add_property_updater(BrownianMotionPropertyUpdater(field=adl_stack.fields[0]))
+
         if args.beam_power is not None:  # if missing or 0.0, we don't need to create a device
-            exp.add_device(DesyatnikovPhotophoresisDevice(
+            pp_device = DesyatnikovPhotophoresisDevice(
                 # All gas properties are assuming dilute nitrogen at 293.15K.
-                gas_density=(0.059, devices[1].fields[0]),
+                gas_density=(0.059, adl_stack.fields[0]),
                 # taken for dilute nitrogen from Lemmon and Jacobsen 2003
                 gas_viscosity=17.8771e-6,  # [Pa*s]
                 gas_thermal_conductivity=25.9361e-3,  # [W/(m*K)]
@@ -171,16 +174,12 @@ class GoldADLSetup(Setup):
                 r_boundary=(-1e-3, 1e-3),  # [m]
                 z_boundary=(adl_exit_position, adl_exit_position + 1e-1),  # [m]
                 z_position=adl_exit_position + 1e-2,  # [m]
-            ))
+            )
+            exp.add_device(pp_device)
+            exp.add_property_updater(BrownianMotionPropertyUpdater(field=pp_device.fields[0]))
 
         for i in range(20):
             exp.add_detector(SimpleZDetector(i, adl_exit_position + i*5e-4))
-
-        if args.brownian:
-            dt = GlobalConfig().
-            bm_updaters = [BrownianMotionPropertyUpdater(field=devices[0].fields[0], dt=dt),
-                           BrownianMotionPropertyUpdater(field=devices[1].fields[0], dt=dt)]
-            exp.property_updaters = bm_updaters + exp.property_updaters
 
         return exp
 

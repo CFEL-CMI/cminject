@@ -41,6 +41,7 @@ class HDF5ResultStorage(ResultStorage):
 
     The following groups and datasets will be stored:
 
+    # FIXME out of date
     - particles:
       - initial_positions: The initial phase space positions of all particles, as one (n, d_p) array.
       - final_position: The final phase space positions of all particles, as one (n, d_p) array.
@@ -94,8 +95,11 @@ class HDF5ResultStorage(ResultStorage):
         self._handle = None
 
     def store_results(self, particles: List[Particle]) -> None:
+        if not particles:
+            return
+
         f = self._require_handle()
-        dims = len(particles[0].spatial_position)
+        dims = particles[0].number_of_dimensions
         f.attrs['dimensions'] = dims
         # Store the metadata: Try storing each value directly, if that fails, try storing a string representation,
         # and if anything fails at that point, output a warning. We do NOT want to lose experiment results just
@@ -109,25 +113,31 @@ class HDF5ResultStorage(ResultStorage):
                 except Exception as e:
                     warnings.warn(f"Could not store metadata with key {k}, exception occurred: {e}")
 
+        # Get the appropriate dtypes, assuming all particles are instances of the same class
+        const_dtype = particles[0].as_dtype('constant')
+        tracked_dtype = particles[0].as_dtype('tracked')
+        all_dtype = particles[0].as_dtype('all')
+
         # Generate arrays that can be efficiently stored and accessed
-        sdtype = h5py.string_dtype()  # special variable-length string dtype, for identifiers
-        d = len(particles[0].initial_position)
         n = len(particles)
         pg = f.create_group('particles')
-        ids = pg.create_dataset('identifiers', (n,), dtype=sdtype)
-        initial_positions = pg.create_dataset('initial_positions', (n, d), dtype=np.float64)
-        final_positions = pg.create_dataset('final_positions', (n, d), dtype=np.float64)
-        # For trajectories, use a JaggedFillable to iteratively append to a jagged array that will be stored
-        trajectories_fillable = awkward.generate.JaggedFillable(awkward.util.awkwardlib(None))
+        props = pg.create_dataset('properties', (n,), dtype=const_dtype)
+
+        tg = pg.create_group('tracked')
+        tracked_initial = tg.create_dataset('initial', (n,), dtype=tracked_dtype)
+        tracked_final = tg.create_dataset('final', (n,), dtype=tracked_dtype)
+
+        trajectories = []
 
         # Aggregate data into arrays prepared above
         detector_hits: Dict[Any, List[ParticleDetectorHit]] = {}
         for i, particle in enumerate(particles):
-            ids[i] = str(particle.identifier)
-            initial_positions[i] = particle.initial_position
-            final_positions[i] = particle.position
+            props[i] = particle.as_array('constant')
+            tracked_initial[i] = particle.initial_tracked_properties
+            tracked_final[i] = particle.as_array('tracked')
+
             trajectory = particle.trajectory or []
-            trajectories_fillable.append(trajectory, awkward.generate.typeof(trajectory))
+            trajectories.append(trajectory)
 
             if particle.detector_hits:
                 for detector_id, hits in particle.detector_hits.items():
@@ -136,39 +146,38 @@ class HDF5ResultStorage(ResultStorage):
                     detector_hits[detector_id] += hits
 
         # Store trajectories
-        trajectories = trajectories_fillable.finalize()
-        if np.any(trajectories.starts != trajectories.stops):  # if any of the particles had a non-empty trajectory
-            f_awkward = awkward.hdf5(f)
-            f_awkward['particles/trajectories'] = trajectories
-            f['particles/trajectories'].attrs['description'] = particles[0].position_description + ['t']
+        if np.any(trajectories):  # if any of the particles had a non-empty trajectory
+            vlen_dtype = h5py.vlen_dtype(tracked_dtype)
+            ds = tg.create_dataset('trajectories', (n,), dtype=vlen_dtype)
+            for i in range(n):
+                ds[i] = np.array(trajectories[i], dtype=tracked_dtype).ravel()
 
         # Store detectors
         dg = f.create_group('detectors')
         for detector_id, hits in detector_hits.items():
             if hits:
-                dg[str(detector_id)] = np.array([hit.full_properties for hit in hits])
-                dg[str(detector_id)].attrs['description'] = hits[0].full_properties_description
+                dg.create_dataset(str(detector_id), (len(hits),), dtype=all_dtype,
+                                  data=np.array([hit.hit_state for hit in hits]))
 
     def get_dimensions(self) -> int:
         f = self._require_handle()
         return int(f.attrs['dimensions'])
 
-    def get_identifiers(self) -> np.ndarray:
+    def get_properties(self) -> np.ndarray:
         f = self._require_handle()
-        return f.get('particles/identifiers')
+        return f.get('particles/properties')
 
-    def get_trajectories(self) -> awkward.JaggedArray:
+    def get_trajectories(self) -> np.ndarray:
         f = self._require_handle()
-        f_awkward = awkward.hdf5(f)
-        return f_awkward.get('particles/trajectories')
+        return f.get('particles/tracked/trajectories')
 
-    def get_initial_positions(self) -> np.ndarray:
+    def get_tracked_initial(self) -> np.ndarray:
         f = self._require_handle()
-        return f.get('particles/initial_positions')
+        return f.get('particles/tracked/initial')
 
-    def get_final_positions(self) -> np.ndarray:
+    def get_tracked_final(self) -> np.ndarray:
         f = self._require_handle()
-        return f.get('particles/final_positions')
+        return f.get('particles/tracked/final')
 
     def get_detectors(self) -> Dict[str, np.ndarray]:
         f = self._require_handle()

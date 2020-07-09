@@ -14,7 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
-
+from functools import cached_property
 from typing import List
 
 import numpy as np
@@ -27,23 +27,24 @@ class SphericalParticle(Particle):
     A simple spherical particle that has a radius and a density (rho).
     """
     def __init__(self, *args, radius: float, rho: float, **kwargs):
-        super().__init__(*args, **kwargs)
         self.radius = radius
         self.rho = rho
-        self.mass = self.rho * 4 / 3 * np.pi * (self.radius ** 3)
+        super().__init__(*args, **kwargs)
 
     @property
-    def properties(self) -> np.array:
-        return np.array([
-            self.identifier,
-            self.time_of_flight,
-            self.radius,
-            self.mass
-        ])
+    def constant_properties(self):
+        return super().constant_properties + [
+            ('radius', np.float64),
+            ('rho', np.float64)
+        ]
 
     @property
-    def properties_description(self) -> List[str]:
-        return ['ID', 't', 'r', 'm']
+    def tracked_properties(self):
+        return super().tracked_properties
+
+    @cached_property
+    def mass(self):
+        return self.rho * 4 / 3 * np.pi * (self.radius ** 3)
 
 ### Local Variables:
 ### fill-column: 100

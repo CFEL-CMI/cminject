@@ -39,41 +39,40 @@ infinite_interval = (float('-inf'), float('inf'))
 
 class ParticleDetectorHit(object):
     """
-    A small data container class, to store useful information about a hit of a particle on a detector.
+    A small data container class, to store required information about a detection event of a particle by a detector.
 
-    Contains :attr:`full_properties`, which is a full description of the particle's state starting with the hit position
-    on the detector as a numpy array, and :attr:`full_properties_description`, which is a string list matching
-    :attr:`full_properties` in size and describing each scalar stored in the array.
+    Contains :attr:`hit_state`, which is a full description of the particle's state, with the 'position' part
+    overwritten by the position the detector detected the particle at.
     """
     def __init__(self, hit_position: np.array, particle: Particle):
         """
         The constructor for a ParticleDetectorHit.
 
         :param hit_position: An (n,)-shaped np.array representing the hit position of the particle on the detector.
-            n is the number of dimensions and must match
-        :param particle:
+            n is the number of spatial dimensions and must match that of the particle.
+        :param particle: The particle which was detected.
         """
-        dimpos = hit_position.size
-        dimpar = particle.number_of_dimensions * 2
-        if dimpos != dimpar:
+        dim_pos = hit_position.size
+        dim_par = particle.number_of_dimensions
+        if dim_pos != dim_par:
             raise ValueError(
-                f"Hit position dimensionality ({dimpos / 2}) does not match the number of "
-                f"dimensions the particle is simulated in ({dimpar / 2})!"
+                f"Hit position dimensionality ({dim_pos}) does not match the number of "
+                f"dimensions the particle is simulated in ({dim_par})!"
             )
 
-        self.number_of_dimensions = particle.number_of_dimensions
-        self.full_properties = np.concatenate([hit_position, particle.properties])
-        hit_position_description = particle.position_description[:dimpar]
-        self.full_properties_description = hit_position_description + particle.properties_description
+        hit_state = particle.as_array('all')
+        hit_state['position'] = hit_position
+        self._hit_state = hit_state
 
     @property
-    def hit_position(self) -> np.array:
+    def hit_state(self) -> np.array:
         """
-        The position where the detector detected the particle hit.
+        The state of the particle in the moment where the detector detected the particle.
+        The 'position' part of this state refers to the (approximate) position of detection as returned by the detector.
 
         :return: The position of the hit.
         """
-        return self.full_properties[:self.number_of_dimensions]
+        return self._hit_state
 
 ### Local Variables:
 ### fill-column: 100

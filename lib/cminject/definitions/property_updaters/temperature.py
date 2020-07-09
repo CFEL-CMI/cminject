@@ -37,7 +37,7 @@ class ParticleTemperaturePropertyUpdater(PropertyUpdater, ConfigSubscriber):
             self.number_of_dimensions = value
 
     def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
-        pressure = self.field.interpolate(particle.spatial_position)[self.number_of_dimensions]
+        pressure = self.field.interpolate(particle.position)[self.number_of_dimensions]
         h = self.field.m_gas / (2 * Boltzmann * self.field.temperature)
         h_ = self.field.m_gas / (2 * Boltzmann * particle.temperature)
         deltaE = 4 * pressure * np.sqrt(np.pi) * particle.radius**2 * (np.sqrt(h)/h_ - 1/np.sqrt(h))

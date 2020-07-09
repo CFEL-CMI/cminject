@@ -30,18 +30,23 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
     def __init__(self, *args,
                  thermal_conductivity: float, temperature: float, specific_heat: float,
                  **kwargs):
-        super().__init__(*args, **kwargs)
         self.thermal_conductivity = thermal_conductivity
         self.temperature = temperature
         self.specific_heat = specific_heat
+        super().__init__(*args, **kwargs)
 
     @property
-    def properties(self) -> np.array:
-        return np.concatenate([super().properties, [self.temperature]])
+    def constant_properties(self):
+        return super().constant_properties + [
+            ('thermal_conductivity', np.float64),
+            ('specific_heat', np.float64)
+        ]
 
     @property
-    def properties_description(self) -> List[str]:
-        return super().properties_description + ['T']
+    def tracked_properties(self):
+        return super().tracked_properties + [
+            ('temperature', np.float64)
+        ]
 
 ### Local Variables:
 ### fill-column: 100
