@@ -48,36 +48,36 @@ class DesyatnikovPhotophoresisSetup(Setup):
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
         dt = main_args.time_step or auto_time_step(abs(args.velocity[-1]['mu']))
 
-        devices = [DesyatnikovPhotophoresisDevice(
+        experiment = Experiment(
+            time_interval=main_args.time_interval, time_step=dt,
+            delta_z_end=0.0, seed=main_args.seed, number_of_dimensions=2
+        )
+
+        experiment.add_source(VariableDistributionSource(
+            main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius, rho=args.rho,
+            subclass=ThermallyConductiveSphericalParticle, specific_heat=0.0, temperature=293.15,
+            thermal_conductivity=args.thermal_conductivity
+        ))
+
+        experiment.add_device(DesyatnikovPhotophoresisDevice(
             r_boundary=args.boundary[:2], z_boundary=args.boundary[2:],
             gas_temperature=args.gas_temperature, gas_viscosity=args.gas_viscosity, flow_gas_pressure=args.gas_pressure,
             gas_thermal_conductivity=args.gas_thermal_conductivity, gas_density=args.gas_density, gas_mass=M_GAS_AIR,
             beam_power=args.beam_power, beam_waist_radius=args.beam_waist_radius,
             flow_gas_velocity=args.uniform_flow_velocity
-        )]
-        detectors = [SimpleZDetector(identifier=i, z_position=pos) for i, pos in enumerate(args.detectors)]
-        sources = [VariableDistributionSource(
-            main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius, rho=args.rho,
-            subclass=ThermallyConductiveSphericalParticle, specific_heat=0.0, temperature=293.15,
-            thermal_conductivity=args.thermal_conductivity
-        )]
+        ))
+
+        for i, pos in enumerate(args.detectors):
+            experiment.add_detector(SimpleZDetector(identifier=i, z_position=pos))
 
         if args.brownian:
-            property_updaters = [
-                # MarkAsLostWhenVZIsPositivePropertyUpdater(),
+            experiment.add_property_updater(
                 UniformBrownianMotionPropertyUpdater(
                     viscosity=args.gas_viscosity, temperature=args.gas_temperature,
                     m_gas=M_GAS_AIR, pressure=args.gas_pressure, dt=dt
-                ),
-            ]
-        else:
-            property_updaters = []
+                )
+            )
 
-        return Experiment(
-            devices=devices, detectors=detectors, sources=sources, property_updaters=property_updaters,
-            time_interval=main_args.time_interval, time_step=dt,
-            delta_z_end=0.0, seed=main_args.seed, number_of_dimensions=2
-        )
 
     @staticmethod
     def get_parser() -> SetupArgumentParser:

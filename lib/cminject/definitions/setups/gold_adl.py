@@ -29,6 +29,7 @@ from cminject.definitions.particles.t_conductive_spherical import ThermallyCondu
 from cminject.definitions.property_updaters.brownian_motion import BrownianMotionPropertyUpdater
 from cminject.definitions.setups import Setup
 from cminject.definitions.sources.variable_distributions import VariableDistributionSource
+from cminject.global_config import GlobalConfig
 from cminject.experiment import Experiment
 from cminject.utils.args import SetupArgumentParser
 
@@ -125,17 +126,37 @@ class GoldADLSetup(Setup):
 
         adl_exit_position = 0.59915  # 0.60015 is where the entire ADL flow field terminates
 
-        devices = [
-            SkimmersDevice(
-                skimmer_flow_file, inter_distance=inter_distance,
-                skimmer_length=skimmer_length, tube_length=skimmer_tube_length,
-                skimmer_min_r=skimmer_min_r, skimmer_max_r=skimmer_max_r, skimmer_min_z=skimmer_min_z
-            ),
-            ADLStackDevice(adl_flow_file, z_offset=adl_offset),
-        ]
+        exp = Experiment(number_of_dimensions=2, time_interval=(0.0, 1.0), time_step=1e-5)
 
+        exp.add_source(VariableDistributionSource(
+            subclass=ThermallyConductiveSphericalParticle,
+            number_of_particles=main_args.nof_particles,
+            rho=19320.0,  # Assuming 50nm gold particles
+            radius=50e-9,
+            thermal_conductivity=315.0,  # [W / (m*K)], taken from Wikipedia
+            specific_heat=0.0,
+            temperature=293.15,
+            #rho=1050.0,  # Assuming expanded Polystyrene at 50nm
+            #radius=50e-9,
+            #thermal_conductivity=0.030,
+
+            position=[{'kind': 'radial_gaussian', 'mu': 0.0, 'sigma': 3.0e-3},
+                      skimmer_min_z+abs(skimmer_min_z*0.001)],
+            velocity=[{'kind': 'gaussian', 'mu': 1e-3, 'sigma': 1e-5},
+                      {'kind': 'gaussian', 'mu': 0.155, 'sigma': 0.001}]
+            # for ADL exit, approximated:
+            # position=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 10e-6}, 0.6],
+            # velocity=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.1}, {'kind': 'gaussian', 'mu': 39.0, 'sigma': 0.01}]
+        ))
+
+        exp.add_device(SkimmersDevice(
+            skimmer_flow_file, inter_distance=inter_distance,
+            skimmer_length=skimmer_length, tube_length=skimmer_tube_length,
+            skimmer_min_r=skimmer_min_r, skimmer_max_r=skimmer_max_r, skimmer_min_z=skimmer_min_z
+        ))
+        exp.add_device(ADLStackDevice(adl_flow_file, z_offset=adl_offset))
         if args.beam_power is not None:  # if missing or 0.0, we don't need to create a device
-            devices += [DesyatnikovPhotophoresisDevice(
+            exp.add_device(DesyatnikovPhotophoresisDevice(
                 # All gas properties are assuming dilute nitrogen at 293.15K.
                 gas_density=(0.059, devices[1].fields[0]),
                 # taken for dilute nitrogen from Lemmon and Jacobsen 2003
@@ -150,44 +171,13 @@ class GoldADLSetup(Setup):
                 r_boundary=(-1e-3, 1e-3),  # [m]
                 z_boundary=(adl_exit_position, adl_exit_position + 1e-1),  # [m]
                 z_position=adl_exit_position + 1e-2,  # [m]
-            )]
+            ))
 
-        detectors = [SimpleZDetector(i, adl_exit_position + i*5e-4) for i in range(20)]
-        sources = [
-            VariableDistributionSource(
-                subclass=ThermallyConductiveSphericalParticle,
-                number_of_particles=main_args.nof_particles,
-                rho=19320.0,  # Assuming 50nm gold particles
-                radius=50e-9,
-                thermal_conductivity=315.0,  # [W / (m*K)], taken from Wikipedia
-                specific_heat=0.0,
-                temperature=293.15,
-                #rho=1050.0,  # Assuming expanded Polystyrene at 50nm
-                #radius=50e-9,
-                #thermal_conductivity=0.030,
-
-                position=[{'kind': 'radial_gaussian', 'mu': 0.0, 'sigma': 3.0e-3},
-                          skimmer_min_z+abs(skimmer_min_z*0.001)],
-                velocity=[{'kind': 'gaussian', 'mu': 1e-3, 'sigma': 1e-5},
-                          {'kind': 'gaussian', 'mu': 0.155, 'sigma': 0.001}]
-                # for ADL exit, approximated:
-                # position=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 10e-6}, 0.6],
-                # velocity=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.1}, {'kind': 'gaussian', 'mu': 39.0, 'sigma': 0.01}]
-            )
-        ]
-        # Construct the Experiment, still missing brownian motion
-        exp = Experiment(
-            detectors=detectors,
-            sources=sources,
-            devices=devices,
-            time_step=1e-5,
-            number_of_dimensions=2
-        )
+        for i in range(20):
+            exp.add_detector(SimpleZDetector(i, adl_exit_position + i*5e-4))
 
         if args.brownian:
-            # Add brownian motion property updaters _after_ the Experiment has decided on a time step to use.
-            # TODO Might be a good idea to refactor this automatic choice of time step to somewhere else.
-            dt = exp.time_step
+            dt = GlobalConfig().
             bm_updaters = [BrownianMotionPropertyUpdater(field=devices[0].fields[0], dt=dt),
                            BrownianMotionPropertyUpdater(field=devices[1].fields[0], dt=dt)]
             exp.property_updaters = bm_updaters + exp.property_updaters
