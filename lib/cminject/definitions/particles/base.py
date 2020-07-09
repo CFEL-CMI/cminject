@@ -42,8 +42,7 @@ class Particle(ConfigSubscriber, ABC):
     - mass (the particle's mass)
     - trajectory (a list describing points in the particle's path)
     """
-    def __init__(self, identifier: Any, start_time: float,
-                 position: np.array, *args, **kwargs):
+    def __init__(self, identifier: Any, start_time: float, position: np.array, *args, **kwargs):
         """
         The constructor for Particle.
 
@@ -60,13 +59,14 @@ class Particle(ConfigSubscriber, ABC):
         self.detector_hits: Dict[int, List['ParticleDetectorHit']] = {}  # TODO naming is nonagnostic about detectors...
         self.mass: float = 0.0
         self.time_of_flight: float = start_time
-        self.number_of_dimensions = None
+        self.number_of_dimensions = len(self.position)
 
         GlobalConfig().subscribe(self, ConfigKey.NUMBER_OF_DIMENSIONS)
 
     def config_change(self, key: ConfigKey, value: Any):
         if key is ConfigKey.NUMBER_OF_DIMENSIONS:
-            self.number_of_dimensions = value
+            if value != self.number_of_dimensions:
+                raise ValueError(f"Number of dimensions changed to {value}, but {self} had {self.number_of_dimensions}")
 
     @property
     @abstractmethod
