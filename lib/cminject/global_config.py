@@ -6,6 +6,9 @@ from typing import Any, Union, List, Iterable, Callable, Dict, Set
 from cminject.utils.software_structure import Singleton
 
 
+__all__ = ['ConfigKey', 'ConfigSubscriber', 'GlobalConfig']
+
+
 class ConfigKey(Enum):
     NUMBER_OF_DIMENSIONS = 1
     TIME_STEP = 2

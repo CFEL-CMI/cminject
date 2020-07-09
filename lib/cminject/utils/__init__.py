@@ -15,7 +15,8 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-__all__ = ['args', 'interpolation', 'cython_interpolation', 'perf']
+__all__ = ['args', 'interpolation', 'cython_interpolation', 'perf', 'software_structure',
+           'result_analysis', 'result_visualization']
 
 ### Local Variables:
 ### fill-column: 100

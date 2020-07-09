@@ -18,7 +18,19 @@
 __all__ = [
     'base', 'boundaries', 'detectors', 'devices', 'fields',
     'particles', 'property_updaters', 'result_storages', 'sources',
+
+    'Boundary', 'Detector', 'Device', 'Field', 'Particle', 'PropertyUpdater', 'ResultStorage', 'Setup', 'Source'
 ]
+
+from .boundaries.base import Boundary
+from .detectors.base import Detector
+from .devices.base import Device
+from .fields.base import Field
+from .particles.base import Particle
+from .property_updaters.base import PropertyUpdater
+from .result_storages.base import ResultStorage
+from .setups.base import Setup
+from .sources.base import Source
 
 ### Local Variables:
 ### fill-column: 100

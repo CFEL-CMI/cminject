@@ -19,7 +19,7 @@
 All the library code for CMInject lives in this module.
 """
 
-__all__ = ['definitions', 'tools', 'utils', 'experiment']
+__all__ = ['definitions', 'tools', 'utils', 'experiment', 'global_config']
 
 ### Local Variables:
 ### fill-column: 100
