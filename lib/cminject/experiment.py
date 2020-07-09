@@ -32,11 +32,10 @@ from cminject.definitions.particles.base import Particle
 from cminject.definitions.property_updaters.base import PropertyUpdater
 from cminject.definitions.result_storages.base import ResultStorage
 from cminject.definitions.sources.base import Source
-from cminject.definitions.particle_status import *
+from cminject.definitions.particles.particle_status import *
 
 from cminject.definitions.util import infinite_interval
 from cminject.global_config import GlobalConfig, ConfigKey
-from cminject.utils.args import auto_time_step
 from tqdm import tqdm
 
 # FIXME file should maybe be split into parts
