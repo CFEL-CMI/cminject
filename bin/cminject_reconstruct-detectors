@@ -21,7 +21,7 @@ import logging
 import h5py
 
 from cminject.definitions.result_storages.hdf5 import HDF5ResultStorage
-from cminject.utils.interpolation import reconstruct_detector_hits
+from cminject.utils.interpolation import slice_trajectories_across_dimension
 
 program_description = """
 Reconstructs virtual detectors at some fixed z positions for an arbitrary set of
@@ -52,7 +52,7 @@ def main():
         zs = args.zs
         trajectories = HDF5ResultStorage(args.file, 'r').get_trajectories_iterator(abs_indices=args.abs)
         logging.info(f"Reconstructing at {zs}...")
-        detectors = reconstruct_detector_hits(
+        detectors = slice_trajectories_across_dimension(
             trajectories, xdims=args.xis, zdim=args.zi, zs=zs,
             interpolation_kind=args.interpolation_kind
         )

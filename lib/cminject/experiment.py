@@ -18,8 +18,6 @@
 import logging
 import multiprocessing
 import os
-import random
-import warnings
 from typing import List, Tuple, Optional
 
 import numpy as np
@@ -273,22 +271,22 @@ class Experiment:
                  z_boundary: Optional[Tuple[float, float]] = None, random_seed=None,
                  result_storage: Optional[ResultStorage] = None):
         """
-        Construct an Experiment to run.
+        Construct an Experiment to run. Sources, Devices, Detectors and PropertyUpdaters should be added after this
+        construction, via the appropriate add_ methods, e.g. add_device(), on the constructed instance.
 
-        :param devices: The list of Devices in the experimental setup.
-        :param sources: The list of Sources that generate particles. Note that for both simulation and storage reasons,
-            having different sources generate different types of particles for one Experiment is not allowed.
-        :param detectors: The list of Detectors in the experimental setup.
-        :param property_updaters: The list of PropertyUpdaters used to update different properties on the particles
-            in each step.
-        :param result_storage: The ResultStorage to use for the experiment's results. Can be None, in which case
-            the results will not be stored and only returned.
+        :param number_of_dimensions: The number of spatial dimensions of this experiment. The phase space will
+           accordingly have 2*number_of_dimensions dimensions.
         :param time_interval: The time interval to run the experiment in, as a 2-tuple of (`t_start`, `t_end`).
         :param time_step: The time step to use. If None is passed, a time step is picked based on the initial particle
             velocities.
         :param z_boundary: (Optional) If passed, the Z boundary of the entire experimental setup. Particles will not
             be simulated outside of this boundary. If this argument is not passed, the minimal interval enclosing all
             Devices and Detectors along the Z axis will be calculated and used as the Z boundary.
+        :param random_seed: The random seed to use for random value generation, affecting things like initial positions
+            and brownian motion steps. Note that when running with multiple processes, every process will start from its
+            own random seed (this random_seed plus an integer offset).
+        :param result_storage: The ResultStorage to use for the experiment's results. Can be None, in which case
+            the results will not be stored and only returned.
         """
         self.devices = []
         self.sources = []
@@ -385,16 +383,15 @@ class Experiment:
         self.__z_boundary = (z_start, z_end)
 
     def run(self,
-            single_threaded: bool = False, chunksize: int = None, processes: int = os.cpu_count(),
+            single_process: bool = False, chunksize: int = None, processes: int = os.cpu_count(),
             loglevel: str = "warning",
             progressbar: bool = False) -> List[Particle]:
         """
         Run the Experiment. A list of resulting Particle instances is returned.
 
-        :param single_threaded: Whether to run this experiment on a single thread, i.e. without parallelization. False
+        :param single_process: Whether to run this experiment on a single process, i.e. without parallelization. False
             by default: It's mostly only useful to pass True for developers, as many debuggers, profilers, etc. are not
-            able to deal well with different processes/threads. To run the experiment and get results quickly, leave
-            this on False.
+            able to deal well with different processes. To run the experiment and get results quickly, leave this False.
         :param chunksize: The chunk size for pool.imap_unordered. None by default, which equates to 1. This parameter
             has no effect if single_threaded is True.
         :param processes: The number of processes to use for multiprocessing. Handed directly to multiprocessing.Pool(),
@@ -408,15 +405,15 @@ class Experiment:
         self.loglevel = loglevel
 
         self._prepare()
-        if single_threaded:
-            logging.info("Running single-threaded.")
+        if single_process:
+            logging.info("Running in a single process.")
             iterator = map(simulate_particle, self.particles)
             if progressbar:
                 iterator = tqdm(iterator, total=len(self.particles))
             particles = list(iterator)
         else:
             logging.info(f"Running in parallel using {processes} processes with chunksize {chunksize}.")
-            pool = multiprocessing.Pool(processes=processes, initializer=self._prepare_thread, initargs=())
+            pool = multiprocessing.Pool(processes=processes, initializer=self._prepare_process, initargs=())
             try:
                 iterator = pool.imap_unordered(simulate_particle, self.particles, chunksize=chunksize)
                 if progressbar:
@@ -468,9 +465,9 @@ class Experiment:
             self.z_boundary = min(self.detectors_z_boundary[0], self.devices_z_boundary[0]), \
                               max(self.detectors_z_boundary[1], self.devices_z_boundary[1])
 
-        self._prepare_thread()
+        self._prepare_process()
 
-    def _prepare_thread(self):
+    def _prepare_process(self):
         self._set_globals()
 
         current_process = multiprocessing.current_process()
@@ -480,7 +477,7 @@ class Experiment:
         else:
             log_format = '%(levelname)s:[%(filename)s/%(funcName)s] %(message)s'
 
-        # we do the logging initialization in this function so it is done in each runner thread as well
+        # we do the logging initialization in this function so it is done in each runner process as well
         logging.basicConfig(format=log_format, level=getattr(logging, self.loglevel.upper()))
 
     def _set_globals(self):

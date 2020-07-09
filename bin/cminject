@@ -165,7 +165,7 @@ def main():
     logging.info(f"The total Z boundary of the experiment is {experiment.z_boundary}.")
     logging.info("Running experiment...")
     experiment.run(
-        single_threaded=args.single_threaded,
+        single_process=args.single_threaded,
         chunksize=args.chunksize,
         processes=args.processes,
         loglevel=args.loglevel,

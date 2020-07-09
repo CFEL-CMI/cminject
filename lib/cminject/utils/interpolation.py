@@ -168,8 +168,8 @@ def split_at_inflections(a: np.array) -> Tuple[List[np.array], np.array]:
     return np.split(a, idxs), idxs
 
 
-def reconstruct_detector_hits(trajectories: List[np.array], xdims: List[int], zdim: int,
-                              zs: List[float], interpolation_kind: str = 'linear') -> List[np.array]:
+def slice_trajectories_across_dimension(trajectories: List[np.array], xdims: List[int], zdim: int,
+                                        zs: List[float], interpolation_kind: str = 'linear') -> List[np.array]:
     """
     Reconstructs measured quantities (e.g. x/y positions) at a given z position from list of trajectories,
     based on interpolating on each function piece of all trajectory curves.
@@ -191,9 +191,6 @@ def reconstruct_detector_hits(trajectories: List[np.array], xdims: List[int], zd
     hit_xys = []
 
     for i, traj in enumerate(trajectories):
-        if (i % 1000) == 0:
-            logging.info(f"...{i}...")
-
         zs = traj[zdim]
         xys = traj[xdims]
 
