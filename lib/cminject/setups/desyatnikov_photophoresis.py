@@ -25,7 +25,7 @@ from cminject.definitions.devices.desyatnikov_photophoresis_device import\
 from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
 from cminject.definitions.sources.variable_distributions import VariableDistributionSource
 from cminject.experiment import Experiment
-from cminject.utils.args import dist_description, SetupArgumentParser, auto_time_step
+from cminject.utils.args import dist_description, SetupArgumentParser
 
 from .base import Setup
 
@@ -46,7 +46,7 @@ class MarkAsLostWhenVZIsPositivePropertyUpdater(PropertyUpdater):
 class DesyatnikovPhotophoresisSetup(Setup):
     @staticmethod
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
-        dt = main_args.time_step or auto_time_step(abs(args.velocity[-1]['mu']))
+        dt = main_args.time_step
 
         experiment = Experiment(
             time_interval=main_args.time_interval, time_step=dt,
