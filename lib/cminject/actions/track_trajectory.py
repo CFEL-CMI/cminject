@@ -15,7 +15,18 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-__all__ = ['visualizers']
+from cminject.base import Particle, Action
+
+
+class TrackTrajectory(Action):
+    """
+    Appends the array of tracked properties to the trajectory of the particle.
+    """
+    def __call__(self, particle: Particle, time: float) -> bool:
+        # TODO is list appending and converting once to np.array more efficient in the end than appending to np.array?
+        particle.trajectory.append(particle.as_array('tracked'))
+        return False
+
 
 ### Local Variables:
 ### fill-column: 100

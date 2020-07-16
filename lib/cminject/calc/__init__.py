@@ -15,20 +15,6 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import numpy as np
-
-from cminject.definitions.particles.base import Particle
-from .base import PropertyUpdater
-
-
-class TrajectoryPropertyUpdater(PropertyUpdater):
-    """
-    A simple property updater to append to the trajectory of the particle after each time step.
-    """
-    def update(self, particle: Particle, time: float) -> bool:
-        particle.trajectory.append(particle.as_array('tracked'))
-        return False
-
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t

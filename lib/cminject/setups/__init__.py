@@ -15,13 +15,6 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-__all__ = ['Setup', 'DesyatnikovPhotophoresisSetup', 'OneFlowFieldSetup', 'GoldADLSetup']
-
-from .base import Setup
-from .one_flow_field import OneFlowFieldSetup
-from .desyatnikov_photophoresis import DesyatnikovPhotophoresisSetup
-from .gold_adl import GoldADLSetup
-
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t

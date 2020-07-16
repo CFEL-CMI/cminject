@@ -17,27 +17,23 @@
 
 import argparse
 
-from cminject.definitions.property_updaters.base import PropertyUpdater
-from cminject.definitions.particles.base import Particle
-from cminject.definitions.detectors.simple_z import SimpleZDetector
-from cminject.definitions.devices.desyatnikov_photophoresis_device import\
-    DesyatnikovPhotophoresisDevice, UniformBrownianMotionPropertyUpdater
-from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
-from cminject.definitions.sources.variable_distributions import VariableDistributionSource
+from cminject.base import Particle, Action, Setup
+from cminject.detectors.simple_z import SimpleZDetector
+from cminject.devices.desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice
+from cminject.particles.spherical import ThermallyConductiveSphericalParticle
+from cminject.sources.variable_distributions import VariableDistributionSource
 from cminject.experiment import Experiment
 from cminject.utils.args import dist_description, SetupArgumentParser
-
-from .base import Setup
 
 M_GAS_AIR = 5.6e-26
 
 
-class MarkAsLostWhenVZIsPositivePropertyUpdater(PropertyUpdater):
+class MarkAsLostWhenVZIsPositive(Action):
     """
     Marks particles as lost when their z coordinate and v_z are both positive.
     Since the beam only drives particles away from the source position in this area, we can consider the particles lost.
     """
-    def update(self, particle: Particle, time: float) -> bool:
+    def __call__(self, particle: Particle, time: float) -> bool:
         if particle.position[-1] > 0.0 and particle.velocity[-1] > 0.0:
             particle.lost = True
         return False
@@ -46,38 +42,28 @@ class MarkAsLostWhenVZIsPositivePropertyUpdater(PropertyUpdater):
 class DesyatnikovPhotophoresisSetup(Setup):
     @staticmethod
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
-        dt = main_args.time_step
-
         experiment = Experiment(
-            time_interval=main_args.time_interval, time_step=dt,
+            time_interval=main_args.time_interval, time_step=main_args.time_step,
             random_seed=main_args.seed, number_of_dimensions=2
         )
 
         experiment.add_source(VariableDistributionSource(
-            main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius, rho=args.rho,
-            subclass=ThermallyConductiveSphericalParticle, specific_heat=0.0, temperature=293.15,
-            thermal_conductivity=args.thermal_conductivity
+            main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius, density=args.rho,
+            subclass=ThermallyConductiveSphericalParticle,
+            subclass_kwargs={
+                'specific_heat': 0.0, 'temperature': 293.15, 'thermal_conductivity': args.thermal_conductivity
+            }
         ))
 
         experiment.add_device(DesyatnikovPhotophoresisDevice(
             r_boundary=args.boundary[:2], z_boundary=args.boundary[2:],
-            gas_temperature=args.gas_temperature, gas_viscosity=args.gas_viscosity, flow_gas_pressure=args.gas_pressure,
+            gas_temperature=args.gas_temperature, gas_viscosity=args.gas_viscosity,
             gas_thermal_conductivity=args.gas_thermal_conductivity, gas_density=args.gas_density, gas_mass=M_GAS_AIR,
             beam_power=args.beam_power, beam_waist_radius=args.beam_waist_radius,
-            flow_gas_velocity=args.uniform_flow_velocity
         ))
 
         for i, pos in enumerate(args.detectors):
             experiment.add_detector(SimpleZDetector(identifier=i, z_position=pos))
-
-        if args.brownian:
-            experiment.add_property_updater(
-                UniformBrownianMotionPropertyUpdater(
-                    viscosity=args.gas_viscosity, temperature=args.gas_temperature,
-                    m_gas=M_GAS_AIR, pressure=args.gas_pressure, dt=dt
-                )
-            )
-
 
     @staticmethod
     def get_parser() -> SetupArgumentParser:
@@ -103,13 +89,6 @@ class DesyatnikovPhotophoresisSetup(Setup):
         parser.add_argument('-gmu', '--gas-thermal-conductivity',
                             help='The thermal conductivity of the surrounding gas [W m^-1 K^-1].', type=float)
         parser.add_argument('-gd', '--gas-density', help='The density of the surrounding gas  [kg m^-3].', type=float)
-        parser.add_argument('-gp', '--gas-pressure', help='The pressure of the surrounding gas [Pa].', type=float)
-
-        parser.add_argument('-F', '--uniform-flow-velocity', help='Add a uniform flow field with a given Z velocity',
-                            type=float, required=False)
-        parser.add_argument('-B', '--brownian',
-                            help='Enable brownian motion in a uniform drag force flow field. Requires -F to be set.',
-                            action='store_true')
 
         parser.add_argument('-b', '--boundary', help='Boundary (rmin, rmax, zmin, zmax) of the experiment.',
                             type=float, nargs=4)
@@ -134,7 +113,6 @@ class DesyatnikovPhotophoresisSetup(Setup):
             gas_viscosity=1.82e-5,  # [Pa*s]
             gas_thermal_conductivity=25.87e-3,  # [W/(m*K)]
             gas_density=1.204,  # [kg/(m^3)]
-            gas_pressure=10000.0,  # [Pa]
 
             beam_power=1.0,  # [W]
             beam_waist_radius=4.0e-6,  # [m]

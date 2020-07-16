@@ -19,9 +19,9 @@ from typing import List, Type, Union, Dict, Any
 
 import numpy as np
 
-from cminject.definitions.particles.spherical import SphericalParticle
-from cminject.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
-from .base import Source
+from cminject.base import Source
+from cminject.particles.spherical import SphericalParticle
+from cminject.utils.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
 
 Distribution = Union[float, Dict[str, float]]
 
@@ -45,19 +45,18 @@ class VariableDistributionSource(Source, ConfigSubscriber):
                  position: List[Distribution],
                  velocity: List[Distribution],
                  radius: Distribution,
-                 rho: float,
+                 density: float,
                  seed=None,
-                 randomly_rotate_around_z: bool = False,
                  subclass: Type[SphericalParticle] = SphericalParticle,
-                 **subclass_kwargs):
+                 subclass_kwargs: Dict[Any, Any] = None):
         self.number_of_particles = number_of_particles
         self.position = position
         self.velocity = velocity
         self.radius = radius
-        self.rho = rho
+        self.rho = density
         self.seed = seed
         self.subclass = subclass
-        self.subclass_kwargs = subclass_kwargs
+        self.subclass_kwargs = subclass_kwargs or {}
         self.number_of_dimensions = len(self.position)
 
         # Check that position and velocity descriptions are equal in length (dimensionality)

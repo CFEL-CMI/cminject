@@ -16,19 +16,13 @@
 # <http://www.gnu.org/licenses/>.
 
 import os
-import pathlib
-import random
 import warnings
-from typing import Dict, Any, List, Tuple, Union
+from typing import Dict, Any, List, Union
 
 import h5py
 import numpy as np
-import awkward
 
-from cminject.definitions.particles.base import Particle
-from cminject.definitions.util import ParticleDetectorHit
-
-from .base import ResultStorage
+from cminject.base import Particle, ResultStorage, ParticleDetectorHit
 
 
 class HDF5ResultStorage(ResultStorage):

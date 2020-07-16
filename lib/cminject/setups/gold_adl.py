@@ -20,16 +20,14 @@ from typing import Tuple
 
 import numpy as np
 
-from cminject.definitions.boundaries.grid_field_based import GridFieldBasedBoundary
-from cminject.definitions.detectors.simple_z import SimpleZDetector
-from cminject.definitions.devices.base import Device, Boundary
-from cminject.definitions.devices.desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice
-from cminject.definitions.fields.fluid_flow import StokesDragForceField
-from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
-from cminject.definitions.property_updaters.brownian_motion import BrownianMotionPropertyUpdater
-from cminject.definitions.setups import Setup
-from cminject.definitions.sources.variable_distributions import VariableDistributionSource
-from cminject.global_config import GlobalConfig, ConfigKey
+from cminject.base import Device, Boundary, Setup
+from cminject.boundaries.grid_field_based import GridFieldBasedBoundary
+from cminject.detectors.simple_z import SimpleZDetector
+from cminject.devices.desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice
+from cminject.fields.fluid_flow import StokesDragForceField
+from cminject.particles.spherical import ThermallyConductiveSphericalParticle
+from cminject.actions.brownian_motion import StokesBrownianMotionStep
+from cminject.sources.variable_distributions import VariableDistributionSource
 from cminject.experiment import Experiment
 from cminject.utils.args import SetupArgumentParser
 
@@ -130,15 +128,13 @@ class GoldADLSetup(Setup):
         exp.add_source(VariableDistributionSource(
             subclass=ThermallyConductiveSphericalParticle,
             number_of_particles=main_args.nof_particles,
-            rho=19320.0,  # Assuming 50nm gold particles
+            density=19320.0,  # Assuming 50nm gold particles
             radius=50e-9,
-            thermal_conductivity=315.0,  # [W / (m*K)], taken from Wikipedia
-            specific_heat=0.0,
-            temperature=293.15,
-            #rho=1050.0,  # Assuming expanded Polystyrene at 50nm
-            #radius=50e-9,
-            #thermal_conductivity=0.030,
-
+            subclass_kwargs={
+                'thermal_conductivity': 315.0,  # [W / (m*K)], taken from Wikipedia. For PS it would be 0.030
+                'specific_heat': 0.0,
+                'temperature': 293.15
+            },
             position=[{'kind': 'radial_gaussian', 'mu': 0.0, 'sigma': 3.0e-3},
                       skimmer_min_z+abs(skimmer_min_z*0.001)],
             velocity=[{'kind': 'gaussian', 'mu': 1e-3, 'sigma': 1e-5},
@@ -156,12 +152,12 @@ class GoldADLSetup(Setup):
 
         adl_stack = ADLStackDevice(adl_flow_file, z_offset=adl_offset)
         exp.add_device(adl_stack)
-        exp.add_property_updater(BrownianMotionPropertyUpdater(field=adl_stack.fields[0]))
+        exp.add_action(StokesBrownianMotionStep(field=adl_stack._fields[0]))
 
         if args.beam_power is not None:  # if missing or 0.0, we don't need to create a device
             pp_device = DesyatnikovPhotophoresisDevice(
                 # All gas properties are assuming dilute nitrogen at 293.15K.
-                gas_density=(0.059, adl_stack.fields[0]),
+                gas_density=(0.059, adl_stack._fields[0]),
                 # taken for dilute nitrogen from Lemmon and Jacobsen 2003
                 gas_viscosity=17.8771e-6,  # [Pa*s]
                 gas_thermal_conductivity=25.9361e-3,  # [W/(m*K)]
@@ -176,7 +172,7 @@ class GoldADLSetup(Setup):
                 z_position=adl_exit_position + 1e-2,  # [m]
             )
             exp.add_device(pp_device)
-            exp.add_property_updater(BrownianMotionPropertyUpdater(field=pp_device.fields[0]))
+            exp.add_action(StokesBrownianMotionStep(field=pp_device._fields[0]))
 
         for i in range(20):
             exp.add_detector(SimpleZDetector(i, adl_exit_position + i*5e-4))

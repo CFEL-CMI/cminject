@@ -20,6 +20,11 @@ Utility functions for handling commandline arguments.
 """
 
 import argparse
+import re
+import warnings
+from typing import Callable, Any
+
+import numpy as np
 
 
 class SetupHelpFormatter(argparse.MetavarTypeHelpFormatter):
@@ -94,8 +99,57 @@ def natural_number(x):
     return x
 
 
-def auto_time_step(mean_velocity):
-    return 10e-6 / abs(mean_velocity)
+def parse_single_dimension_description(s: str) -> Callable[[np.array], Any]:
+    """
+    Parses dimension descriptions that can be of the following format:
+
+    - x, y, z, vx, vy, vz refer to the first (x), second (y) and last (z) component of the position and velocity
+      components
+    - p<i> refers to the i-th entry of the position component
+    - v<i> refers to the i-th entry of the velocity component
+    - <some_name><i> refers to the i-th entry of the component called some_name
+    - <some_name> refers to the component called some_name as a whole
+
+    :param s: The string to parse
+    :return: A Callable that will return the appropriate component from a given np.array, when given an array
+        with a structured dtype that contains the given component. This Callable will throw an error when called if it
+        can not execute the access the user wants on the given np.array.
+    """
+    s = s.strip()
+    static = {
+        'x': lambda x: x['position'][:, 0],
+        'y': lambda x: x['position'][:, 1],
+        'z': lambda x: x['position'][:, -1],
+        'vx': lambda x: x['velocity'][:, 0],
+        'vy': lambda x: x['velocity'][:, 1],
+        'vz': lambda x: x['velocity'][:, -1],
+    }
+    if s in static:
+        return static[s]
+
+    if re.match('p[0-9]+', s):
+        return lambda x: x['position'][:, int(s[1:])]
+    if re.match('v[0-9]+', s):
+        return lambda x: x['velocity'][:, int(s[1:])]
+
+    try:
+        a, b, *rest = re.split('(\d+)', s)
+        if rest != ['']:
+            warnings.warn(f'Ignored part of description: {rest}')
+        return lambda x: x[a][:, int(b)]
+    except ValueError:
+        # Can't make sense of s, can only treat it as a direct accessor
+        return lambda x: x[s]
+
+
+def parse_dimension_description(s: str):
+    if ',' in s:
+        l, r = s.split(',')
+        l = parse_single_dimension_description(l)
+        r = parse_single_dimension_description(r)
+        return lambda x: (l(x), r(x))
+    else:
+        return parse_single_dimension_description(s)
 
 ### Local Variables:
 ### fill-column: 100

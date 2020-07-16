@@ -17,13 +17,15 @@
 
 import argparse
 
-from cminject.definitions.detectors.simple_z import SimpleZDetector
-from cminject.definitions.devices.fluid_flow_field_device import FluidFlowFieldDevice, FlowType
-from cminject.definitions.particles.spherical import SphericalParticle
-from cminject.definitions.property_updaters.brownian_motion import\
-    BrownianMotionPropertyUpdater, BrownianMotionMolecularFlowPropertyUpdater
-from cminject.definitions.setups import Setup
-from cminject.definitions.sources.variable_distributions import VariableDistributionSource
+from cminject.boundaries.grid_field_based import GridFieldBasedBoundary
+from cminject.detectors.simple_z import SimpleZDetector
+from cminject.devices.fluid_flow_device import FluidFlowDevice, FlowType
+from cminject.fields.fluid_flow import StokesDragForceField, MolecularFlowDragForceField
+from cminject.particles.spherical import SphericalParticle, ThermallyConductiveSphericalParticle
+from cminject.actions.brownian_motion import\
+    StokesBrownianMotionStep, MolecularFlowBrownianMotionStep
+from cminject.base import Setup, Device
+from cminject.sources.variable_distributions import VariableDistributionSource
 
 from cminject.experiment import Experiment
 from cminject.utils.args import dist_description, SetupArgumentParser
@@ -38,31 +40,35 @@ class OneFlowFieldSetup(Setup):
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
         t_start, t_end = main_args.time_interval
         dt = main_args.time_step
+        source_kwargs = {
+            'number_of_particles': main_args.nof_particles,
+            'position': args.position, 'velocity': args.velocity,
+            'radius': args.radius, 'density': args.density
+        }
+        ff_kwargs = {
+            'filename': args.flow_field, 'brownian_motion': args.brownian,
+            'flow_type': FlowType.MOLECULAR_FLOW if args.flow_type == 'molecular_flow' else FlowType.STOKES,
+            'temperature': args.flow_temperature
+        }
+        if args.flow_type == 'molecular_flow':
+            # Need to set subclass and pass starting temperature when using molecular flow
+            source_kwargs = {
+                **source_kwargs, 'subclass': ThermallyConductiveSphericalParticle,
+                'subclass_kwargs': {'temperature': args.particle_temperature}
+            }
+        else:
+            # Need to pass along slip correction scale if using stokes flow
+            ff_kwargs = {**ff_kwargs, 'slip_correction_scale': args.flow_scale_slip or 1.0}
 
+        # Construct Experiment
         experiment = Experiment(number_of_dimensions=args.dimensions, time_interval=(t_start, t_end), time_step=dt,
                                 random_seed=main_args.seed)
-
-        ff_device = FluidFlowFieldDevice(
-            filename=args.flow_field,
-            temperature=args.flow_temperature, slip_correction_scale=args.flow_scale_slip or 1.0,
-            flow_type=(FlowType.MOLECULAR_FLOW if args.flow_type == 'molecular_flow' else FlowType.STOKES)
-        )
-        experiment.add_device(ff_device)
-
-        if args.brownian:
-            if args.flow_type == 'stokes':
-                # noinspection PyTypeChecker
-                experiment.add_property_updater(BrownianMotionPropertyUpdater(field=ff_device.fields[0]))
-            elif args.flow_type == 'molecular_flow':
-                # noinspection PyTypeChecker
-                experiment.add_property_updater(BrownianMotionMolecularFlowPropertyUpdater(field=ff_device.fields[0]))
-
+        # Add Source and Device
+        experiment.add_source(VariableDistributionSource(**source_kwargs))
+        experiment.add_device(FluidFlowDevice(**ff_kwargs))
+        # Simple Z detectors at every given position
         for i, pos in enumerate(args.detectors or []):
             experiment.add_detector(SimpleZDetector(identifier=i, z_position=pos))
-
-        source = VariableDistributionSource(main_args.nof_particles, position=args.position, velocity=args.velocity,
-                                            radius=args.radius, rho=args.density, subclass=SphericalParticle)
-        experiment.add_source(source)
         return experiment
 
     @staticmethod
@@ -97,6 +103,10 @@ class OneFlowFieldSetup(Setup):
         parser.add_argument('-fs', '--flow-scale-slip', help='Slip scale factor of the flow field',
                             type=float)
 
+        parser.add_argument('-pt', '--particle-temperature',
+                            help='(Initial) temperature of the particles in K. Ignored if --flow-type=stokes, '
+                                 'required if --flow-type=molecular_flow.',
+                            type=float, required=False)
         return parser
 
     @staticmethod
@@ -109,6 +119,11 @@ class OneFlowFieldSetup(Setup):
         if len(args.velocity) != args.dimensions:
             raise ValueError(
                 "The length of the velocity description vectors must match the simulation dimensionality!"
+            )
+        # Verify that particle temperature is passed when using molecular flow
+        if args.flow_type == 'molecular_flow' and args.particle_temperature is None:
+            raise ValueError(
+                "--particle-temperature must be passed when --flow-type=molecular_flow!"
             )
 
 

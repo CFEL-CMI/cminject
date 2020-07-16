@@ -19,28 +19,21 @@ import logging
 import multiprocessing
 import os
 from typing import List, Tuple, Optional
+from tqdm import tqdm
 
 import numpy as np
 from scipy.integrate import ode
 
-from cminject.definitions.base import ZBounded
-from cminject.definitions.devices.base import Device
-from cminject.definitions.detectors.base import Detector
-from cminject.definitions.particles.base import Particle
-from cminject.definitions.property_updaters.base import PropertyUpdater
-from cminject.definitions.result_storages.base import ResultStorage
-from cminject.definitions.sources.base import Source
-from cminject.definitions.particles.particle_status import *
-
-from cminject.definitions.util import infinite_interval
-from cminject.global_config import GlobalConfig, ConfigKey
-from tqdm import tqdm
+from cminject.base import ZBounded, Device, Detector, Particle, Action, ResultStorage, Source
+from cminject.particles.particle_status import *
+from cminject.utils import infinite_interval
+from cminject.utils.global_config import GlobalConfig, ConfigKey
 
 # FIXME file should maybe be split into parts
 
 PARTICLE_STATES_CONSIDERED_AS_LOST = [PARTICLE_STATUS_LOST, PARTICLE_STATUS_OUTSIDE_EXPERIMENT]
 
-DEVICES, DETECTORS, PROPERTY_UPDATERS, Z_BOUNDARY, NUMBER_OF_DIMENSIONS, BASE_SEED = [None] * 6
+DEVICES, DETECTORS, ACTIONS, Z_BOUNDARY, NUMBER_OF_DIMENSIONS, BASE_SEED = [None] * 6
 TIME_START, TIME_END, TIME_STEP = [None] * 3
 Z_LOWER, Z_UPPER = None, None
 
@@ -73,7 +66,7 @@ def get_particle_simulation_state(particle_position: np.array, time: float,
                 return PARTICLE_STATUS_OK
             if not is_inside and device_z_boundary[0] <= particle_z_pos <= device_z_boundary[1]:
                 # Particles that are outside devices *but* within their Z boundary are considered lost
-                return PARTICLE_STATUS_LOST
+                return PARTICLE_STATUS_LOST  # FIXME need to change this. what about two 'parallel' devices with same Z?
         # Particles that are not inside any device but also not within any device's Z boundary are not considered
         # lost (as long as they are within the experiment's total Z boundary, see beginning of function)
         return PARTICLE_STATUS_BETWEEN_DEVICES
@@ -82,7 +75,7 @@ def get_particle_simulation_state(particle_position: np.array, time: float,
 def postprocess_integration_step(particle: Particle, integral: ode, position_changed: bool) -> None:
     """
     Does post-processing after an integration step, which consists of:
-      - running all property updaters, possibly re-instantiating the integrator when they change the particle position
+      - running all actions, possibly re-instantiating the integrator when they change the particle position
       - running all detectors, asking them to try and detect the particle
 
     :param particle: The particle which experienced an integration step
@@ -91,11 +84,13 @@ def postprocess_integration_step(particle: Particle, integral: ode, position_cha
         Whether the position of the particle had been changed relative to the integral result,
         _before_ this function was called.
     """
-    # Run all property updaters for the particle with the current integral time
-    for property_updater in PROPERTY_UPDATERS:
-        position_changed |= property_updater.update(particle, integral.t)
-    # If some property updater changed the position, reset the integrator's initial value
-    # NOTE: doing this is slow and should be reserved for cases where motion cannot be modeled differently
+    # Run all actions for the particle with the current integral time
+    for device in DEVICES:
+        position_changed |= device.run_actions(particle, integral.t)
+    for action in ACTIONS:
+        position_changed |= action(particle, integral.t)
+    # If some action changed the position, reset the integrator's initial value.
+    # NOTE: this is (somewhat) slow and should be reserved for cases where the action cannot be modeled differently
     if position_changed:
         integral.set_initial_value(particle.phase_space_position, integral.t)
 
@@ -105,9 +100,11 @@ def postprocess_integration_step(particle: Particle, integral: ode, position_cha
 
 
 def postprocess_particle(particle: Particle, integral: ode, t_end: float) -> None:
-    # Run the updaters and detectors one last time after simulation completed
-    for property_updater in PROPERTY_UPDATERS:
-        property_updater.update(particle, integral.t)
+    # Run the actions and detectors one last time after simulation completed
+    for device in DEVICES:
+        device.run_actions(particle, integral.t)
+    for action in ACTIONS:
+        action(particle, integral.t)
     for detector in DETECTORS:
         detector.try_to_detect(particle)
 
@@ -191,8 +188,8 @@ def spatial_derivatives(time: float, phase_space_position: np.array,
 def simulate_particle(particle: Particle) -> Particle:
     """
     Simulates the flight path of a single particle, with a list of devices that can affect the particle,
-    a list of detectors that can detect the particle, a list of property updaters that can store additional results
-    on the particle, a time interval to simulate the particle for, and a Z boundary to simulate the particle within.
+    a list of detectors that can detect the particle, a list of actions that can affect the particle after each
+    integration step, a time interval to simulate the particle for, and a Z boundary to simulate the particle within.
 
     :param particle: The particle instance.
     :return: A modified version of the particle instance after the simulation has ended.
@@ -214,7 +211,7 @@ def simulate_particle(particle: Particle) -> Particle:
 
         - DEVICES: The list of devices.
         - DETECTORS: The list of detectors.
-        - PROPERTY_UPDATERS: The list of property_updaters.
+        - ACTIONS: The list of actions.
         - TIME_INTERVAL: The time interval of the simulation.
         - Z_BOUNDARY: The Z boundary of the simulation.
         - NUMBER_OF_DIMENSIONS: The number of dimensions of the space the particle moves in.
@@ -271,7 +268,7 @@ class Experiment:
                  z_boundary: Optional[Tuple[float, float]] = None, random_seed=None,
                  result_storage: Optional[ResultStorage] = None):
         """
-        Construct an Experiment to run. Sources, Devices, Detectors and PropertyUpdaters should be added after this
+        Construct an Experiment to run. Sources, Devices, Detectors and Actions should be added after this
         construction, via the appropriate add_ methods, e.g. add_device(), on the constructed instance.
 
         :param number_of_dimensions: The number of spatial dimensions of this experiment. The phase space will
@@ -291,7 +288,7 @@ class Experiment:
         self.devices = []
         self.sources = []
         self.detectors = []
-        self.property_updaters = []
+        self.actions = []
         self.result_storage = result_storage
         self.random_seed = random_seed
         self.time_interval = time_interval
@@ -331,13 +328,13 @@ class Experiment:
         self.detectors.append(detector)
         return self
 
-    def add_property_updater(self, property_updater: PropertyUpdater):
+    def add_action(self, action: Action):
         """
-        Adds a PropertyUpdater to this experiment.
+        Adds a Action to this experiment.
 
-        :param property_updater: The PropertyUpdater instance to add.
+        :param action: The Action instance to add.
         """
-        self.property_updaters.append(property_updater)
+        self.actions.append(action)
         return self
 
     @property
@@ -481,12 +478,12 @@ class Experiment:
         logging.basicConfig(format=log_format, level=getattr(logging, self.loglevel.upper()))
 
     def _set_globals(self):
-        global DEVICES, DETECTORS, PROPERTY_UPDATERS, NUMBER_OF_DIMENSIONS, BASE_SEED
+        global DEVICES, DETECTORS, ACTIONS, NUMBER_OF_DIMENSIONS, BASE_SEED
         global TIME_START, TIME_END, TIME_STEP
         global Z_BOUNDARY, Z_LOWER, Z_UPPER
         DEVICES = self.devices
         DETECTORS = self.detectors
-        PROPERTY_UPDATERS = self.property_updaters
+        ACTIONS = self.actions
         TIME_START, TIME_END = self.time_interval
         TIME_STEP = self.time_step
         Z_BOUNDARY = self.z_boundary

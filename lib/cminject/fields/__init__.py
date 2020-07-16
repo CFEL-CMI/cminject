@@ -15,11 +15,6 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-__all__ = ['fluid_flow', 'photophoresis', 'regular_grid_interpolation']
-from .regular_grid_interpolation import RegularGridInterpolationField
-from .fluid_flow import StokesDragForceField, DragForceInterpolationField,\
-    MolecularFlowDragForceField
-from .photophoresis import DesyatnikovPhotophoreticLaserField
 
 ### Local Variables:
 ### fill-column: 100

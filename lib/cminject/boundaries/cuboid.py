@@ -20,7 +20,7 @@ from typing import List, Tuple, Any
 import numpy as np
 
 from .simple_z import SimpleZBoundary
-from cminject.global_config import ConfigSubscriber, GlobalConfig, ConfigKey
+from cminject.utils.global_config import ConfigSubscriber, GlobalConfig, ConfigKey
 
 
 class CuboidBoundary(SimpleZBoundary, ConfigSubscriber):

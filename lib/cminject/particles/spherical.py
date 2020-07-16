@@ -16,11 +16,10 @@
 # <http://www.gnu.org/licenses/>.
 
 from functools import cached_property
-from typing import List
 
 import numpy as np
 
-from .base import Particle
+from cminject.base import Particle
 
 
 class SphericalParticle(Particle):
@@ -46,6 +45,33 @@ class SphericalParticle(Particle):
     @cached_property
     def mass(self):
         return self.rho * 4 / 3 * np.pi * (self.radius ** 3)
+
+
+class ThermallyConductiveSphericalParticle(SphericalParticle):
+    """
+    Lacking a better name (so far), this class extends on the SphericalParticle with a thermal conductivity
+    that is required by e.g. the photophoretic force and for thermal calculations.
+    """
+    def __init__(self, *args, temperature: float, thermal_conductivity: float = None, specific_heat: float = None,
+                 **kwargs):
+        self.thermal_conductivity = thermal_conductivity
+        self.temperature = temperature
+        self.specific_heat = specific_heat
+        super().__init__(*args, **kwargs)
+
+    @property
+    def constant_properties(self):
+        return super().constant_properties + [
+            ('thermal_conductivity', np.float64),
+            ('specific_heat', np.float64)
+        ]
+
+    @property
+    def tracked_properties(self):
+        return super().tracked_properties + [
+            ('temperature', np.float64)
+        ]
+
 
 ### Local Variables:
 ### fill-column: 100

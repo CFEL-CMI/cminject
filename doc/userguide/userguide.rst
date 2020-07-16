@@ -13,34 +13,8 @@ nanoparticle trajectory simulations.
 Installation
 ************
 
-We recommend using `Anaconda`_, if possible, because of its easy setup and performance-optimized package distributions.
-
-For Anaconda users
-------------------
-- Set up a new Anaconda environment for CMInject::
-
-    conda create -n cminject python=3.8
-
-- Activate the Anaconda environment::
-
-    conda activate cminject
-
-- Install Cython and numpy (required for installation)::
-
-    conda install Cython numpy
-
-- Install CMInject:
-
-  - If you plan on developing CMInject (see `setup.py develop`_)::
-
-      python setup.py develop
-
-  - If you plan on only using CMInject::
-
-      python setup.py install
-
-For Python users without Anaconda
----------------------------------
+We strongly recommend the use of a virtual environment (`venv`_) for CMInject. If you cannot use
+virtual environments for whatever reason, simply skip the first two steps.
 
 - Create a virtual environment with `venv`_ in a directory of your choice::
 
@@ -70,11 +44,13 @@ For Python users without Anaconda
 
 - Install CMInject:
 
+  Switch (``cd``) to the directory where you downloaded/cloned CMInject. Then:
+
   - If you plan on developing CMInject (see `setup.py develop`_)::
 
       python setup.py develop
 
-  - If you plan on only using CMInject::
+  - If you just want to use CMInject::
 
       python setup.py install
 
@@ -251,4 +227,3 @@ References
 
 .. _`setup.py develop`: https://setuptools.readthedocs.io/en/latest/setuptools.html#develop-deploy-the-project-source-in-development-mode
 .. _venv: https://docs.python.org/3/library/venv.html
-.. _Anaconda: https://www.anaconda.com/distribution/

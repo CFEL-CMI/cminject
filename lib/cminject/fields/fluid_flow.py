@@ -20,16 +20,15 @@ import warnings
 from abc import ABC
 from typing import Tuple
 
-import h5py
-import numba
+import h5py  # TODO should this file really be concerned with I/O?
 import numpy as np
 from scipy.constants import pi, Boltzmann
 from scipy.special import erf
 
-from cminject.definitions.particles.spherical import SphericalParticle
-from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
-
+from cminject.calc import fluid_flow as calc
+from cminject.particles.spherical import SphericalParticle, ThermallyConductiveSphericalParticle
 from .regular_grid_interpolation import RegularGridInterpolationField
+from ..calc.common import is_finite
 
 
 class DragForceInterpolationField(RegularGridInterpolationField, ABC):
@@ -62,7 +61,6 @@ class DragForceInterpolationField(RegularGridInterpolationField, ABC):
         return self._z_boundary
 
     def _set_cascading(self, attribute_name, passed_arg, h5f, key):
-        # TODO docstring
         if passed_arg is not None:
             setattr(self, attribute_name, passed_arg)
         elif key in h5f.attrs:
@@ -110,75 +108,43 @@ class StokesDragForceField(DragForceInterpolationField):
 
         super().__init__(filename, *args, **kwargs)
 
-    @staticmethod
-    @numba.jit('float64[::1](float64, float64[::1], float64, float64, float64, float64, float64[::1])', nopython=True)
-    def _a(p, delta_v, mu, r_p, m_p, Cc, azero):
-        if p <= 0:
-            return azero
-        return 6*pi * mu * r_p * delta_v / (m_p * Cc)
-
     def calculate_acceleration(self, particle: SphericalParticle, time: float) -> np.array:
         """
         Calculates the drag force using Stokes' law for spherical particles in continuum
         """
         pressure, relative_velocity = self.get_local_properties(particle.position, particle.velocity)
-        Cc = self.calc_slip_correction(pressure, particle.radius)
-        return self._a(pressure, relative_velocity, self.dynamic_viscosity,
-                       particle.radius, particle.mass, Cc, self._zero_acceleration)
 
-    @staticmethod
-    @numba.jit(nopython=True)
-    def _slip_correction_4k(p, r_p, T, ss):
-        # The Sutherland constant for helium is 79.4 at reference temperature of 273.0 K.
-        # I took a reference pressure of 1 Pascal, in which the mean free path of helium is 0.01754.
-        # see J. Aerosol Sci. 1976 Vol. 7. pp 381-387 by Klaus Willeke
-        knudsen = 0.01754 * 1 / (p * r_p) * (T / 273.0) * ((1 + 79.4 / 273.0) / (1 + 79.4 / T))
-        s = 1 + knudsen * (1.246 + (0.42 * np.exp(-0.87 / knudsen)))
-        return s * ss
-
-    @staticmethod
-    @numba.jit(nopython=True)
-    def _slip_correction_hutchins(mu, p, r_p, T, m_g, ss):
-        # D. K. Hutchins, M. H. Harper, R. L. Felder, Slip correction measurements for solid spherical particles
-        # by modulated dynamic light scattering, Aerosol Sci. Techn. 22 (2) (1995) 202–218.
-        # doi:10.1080/02786829408959741.
-        knudsen = mu / (p * r_p) * np.sqrt(pi * Boltzmann * T / (2 * m_g))
-        s = 1 + knudsen * (1.231 + 0.4695 * np.exp(-1.1783 / knudsen))
-        return s * ss
+        if pressure > 0 and is_finite(pressure):
+            Cc = self.calc_slip_correction(pressure, particle.radius)
+            return calc.a_stokes(relative_velocity, self.dynamic_viscosity, particle.radius, particle.mass, Cc)
+        else:
+            return self._nan_acceleration
 
     def calc_slip_correction(self, pressure: float, particle_radius: float) -> float:
         """
         Calculates the slip correction factor with temperature corrections. Works for models '4_kelvin' at 4K,
         and 'room_temp' at 293.15K.
 
-        The 'room_temp' models is based on the paper:
-        D. K. Hutchins, M. H. Harper, R. L. Felder, Slip correction measurements for solid spherical particles
-        by modulated dynamic light scattering, Aerosol Sci. Techn. 22 (2) (1995) 202–218. doi:10.1080/02786829408959741.
-
-        .. todo::
-            what model is 4_kelvin based on?
-
         .. note::
             This method is replaced at runtime with a concrete implementation for the chosen slip correction model,
             to avoid the overhead of choosing at every call.
         """
-        raise NotImplementedError("Unknown slip correction model -- "
-                                  "this method should have been replaced at construction!")
+        raise NotImplementedError(
+            "Unknown slip correction model; this method should have been replaced at construction!"
+        )
 
     def _calc_slip_correction_4k(self, pressure: float, particle_radius: float) -> float:
-        if pressure == 0.0:
-            return float('inf')  # Correct force to 0 by dividing by infinity. FIXME better way?
-        return self._slip_correction_4k(pressure, particle_radius, self.temperature, self.slip_correction_scale)
+        return calc.slip_correction_4k(pressure, particle_radius, self.temperature, self.slip_correction_scale)
 
     def _calc_slip_correction_hutchins(self, pressure: float, particle_radius: float) -> float:
-        if pressure == 0.0:
-            return float('inf')  # Correct force to 0 by dividing by infinity. FIXME better way?
-        return self._slip_correction_hutchins(
+        return calc.slip_correction_hutchins(
             self.dynamic_viscosity, pressure, particle_radius, self.temperature,
             self.m_gas, self.slip_correction_scale
         )
 
     def _set_properties_based_on_gas_type(self, gas_type: str, gas_temp: float):
+        # TODO this should be some kind of table, maybe along with interpolation, rather than for a very small finite...
+        # TODO ...set of temperature/gas combinations
         self.temperature = gas_temp
 
         if gas_type is not None:
@@ -254,32 +220,16 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
         Calculates the drag force using Epstein's law for spherical particles
         in molecular flow with corrections for high velocities
         """
-        pressure, relative_velocity = self.get_local_properties(particle.position, particle.velocity)
+        pressure, relative_velocity = self.get_local_properties(particle.phase_space_position)
 
         # Negative pressure or zero pressure is akin to the particle not being in the flow field, force is zero
-        # and we can stop considering the particle to be inside this field
         if pressure <= 0:
-            return np.zeros(self.number_of_dimensions)
-        h = self.m_gas / (2*Boltzmann*self.temperature)
-        h_ = self.m_gas / (2*Boltzmann*particle.temperature)
+            return self._zero_acceleration
+        elif not np.isfinite(pressure):
+            return self._nan_acceleration
 
-        # calculating the force for two different cases
-        # 1. Epstein's formula (V<10 m/s)
-        # 2. Epstein's formula corrected for high velocities (V>=10 m/s)
-        f_spec = np.where(
-            abs(relative_velocity) < 10,
-
-            16/3 * pressure * np.sqrt(pi*h) * particle.radius**2 * relative_velocity,
-
-            -pressure * np.sqrt(pi) * particle.radius**2 * (
-                -2*np.exp(-h*relative_velocity**2) * np.sqrt(h) * relative_velocity * (1+2*h*relative_velocity**2) +
-                np.sqrt(pi) * (1 - 4 * h * relative_velocity**2 - 4 * h**2 * relative_velocity**4) *
-                erf(np.sqrt(h) * relative_velocity)
-            ) / (2 * h * relative_velocity**2)
-        )
-        force_vector = f_spec + 1.8 / 3 * pressure * pi**(3/2) * h/np.sqrt(h_) * particle.radius**2 * relative_velocity
-        acceleration = force_vector / particle.mass
-        return acceleration
+        return calc.a_roth(pressure, relative_velocity, self.m_gas, self.temperature,
+                           particle.temperature, particle.radius, particle.mass)
 
 ### Local Variables:
 ### fill-column: 100

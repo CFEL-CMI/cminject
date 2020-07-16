@@ -16,63 +16,56 @@
 # <http://www.gnu.org/licenses/>.
 
 import argparse
-import logging
 
+import numpy as np
 import matplotlib.pyplot as plt
 
-from cminject.tools.visualization.visualizers import DetectorHistogramVisualizer, TrajectoryVisualizer
+from cminject.result_storages.hdf5 import HDF5ResultStorage
+from cminject.utils.visualization import plot_trajectories, plot_trajectories_colored, plot_detectors
 
-program_description = """
-Visualizes a simulation result HDF5 file in one or multiple ways.
-"""
+program_description = """Visualizes a simulation result HDF5 file."""
 
 if __name__ == '__main__':
-    def comma_tuple(x):
-        a, b = x.split(',')
-        return (a, b)
-
     parser = argparse.ArgumentParser(prog='cminject_visualization', description=program_description,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('file', help='The result (HDF5) file to visualize.', type=str, metavar='filename')
-    parser.add_argument('-T', help='Plot the trajectories.', action='store_true')
-    parser.add_argument('-Tn', help='(Only used when -t is given) Only plot n randomly sampled trajectories. '
+
+    parser.add_argument('-T', help='Plot trajectories.', action='store_true')
+    parser.add_argument('-Tn', help='Only plot n randomly sampled trajectories. '
                                     'Useful for quick qualitative analysis of large files.', type=int, metavar='n')
-    parser.add_argument('-Ts', help='Show scatter plots at each detector.', action='store_true')
     parser.add_argument('-Tc',
                         help='Plot colored trajectories, as line segments encoding particle velocity. '
                              'Shows more information, but is more computationally expensive to render.',
                         action='store_true')
-    parser.add_argument('-Txabs',
-                        help='Take the modulus of x (dimension 0) coordinates. Useful for radially symmetrical '
-                             'simulations where "x" is r and negative r were used during the simulation.',
-                        action='store_true')
-
-    parser.add_argument('-H', help='Plot histograms based on a list of dimension pairs to plot against each other.',
-                        nargs='+', default=[], type=comma_tuple, metavar='x,y')
+    parser.add_argument('-H', help='Plot histograms (1D/2D) of named quantities at each detector. 2D histograms '
+                                   'will be plotted when a pair of quantity names is given separated by a comma,'
+                                   ' e.g. "x,y", otherwise a 1D histogram will be plotted.', nargs='*')
     args = parser.parse_args()
 
-    if args.H:
-        visualizer = DetectorHistogramVisualizer(
-            filename=args.file, dimension_pairs=args.H, use_tex=True,
-        )
-        fig, axes = visualizer.visualize()
-        fig.show()
+    with HDF5ResultStorage(args.file) as f:
+        # Plot detector histograms
+        if args.H:
+            detectors = list(f.get_detectors().values())
+            for desc in args.H:
+                plot_detectors(detectors, desc)
 
-    if args.T:
-        visualizer = TrajectoryVisualizer(
-            filename=args.file, n_samples=args.Tn,
-            colored=args.Tc, make_x_absolute=args.Txabs,
-            scatter=args.Ts, scatter_kwargs={'alpha': 0.3},
-            traj_kwargs={'marker': '.'}
-        )
-        fig, axes = visualizer.visualize()
-        fig.show()
+        # Plot trajectories
+        if args.T:
+            fig = plt.figure()
+            ax = fig.gca()
+            # Get trajectories, potentially taking a sample
+            trajectories = f.get_trajectories()
+            if args.Tn:
+                trajectories = np.random.choice(trajectories, args.Tn, replace=False)
+            # Plot trajectories
+            if args.Tc:
+                plot_trajectories_colored(trajectories, ax=ax)
+            else:
+                plot_trajectories(trajectories, ax=ax, color='k')
+            fig.show()
 
     plt.show()
 
-    if not any([args.H, args.T]):
-        logging.error("Missing plot type, please refer to -h.")
-        exit(1)
 
 ### Local Variables:
 ### fill-column: 100

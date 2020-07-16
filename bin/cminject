@@ -22,9 +22,9 @@ import os
 import importlib
 from typing import Type
 
-from cminject.definitions.property_updaters.track_trajectory import TrajectoryPropertyUpdater
-from cminject.definitions.result_storages.hdf5 import HDF5ResultStorage
-from cminject.definitions.setups.base import Setup
+from cminject.base import Setup
+from cminject.actions.track_trajectory import TrackTrajectory
+from cminject.result_storages.hdf5 import HDF5ResultStorage
 from cminject.utils.args import natural_number
 
 
@@ -82,7 +82,7 @@ def main():
     """
     The main method of cminject. Further documentation is given by the help strings of the argparse parser.
     """
-    DEFAULT_SETUP = 'cminject.definitions.setups.OneFlowFieldSetup'
+    default_setup = 'cminject.setups.one_flow_field.OneFlowFieldSetup'
     # This base_parser is a small workaround for wanting to print out the help of the given --setup parameter.
     # If we define an action directly on `parser` that prints the help, it won't have parsed the other arguments
     # at all, so the setup help will always be printed for the same default setup, which of course isn't intended.
@@ -90,14 +90,13 @@ def main():
     base_parser = argparse.ArgumentParser(add_help=False)
     base_parser.add_argument('-s', '--setup',
                              help='A python import path to a Setup subclass that defines the experiment.',
-                             type=str, default=DEFAULT_SETUP)
+                             type=str, default=default_setup)
     # ignore all other args, also don't separate them (ignore 2nd return value)
     base_args, __ = base_parser.parse_known_args()
 
     # This constructs the actual parser for the main program.
-    parser = argparse.ArgumentParser(prog='cminject',
-                                     formatter_class=argparse.MetavarTypeHelpFormatter,
-                                     add_help=False)
+    # noinspection PyTypeChecker
+    parser = argparse.ArgumentParser(prog='cminject', formatter_class=argparse.MetavarTypeHelpFormatter, add_help=False)
     parser.add_argument('-s', '--setup', help='A python import path to a Setup subclass that defines the experiment.',
                         type=str)
     parser.add_argument('-h', '--help', action=get_setup_help_action(base_args.setup), default=argparse.SUPPRESS,
@@ -123,7 +122,7 @@ def main():
     parser.add_argument('--loglevel', choices={'debug', 'info', 'warning', 'error', 'critical'}, type=str)
 
     parser.set_defaults(
-        setup=DEFAULT_SETUP,
+        setup=default_setup,
         time_interval=[0.0, 1.0],
         time_step=1e-5,
         chunksize=1,  # same as None according to multiprocessing docs
@@ -154,9 +153,9 @@ def main():
         experiment.result_storage = HDF5ResultStorage(args.output_file, mode='w', metadata=metadata)
 
     # This is a bit of a special case that should be allowed to be enabled/disabled independent of the setup,
-    # and it makes sense to always have this property updater run _after_ all others, so it's handled separately
+    # and it makes sense to always have this action run _after_ all others, so it's handled separately
     if args.store_trajectories:
-        experiment.property_updaters += [TrajectoryPropertyUpdater()]
+        experiment.actions += [TrackTrajectory()]
 
     # Log some basic info and start running.
     logging.info(f"Simulating in {experiment.number_of_dimensions}D space, "

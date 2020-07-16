@@ -28,7 +28,8 @@ from scipy.sparse import csr_matrix
 
 gte2spaces = re.compile(r'\s{2,}')
 
-def _mirror_around_axis(arr, axis=0, flipsign=False):
+
+def _mirror_around_axis(arr, axis=0, flip_sign=False):
     """
     Mirrors a 2D array around an axis and returns the resulting array.
     The "middle" column in the resulting array is not duplicated,
@@ -36,7 +37,7 @@ def _mirror_around_axis(arr, axis=0, flipsign=False):
 
     :param arr: The array. Must be 2-dimensional, i.e. len(arr.shape) must be 2.
     :param axis: The axis to flip along. Must be 0 or 1.
-    :param flipsign: Whether to flip the sign of the values in the array on the mirrored side.
+    :param flip_sign: Whether to flip the sign of the values in the array on the mirrored side.
     :return: An (2m-1, n)-shaped (for axis=0) or a (m, 2n-1)-shaped array (for axis=1),
         where the mirrored part is constructed as described in the docstring above.
     """
@@ -51,7 +52,7 @@ def _mirror_around_axis(arr, axis=0, flipsign=False):
 
     # Mirror around the axis and optionally flip the sign of the values
     mir = np.flip(arr, axis=axis)
-    if flipsign:
+    if flip_sign:
         mir = -mir  # velocity in the direction of the mirrored dimension must be mirrored
 
     if dimensions == 2:  # Case for 2D
@@ -209,7 +210,7 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
             flipsign = headers[i][0] in ['v_r', 'V_R', 'u', 0]  # TODO better conditions to check for?
             # Mirror the value array along that axis, possibly flipping the mirrored values' signs
             # TODO what if flip_indices *and* mirror is True? is this correct then? I think so but I'm unsure  - Simon
-            val_arr = _mirror_around_axis(val_arr.reshape(index_n), axis=0, flipsign=flipsign).flatten()
+            val_arr = _mirror_around_axis(val_arr.reshape(index_n), axis=0, flip_sign=flipsign).flatten()
 
         # Construct sparse matrix and store it in values
         val_mat = csr_matrix(np.nan_to_num(val_arr))
@@ -217,7 +218,7 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
 
     if mirror:
         # Update the index array for the first dimension
-        index[0] = _mirror_around_axis(index[0], axis=0, flipsign=True)
+        index[0] = _mirror_around_axis(index[0], axis=0, flip_sign=True)
 
     _save_to_hdf5(attributes, dimensions, headers, index, metadata, outfile_name, values)
 

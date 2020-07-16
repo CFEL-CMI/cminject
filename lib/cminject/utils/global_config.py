@@ -20,10 +20,18 @@ from collections import defaultdict
 from enum import Enum
 from typing import Any, Union, List, Iterable, Callable, Dict, Set
 
-from cminject.utils.software_structure import Singleton
-
-
 __all__ = ['ConfigKey', 'ConfigSubscriber', 'GlobalConfig']
+
+
+class Singleton:
+    def __init__(self, klass):
+        self.klass = klass
+        self.instance = None
+
+    def __call__(self, *args, **kwargs):
+        if self.instance is None:
+            self.instance = self.klass(*args, **kwargs)
+        return self.instance
 
 
 class ConfigKey(Enum):

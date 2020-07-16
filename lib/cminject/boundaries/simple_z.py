@@ -19,7 +19,7 @@ from typing import Tuple
 
 import numpy as np
 
-from .base import Boundary
+from cminject.base import Boundary
 
 
 class SimpleZBoundary(Boundary):

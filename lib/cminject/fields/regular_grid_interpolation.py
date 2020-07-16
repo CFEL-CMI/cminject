@@ -15,15 +15,15 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Tuple, Any
 
 import numpy as np
 
+from cminject.base import Field
 from cminject.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
 from cminject.utils.interpolation import get_regular_grid_interpolator
-from cminject.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
-from .base import Field
+from cminject.utils.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
 
 
 class RegularGridInterpolationField(Field, ConfigSubscriber, ABC):
@@ -39,8 +39,9 @@ class RegularGridInterpolationField(Field, ConfigSubscriber, ABC):
         :param filename: The filename of an HDF5 file in the format as constructed by `tools/txt_to_hdf5`.
         :param offset: The positional offset of the field as a (d,)-ndarray, where d is the number of spatial dimensions
 
-        .. todo:: Provide a "formal" definition of the Field-file format in documentaiton, not only through an implementation
-           And then refer to this file format by its name, not by its "implemented somewhere" specification...
+        .. todo:: Provide a "formal" definition of the Field-file format in documentaiton, not only through an
+          implementation And then refer to this file format by its name, not by its "implemented somewhere"
+          specification...
 
         """
         # Construct the interpolator from the HDF5 file passed by file name
@@ -52,13 +53,13 @@ class RegularGridInterpolationField(Field, ConfigSubscriber, ABC):
 
         self.number_of_dimensions = len(data_index)
         self._zero_acceleration = np.zeros(self.number_of_dimensions)
+        self._nan_acceleration = np.full(self.number_of_dimensions, np.nan)
         self._interpolator = get_regular_grid_interpolator(tuple(data_index), data_grid)
 
         # Assuming that Z is always the last dimension, construct the Z boundary from it
         minima = list(np.min(d) for d in data_index)
         maxima = list(np.max(d) for d in data_index)
         self._z_boundary = (minima[self.number_of_dimensions - 1], maxima[self.number_of_dimensions - 1])
-        self.grid_boundary = np.array(list(zip(minima, maxima)))
         super().__init__(*args, **kwargs)
 
         GlobalConfig().subscribe(self, ConfigKey.NUMBER_OF_DIMENSIONS)
@@ -75,8 +76,16 @@ class RegularGridInterpolationField(Field, ConfigSubscriber, ABC):
     def z_boundary(self) -> Tuple[float, float]:
         return self._z_boundary
 
+    @abstractmethod
     def is_particle_inside(self, position: np.array, time: float) -> bool:
-        return np.all((position >= self.grid_boundary[:, 0]) * (position <= self.grid_boundary[:, 1]))
+        """
+        Akin to a Boundary's is_particle_inside method. Used by GridFieldBasedBoundary to delegate the calculation of
+        the result to a RegularGridInterpolationField.
+        :param position: The particle's position.
+        :param time: The current time.
+        :return: True if the particle is inside this field, False otherwise.
+        """
+        pass
 
 ### Local Variables:
 ### fill-column: 100

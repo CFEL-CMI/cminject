@@ -23,11 +23,10 @@ import numpy as np
 from scipy.constants import pi, Avogadro, R
 from scipy.integrate import dblquad
 
-from cminject.definitions.util import empty_interval
-from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
-
+from cminject.base import Field
+from cminject.utils import empty_interval
+from cminject.particles.spherical import ThermallyConductiveSphericalParticle
 from .fluid_flow import DragForceInterpolationField
-from .base import Field
 
 
 class VortexBeamPhotophoreticForceField(Field, ABC):

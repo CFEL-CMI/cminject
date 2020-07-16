@@ -19,8 +19,8 @@ from typing import Tuple
 
 import numpy as np
 
-from .base import Boundary
-from cminject.definitions.fields.regular_grid_interpolation import RegularGridInterpolationField
+from cminject.base import Boundary
+from cminject.fields.regular_grid_interpolation import RegularGridInterpolationField
 
 
 class GridFieldBasedBoundary(Boundary):

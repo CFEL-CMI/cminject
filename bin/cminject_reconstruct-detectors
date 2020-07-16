@@ -20,7 +20,7 @@ import logging
 
 import h5py
 
-from cminject.definitions.result_storages.hdf5 import HDF5ResultStorage
+from cminject.result_storages.hdf5 import HDF5ResultStorage
 from cminject.utils.interpolation import slice_trajectories_across_dimension
 
 program_description = """
@@ -42,7 +42,6 @@ def main():
     parser.add_argument('--zi', help='The Z dimension index', type=int, required=True, metavar='zindex')
     parser.add_argument('--xis', help='The X/Y/... dimensions indices', type=int, required=True, nargs='+')
     parser.add_argument('--zs', help='The Z positions to reconstruct', type=float, required=True, nargs='+')
-    parser.add_argument('--abs', help='Dimension indices to take absolute values of', type=int, nargs='*')
     parser.add_argument('--interpolation-kind', help='The interpolation kind to use.',
                         choices={'linear', 'cubic'}, default='linear')
     args = parser.parse_args()
@@ -50,7 +49,7 @@ def main():
     logging.basicConfig(format='%(levelname)s:[%(filename)s/%(funcName)s] %(message)s', level=logging.INFO)
     with h5py.File(args.file, 'r+') as h5f:
         zs = args.zs
-        trajectories = HDF5ResultStorage(args.file, 'r').get_trajectories_iterator(abs_indices=args.abs)
+        trajectories = HDF5ResultStorage(args.file, 'r').get_trajectories()
         logging.info(f"Reconstructing at {zs}...")
         detectors = slice_trajectories_across_dimension(
             trajectories, xdims=args.xis, zdim=args.zi, zs=zs,

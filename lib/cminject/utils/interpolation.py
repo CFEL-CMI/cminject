@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-import logging
-from typing import List, Tuple
+from typing import List, Tuple, Iterable
 
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator, interp1d
@@ -168,7 +167,7 @@ def split_at_inflections(a: np.array) -> Tuple[List[np.array], np.array]:
     return np.split(a, idxs), idxs
 
 
-def slice_trajectories_across_dimension(trajectories: List[np.array], xdims: List[int], zdim: int,
+def slice_trajectories_across_dimension(trajectories: Iterable[np.array], xdims: List[int], zdim: int,
                                         zs: List[float], interpolation_kind: str = 'linear') -> List[np.array]:
     """
     Reconstructs measured quantities (e.g. x/y positions) at a given z position from list of trajectories,

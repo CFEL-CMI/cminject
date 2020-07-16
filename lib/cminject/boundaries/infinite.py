@@ -17,8 +17,8 @@
 
 from typing import Tuple
 
-from .base import Boundary
-from cminject.definitions.util import infinite_interval
+from cminject.base import Boundary
+from cminject.utils import infinite_interval
 
 
 class InfiniteBoundary(Boundary):

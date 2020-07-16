@@ -19,8 +19,8 @@ from typing import Optional, Dict, Any, Tuple
 
 import numpy as np
 
-from .base import Detector
-from cminject.global_config import ConfigSubscriber, GlobalConfig, ConfigKey
+from cminject.base import Detector
+from cminject.utils.global_config import ConfigSubscriber, GlobalConfig, ConfigKey
 
 
 class SimpleZDetector(Detector, ConfigSubscriber):

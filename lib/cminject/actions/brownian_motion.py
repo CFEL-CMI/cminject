@@ -17,26 +17,21 @@
 
 from typing import Any
 
-import numba
 import numpy as np
-from cminject.definitions.particles.spherical import SphericalParticle
-from cminject.definitions.particles.t_conductive_spherical import ThermallyConductiveSphericalParticle
 from scipy.constants import Boltzmann, pi
 
-from cminject.definitions.fields.fluid_flow import StokesDragForceField, MolecularFlowDragForceField
-from cminject.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
-from .base import PropertyUpdater
+from cminject.calc import fluid_flow as calc
+from cminject.base import Action
+from cminject.particles.spherical import SphericalParticle, ThermallyConductiveSphericalParticle
+from cminject.fields.fluid_flow import StokesDragForceField, MolecularFlowDragForceField
+from cminject.utils.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
 
 
-class BrownianMotionPropertyUpdater(PropertyUpdater, ConfigSubscriber):
+class StokesBrownianMotionStep(Action, ConfigSubscriber):
     """
     Models brownian motion for a Stokes drag force field based on the paper:
     A. Li, G. Ahmadi, Dispersion and deposition of spherical particles from point sources in a turbulent channel flow,
     Aerosol Sci. Techn. 16 (24) (1992) 209–226. doi:10.1080/02786829208959550
-
-    .. note::
-        This property updater assumes that when the number of spatial dimensions is 2, the problem is radially
-        symmetrical. If you need an x/y 2D simulation rather than a r/z simulation, derive a new class.
     """
     def __init__(self, field: StokesDragForceField):
         self.field = field
@@ -50,21 +45,21 @@ class BrownianMotionPropertyUpdater(PropertyUpdater, ConfigSubscriber):
         elif key is ConfigKey.TIME_STEP:
             self.dt = value
 
-    def update(self, particle: SphericalParticle, time: float) -> bool:
+    def __call__(self, particle: SphericalParticle, time: float) -> bool:
         pressure = self.field.interpolate(particle.position)[self.number_of_dimensions]
         if pressure >= 0.0:
             cunningham = self.field.calc_slip_correction(pressure, particle.radius)
-            s0 = 216 * self.field.dynamic_viscosity * Boltzmann * self.field.temperature /\
-                 (pi**2 * (2 * particle.radius)**5 * particle.rho**2 * cunningham)
-            a = np.random.normal(0.0, 1.0, self.number_of_dimensions) * np.sqrt(pi * s0 / self.dt)
-
+            a = calc.a_brown_stokes(
+                self.field.dynamic_viscosity, self.field.temperature,
+                particle.radius, particle.rho, cunningham, self.dt, self.number_of_dimensions
+            )
             particle.position += 0.5 * a * self.dt**2
             particle.velocity += a * self.dt
             return True
         return False
 
 
-class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater, ConfigSubscriber):
+class MolecularFlowBrownianMotionStep(Action, ConfigSubscriber):
     """
     Models brownian motion based on the fluctuation-dissipation-theorem
     and a numerical representation of the delta function
@@ -82,30 +77,15 @@ class BrownianMotionMolecularFlowPropertyUpdater(PropertyUpdater, ConfigSubscrib
         elif key is ConfigKey.TIME_STEP:
             self.dt = value
 
-    def update(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
+    def __call__(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
         pressure = self.field.interpolate(particle.position)[self.number_of_dimensions]
         if pressure >= 0.0:
-            h = self.field.m_gas / (2 * Boltzmann * self.field.temperature)
-            h_ = self.field.m_gas / (2 * Boltzmann * particle.temperature)
-
-            s0 = (16/3 + 2/3*pi*np.sqrt(h/h_)) * np.sqrt(pi/h) * pressure * self.field.m_gas * particle.radius**2
-            if self.number_of_dimensions == 2:  # TODO this is just for radial symmetry
-                a = np.random.normal(0.0, 1.0, 3) * np.sqrt(s0 / self.dt) / particle.mass
-
-                new_x = particle.position[0] + (0.5 * a[0] * self.dt**2)
-                new_vx = particle.velocity[0] + (a[0] * self.dt)
-                r_sign = np.sign(new_x)
-                vr_sign = np.sign(new_vx)
-
-                particle.position[0] = r_sign * np.sqrt(new_x**2 + (0.5 * a[1] * self.dt**2)**2)
-                particle.position[1] += 0.5 * a[2] * self.dt**2
-                particle.velocity[0] = vr_sign * np.sqrt(new_vx**2 + (a[1] * self.dt)**2)
-                particle.velocity[1] += a[2] * self.dt
-            else:
-                a = np.random.normal(0.0, 1.0, self.number_of_dimensions) * np.sqrt(s0 / self.dt) / particle.mass
-                particle.position += 0.5 * a * self.dt**2
-                particle.velocity += a * self.dt
-
+            a = calc.a_brown_roth(
+                pressure, self.field.m_gas, self.field.temperature,
+                particle.temperature, particle.radius, particle.mass, self.dt, self.number_of_dimensions
+            )
+            particle.position += 0.5 * a * self.dt**2
+            particle.velocity += a * self.dt
             return True
         return False
 

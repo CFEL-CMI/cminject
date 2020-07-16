@@ -25,7 +25,7 @@ If all went well, we can visualize the results:
 This command will show both a qualitative trajectory plot and a quantitative histogram plot of the detectors.
     
 Let's further look at the available options and how to extend them.
-    
+
 ### Getting help
 To get more information about available options, just run `cminject -h`.
 This will document all the available parameters for the main program and its default setup.
@@ -40,14 +40,14 @@ Let's now instead look at the help specific to `SimpleSetup`:
       -f str, --filename str
                             The filename of the flow field (HDF5).
       --rho float           The density of the particle material [kg/m^3].
-      
+
 There are currently only two parameters available, which is likely far too little for a flexible and interesting setup.
 Adding further parameters can be done by adding arguments inside `SimpleSetup`'s `get_parser()` method. Refer to the 
 [argparse documentation](https://docs.python.org/3.7/library/argparse.html).
 
 The parsed values will then available inside `SimpleSetup`'s `construct_experiment()` method
 on the `args` parameter by the name defined by the new parser argument, and can be further passed along to
-Devices, PropertyUpdaters, etc.
+Devices, Actions, etc.
 
 ## Converting flow fields to use
 To use other flow fields, it is likely necessary to convert them first.

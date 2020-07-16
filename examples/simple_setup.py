@@ -28,19 +28,19 @@ import argparse
 # Import the most basic definitions for defining a Setup which returns an Experiment
 # and has arguments parsed by a SetupArgumentParser
 from cminject.experiment import Experiment
-from cminject.definitions.setups import Setup
+from cminject.base import Setup
 from cminject.utils.args import SetupArgumentParser
 
 # Import some concrete class implementations to be able to define a simple setup:
 # A source which can generate different distributions
-from cminject.definitions.sources import VariableDistributionSource
+from cminject.sources import VariableDistributionSource
 # A detector which is positioned at some Z position
-from cminject.definitions.detectors import SimpleZDetector
+from cminject.detectors import SimpleZDetector
 # A device for fluid flow based on an HDF5 file, together with an enumeration of the possible models to pick (FlowType).
 # (this setup only imports FlowType to access FlowType.STOKES, and doesn't allow picking by a user)
-from cminject.definitions.devices.fluid_flow_field_device import FluidFlowFieldDevice, FlowType
-# A PropertyUpdater for modeling Brownian motion based on a Stokes drag force.
-from cminject.definitions.property_updaters import BrownianMotionPropertyUpdater
+from cminject.devices.fluid_flow_field_device import FluidFlowFieldDevice, FlowType
+# A Action for modeling Brownian motion based on a Stokes drag force.
+from cminject.actions.brownian_motion import StokesBrownianMotionStep
 
 
 class SimpleSetup(Setup):
@@ -71,11 +71,11 @@ class SimpleSetup(Setup):
                     {'kind': 'gaussian', 'mu': 2.0, 'sigma': 0.5}
                 ],
                 radius=5e-9,
-                rho=args.rho
+                density=args.rho
             )],
             devices=[device],
             property_updaters=[
-                BrownianMotionPropertyUpdater(field=device.fields[0], dt=dt)
+                BrownianMotionPropertyUpdater(field=device._fields[0], dt=dt)
             ],
             time_step=dt,
             number_of_dimensions=2,
