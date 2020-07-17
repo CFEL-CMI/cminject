@@ -22,13 +22,10 @@ from typing import Tuple
 
 import h5py  # TODO should this file really be concerned with I/O?
 import numpy as np
-from scipy.constants import pi, Boltzmann
-from scipy.special import erf
 
-from cminject.calc import fluid_flow as calc
+from cminject.calc import fluid_flow, common
 from cminject.particles.spherical import SphericalParticle, ThermallyConductiveSphericalParticle
 from .regular_grid_interpolation import RegularGridInterpolationField
-from ..calc.common import is_finite
 
 
 class DragForceInterpolationField(RegularGridInterpolationField, ABC):
@@ -41,9 +38,9 @@ class DragForceInterpolationField(RegularGridInterpolationField, ABC):
         self.interpolation_results = {}
         super().__init__(filename=filename, *args, **kwargs)
 
-    def get_local_properties(self, particle_position: np.array, particle_velocity: np.array) -> Tuple[float, np.array]:
-        data = self.interpolate(particle_position)
-        relative_velocity = data[:self.number_of_dimensions] - particle_velocity
+    def get_local_properties(self, phase_space_position: np.array) -> Tuple[float, np.array]:
+        data = self.interpolate(phase_space_position[:self.number_of_dimensions])
+        relative_velocity = data[:self.number_of_dimensions] - phase_space_position[self.number_of_dimensions:]
         pressure = data[self.number_of_dimensions]
         return pressure, relative_velocity
 
@@ -112,11 +109,11 @@ class StokesDragForceField(DragForceInterpolationField):
         """
         Calculates the drag force using Stokes' law for spherical particles in continuum
         """
-        pressure, relative_velocity = self.get_local_properties(particle.position, particle.velocity)
+        pressure, relative_velocity = self.get_local_properties(particle.phase_space_position)
 
-        if pressure > 0 and is_finite(pressure):
+        if pressure > 0 and common.is_finite(pressure):
             Cc = self.calc_slip_correction(pressure, particle.radius)
-            return calc.a_stokes(relative_velocity, self.dynamic_viscosity, particle.radius, particle.mass, Cc)
+            return fluid_flow.a_stokes(relative_velocity, self.dynamic_viscosity, particle.radius, particle.mass, Cc)
         else:
             return self._nan_acceleration
 
@@ -134,10 +131,10 @@ class StokesDragForceField(DragForceInterpolationField):
         )
 
     def _calc_slip_correction_4k(self, pressure: float, particle_radius: float) -> float:
-        return calc.slip_correction_4k(pressure, particle_radius, self.temperature, self.slip_correction_scale)
+        return fluid_flow.slip_correction_4k(pressure, particle_radius, self.temperature, self.slip_correction_scale)
 
     def _calc_slip_correction_hutchins(self, pressure: float, particle_radius: float) -> float:
-        return calc.slip_correction_hutchins(
+        return fluid_flow.slip_correction_hutchins(
             self.dynamic_viscosity, pressure, particle_radius, self.temperature,
             self.m_gas, self.slip_correction_scale
         )
