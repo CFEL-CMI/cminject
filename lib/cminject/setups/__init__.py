@@ -15,6 +15,11 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+__all__ = ['OneFlowFieldSetup', 'DesyatnikovPhotophoresisSetup']
+
+from .one_flow_field import OneFlowFieldSetup
+from .desyatnikov_photophoresis import DesyatnikovPhotophoresisSetup
+
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
