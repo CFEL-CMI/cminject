@@ -5,6 +5,7 @@ Subpackages
 -----------
 
 .. toctree::
+   :maxdepth: 4
 
    cminject.utils.visualization
 
@@ -15,6 +16,14 @@ cminject.utils.args module
 --------------------------
 
 .. automodule:: cminject.utils.args
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cminject.utils.cython\_interpolation module
+-------------------------------------------
+
+.. automodule:: cminject.utils.cython_interpolation
    :members:
    :undoc-members:
    :show-inheritance:

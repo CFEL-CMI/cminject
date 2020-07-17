@@ -37,6 +37,7 @@ class HDF5ResultStorage(ResultStorage):
 
     # FIXME out of date
     - particles:
+
       - initial_positions: The initial phase space positions of all particles, as one (n, d_p) array.
       - final_position: The final phase space positions of all particles, as one (n, d_p) array.
       - trajectories: A jagged array of (n, d_t, X) entries, where X can be variable (jagged)..

@@ -60,17 +60,16 @@ def main():
                         type=float)
 
     args = parser.parse_args()
-    args.attr = dict(args.attr or [])
+    attrs = dict(args.attr or [])
     # Attach args that are shorthands for attributes to args.attr, if they are present in args
     # TODO this violates DRY, we should instead extract and transform the names from the parser args somehow
     for k in {'flow_gas', 'flow_temperature', 'flow_dynamic_viscosity',
               'flow_density', 'flow_gas_mass'} & args.__dict__.keys():
         value = getattr(args, k)
         if value is not None:
-            args.attr[k] = value
+            attrs[k] = value
 
-    txt_to_hdf5(infile_name=args.i, outfile_name=args.o, dimensions=args.d, mirror=args.mirror,
-                attributes=args.attr)
+    txt_to_hdf5(infile_name=args.i, outfile_name=args.o, dimensions=args.d, mirror=args.mirror, attributes=attrs)
     logging.info("Done.")
 
 

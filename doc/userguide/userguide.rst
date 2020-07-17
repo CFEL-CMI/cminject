@@ -57,44 +57,35 @@ virtual environments for whatever reason, simply skip the first two steps.
 ****************
 Running CMInject
 ****************
-``cminject`` is the program for running simulations. Let's look at an example call of it,
-split into lines for readability::
+``cminject`` is the program for running CMInject simulations. Let's look at an example call
+of it, split into lines for readability: ::
 
-    cminject -n 100          # Run the simulation for 100 particles.
-
-      -D 3                   # Use a spatial dimensionality of 3.
-
-      -f flowfield.h5        # Use the flow field file flowfield.h5. Must be a 3D flow field
-                             # since we specified -D 3.
-
-      -rho 1050 -r 50e-9     # Simulate particles with a density of 1050kg/m^3
-                             # and a radius of 50nm
-
-      -p "G 0.0 1e-3" 0 0    # Randomly generate initial particle positions, the first dimension
-                             # (x) being normally (gaussian) distributed with mu = 0m and
-                             # sigma = 1mm, and the others (y, z) being fixed at 0m.
-
-      -v "G 0.0 1.0" 0 -10.0 # Randomly generate initial particle velocities, the first dimension
-                             # being normally (gaussian) distributed with mu = 0m/s and
-                             # sigma = 1m/s, the second (y) fixed at 0m/s, and the third (z)
-                             # fixed at -10.0m/s.
-
-      -d 0 -0.1              # Insert virtual detectors at 0m and -1cm
-
-      -T                     # Track and store trajectories
-
-      -B                     # Enable Brownian motion
-
-      -o output.h5           # Write results to output.h5
+    cminject -n 100          `# Run the simulation for 100 particles.`\
+      -D 3                   `# Use a spatial dimensionality of 3.`\
+      -f flowfield.h5        `# Use the flow field file flowfield.h5. Must be a 3D flow field\
+                              # since we specified -D 3.`\
+      -rho 1050 -r 50e-9     `# Simulate particles with a density of 1050kg/m^3\
+                              # and a radius of 50nm`\
+      -p "G 0.0 1e-3" 0 0    `# Randomly generate initial particle positions, the first dimension\
+                              # (x) being normally (gaussian) distributed with mu = 0m and\
+                              # sigma = 1mm, and the others (y, z) being fixed at 0m.`\
+      -v "G 0.0 1.0" 0 -10.0 `# Randomly generate initial particle velocities, the first dimension\
+                              # being normally (gaussian) distributed with mu = 0m/s and\
+                              # sigma = 1m/s, the second (y) fixed at 0m/s, and the third (z)\
+                              # fixed at -10.0m/s.`\
+      -d 0 -0.01             `# Insert virtual detectors at 0m and -1cm`\
+      -T                     `# Track and store trajectories`\
+      -B                     `# Enable Brownian motion`\
+      -o output.h5           `# Write results to output.h5`\
 
 You can also run different experiment setups. The call above is for the default of
-``-s 'cminject.definitions.setups.OneFlowFieldSetup'``, which simulates particles moving through
+``-s 'cminject.setups.OneFlowFieldSetup'``, which simulates particles moving through
 exactly one flow field. This and other available setups are listed in :ref:`list-of-setups`.
 
 .. note::
   Different setups can have different sets of parameters. To look at the parameters for a different
   setup, you can run, for example,
-  ``cminject -s cminject.definitions.setups.desyatnikov_photophoresis -h``.
+  ``cminject -s cminject.setups.DesyatnikovPhotophoresisSetup -h``.
 
 Other options exist and can be listed by running ``cminject -h``. The output file ``output.h5`` can
 be viewed with ``cminject_visualize`` or further analyzed with ``cminject_analyze-asymmetry``, and

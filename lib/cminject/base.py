@@ -24,11 +24,11 @@ __all__ = ['ZBounded', 'Particle', 'Boundary', 'Detector', 'Device', 'Field', 'A
 
 import argparse
 from abc import ABC, abstractmethod
-from functools import cached_property
-from typing import Tuple, Optional, List, Any, Dict, Iterable, Callable, Union
+from typing import Tuple, Optional, List, Any, Dict, Iterable, Union
 
 import numpy as np
 
+from cminject.utils.perf import cached_property
 from cminject.utils.global_config import ConfigSubscriber, GlobalConfig, ConfigKey
 from cminject.utils.args import SetupArgumentParser
 
@@ -166,11 +166,12 @@ class Particle(ConfigSubscriber, ABC):
         or the constant properties, or all (tracked + constant) can be returned as a single NumPy array with a
         structured NumPy datatype.
 
-        :param which: The part of this particle's state to return as an array.
-           Must be one of ['tracked', 'constant', 'all'].
-             - 'tracked' will refer to the implementation of tracked_properties,
-             - 'constant' will refer to the implementation of constant_properties,
-             - 'all' will refer to both and concatenate them in order (tracked + constant).
+        :param which: The part of this particle's state to return as an array. Must be one of
+         ['tracked', 'constant', 'all']:
+
+           - 'tracked' will refer to the implementation of tracked_properties,
+           - 'constant' will refer to the implementation of constant_properties,
+           - 'all' will refer to both and concatenate them in order (tracked + constant).
         """
         assert which in ['tracked', 'constant', 'all'],\
             f"which was '{which}' but must be 'tracked', 'constant', or 'all'"
