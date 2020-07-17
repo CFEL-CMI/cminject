@@ -50,7 +50,7 @@ Original author:    Muhamed Amin <muhamed.amin@cfel.de> and the CMI COMOTION tea
 Current maintainer: Simon Welker <simon.welker@cfel.de> and the Controlled Molecule Imaging group
 """
 
-if sys.version_info < (3, 8):
+if sys.version_info < (3, 6):
     sys.exit('Sorry, Python < 3.8 is not supported')
 
 package_dir = {'': 'lib'}

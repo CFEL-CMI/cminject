@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from functools import cached_property
+from cminject.utils.perf import cached_property
 
 import numpy as np
 
