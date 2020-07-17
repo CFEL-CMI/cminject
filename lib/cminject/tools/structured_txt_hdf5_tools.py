@@ -21,7 +21,7 @@ import warnings
 from collections import OrderedDict
 from typing import Tuple, List, Dict, Union
 
-import h5sparse
+import h5py
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
@@ -70,27 +70,23 @@ def _mirror_around_axis(arr, axis=0, flip_sign=False):
 def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror: bool = False,
                 attributes: Union[Dict, None] = None) -> None:
     """
-    A function that reads a structured .txt file and stores a sparse specially constructed HDF5 file,
-    while keeping metadata from the original file. The general structure of the .txt input file must be as follows::
+    A function that reads a structured .txt file and stores a sparse specially constructed HDF5 file, while keeping
+    metadata from the original file. The general structure of the .txt input file must be as follows (example for 3D)::
 
-        % <Some meta information>
-        % <Some more meta information>
+        % <Optional meta information lines...>
         % X  Y  Z  A (m)  B (s)  C ...
         0.0  0.0  0.0  1.0  2.0  3.0 ...
         0.1  0.0  0.0  4.0  5.0  6.0 ...
         ...
 
-    This matches the .txt output format of COMSOL for 3D grids.
+    This matches the .txt output format of COMSOL for n-D grids, where n is given via the ``dimensions`` parameter.
+    The number of columns after X/Y/Z is arbitrary.
 
     All but the last line starting with % at the beginning of the file are considered to be a general textual
-    description of the file (metadata about the file itself), and are stored.
-
-    The last line starting with % is considered the header of the columns, where each column name has to be separated
-    by at least two spaces from the other column names. A single space is considered to still be part of the same
-    column, and the second part of the column name is - if present - considered to be the unit of the column.
-    This will be stored as metadata too.
-
-    The number of columns after X/Y/Z is arbitrary.
+    description of the file (metadata about the file itself), and are stored. The last line starting with % is
+    considered the header of the columns, where each column name has to be separated by at least two spaces from the
+    other column names. A single space is considered to still be part of the same column, and the second part of the
+    column name is - if present - considered to be the unit of the column. This will be stored as metadata too.
 
     The constructed HDF5 file will have the following entries:
 
@@ -104,7 +100,7 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
 
       - <one for each column, matching the column name from the file>
 
-    The metadata (the lines starting with %) is stored as an attribute on the HDF5 root.
+    The metadata (the lines starting with %) is stored as a string attribute on the HDF5 root.
     Columns specifying a unit (separated by one space) have this information attached as metadata on data/<...>.
 
     :param infile_name: The input file name. Must be a .txt file matching the format described above, otherwise
@@ -201,20 +197,25 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
     for i in range(len(headers)):
         val_arr = np.array(values[headers[i][0]], dtype=np.float)
         if flip_indices:
-            # Transpose the whole array to match "normal" X/Y/Z/... iteration order. The order that the dimensions
+            # Transpose the whole array to match "normal" X/Y/Z/... iteration order. The order
+            # that the dimensions
             # increment in is inverted in the txt file format, so transpose it here.
-            val_arr = val_arr.reshape(tuple(reversed(index_n))).transpose().reshape((np.prod(index_n),))
+            val_arr = val_arr.reshape(tuple(reversed(index_n))) \
+                .transpose() \
+                .reshape((np.prod(index_n),))
 
         if mirror:
             # Determine if we need to flip the sign on the mirrored side (only for v_r)
-            flipsign = headers[i][0] in ['v_r', 'V_R', 'u', 0]  # TODO better conditions to check for?
+            # TODO better conditions to check for?
+            flip_sign = headers[i][0] in ['v_r', 'V_R', 'u', 0]
             # Mirror the value array along that axis, possibly flipping the mirrored values' signs
-            # TODO what if flip_indices *and* mirror is True? is this correct then? I think so but I'm unsure  - Simon
-            val_arr = _mirror_around_axis(val_arr.reshape(index_n), axis=0, flip_sign=flipsign).flatten()
+            # TODO what if flip_indices *and* mirror is True? is this correct then? I think so
+            #  but I'm unsure  - Simon
+            val_arr = _mirror_around_axis(val_arr.reshape(index_n), axis=0, flip_sign=flip_sign)
+            val_arr = val_arr.flatten()
 
-        # Construct sparse matrix and store it in values
-        val_mat = csr_matrix(np.nan_to_num(val_arr))
-        values[headers[i][0]] = val_mat
+        # Store value array in "values" dict
+        values[headers[i][0]] = val_arr
 
     if mirror:
         # Update the index array for the first dimension
@@ -224,8 +225,7 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
 
 
 def _save_to_hdf5(attributes, dimensions, headers, index, metadata, outfile_name, values):
-    # Use h5sparse to save (lots of) space when storing (lots of) NaN or 0.0 values
-    with h5sparse.File(outfile_name) as h5f:
+    with h5py.File(outfile_name, 'w') as h5f:
         # Store the metadata from the .txt file and the passed attributes as attributes on the root of the hdf5 file
         h5f.attrs['metadata'] = "\n".join(metadata)
         if attributes:
@@ -234,7 +234,8 @@ def _save_to_hdf5(attributes, dimensions, headers, index, metadata, outfile_name
 
         # Create a dataset for each column, store the np.array and the original index of the column
         for i in range(len(headers)):
-            dataset = h5f.create_dataset(f'data/{headers[i][0]}', data=values[headers[i][0]])
+            dataset = h5f.create_dataset(
+                f'data/{headers[i][0]}', data=values[headers[i][0]], compression='gzip', shuffle=True)
             dataset.attrs['column_index'] = i  # store this to preserve column order
             if len(headers[i]) > 1:
                 # If the header for this column has more than one part, it's assumed the second part is the unit
@@ -248,13 +249,13 @@ def _save_to_hdf5(attributes, dimensions, headers, index, metadata, outfile_name
 
 def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
     """
-    Reads in an HDF5 file (as written by txt_to_hdf5) and returns a pandas DataFrame matching it.
-    Note that not all metadata stored in the HDF5 file is also attached to the DataFrame as of now.
+    Reads in an HDF5 file (as written by txt_to_hdf5) and returns a pandas DataFrame matching it. Note that not all
+    metadata stored in the HDF5 file is also attached to the DataFrame as of now.
 
     :param filename: The HDF5 file to read in. Must be written by or adhere to the format that txt_to_hdf5 defines.
     :return: A pandas DataFrame matching the data stored in the HDF5 file.
     """
-    with h5sparse.File(filename, 'r') as h5f:
+    with h5py.File(filename, 'r') as h5f:
         dimensions = len(h5f['index'])
         index = [h5f[f'index/{i}'] for i in range(dimensions)]
 
@@ -268,10 +269,10 @@ def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
             column_headers.append(column_name)
             column_indices.append(col.attrs['column_index'])
 
-            val = col[:]
-            if not isinstance(val, np.ndarray):
-                val = val.toarray()
-            column_values.append(val)
+            col = col[:]
+            if not isinstance(col, np.ndarray):
+                col = col.toarray()
+            column_values.append(col)
 
         # Reorder the column data and headers according to the (inverse) permutation gathered from the metadata
         column_indices = np.argsort(column_indices)  # argsort constructs the inverse permutation
@@ -292,12 +293,12 @@ def hdf5_to_data_frame(filename: str) -> pd.DataFrame:
 def data_frame_to_data_grid(df: pd.DataFrame) -> Tuple[List[np.array], np.array]:
     """
     Turns a DataFrame (as constructed by hdf5_to_data_frame) into a data grid that can be used with the
-    scipy.interpolate.RegularGridInterpolator.
-    The result can be passed on like: RegularGridInterpolator((x,y,z), data_grid).
+    scipy.interpolate.RegularGridInterpolator. The result can be passed on like: RegularGridInterpolator((x,y,z),
+    data_grid).
 
     :param df: The pandas DataFrame. Must be constructed by or adhere to the format that hdf5_to_data_frame defines.
     :return: A 2-tuple like ([x, y, ...], data_grid), where the first component is a list of all index arrays,
-        and the second component is the data grid matching this index.
+    and the second component is the data grid matching this index.
     """
     # Gather index and number of indices along each axis from the DataFrame's MultiIndex
     index = [level.values for level in df.index.levels]
@@ -305,16 +306,16 @@ def data_frame_to_data_grid(df: pd.DataFrame) -> Tuple[List[np.array], np.array]
 
     # Create the data grid and shape it into expected n-dimensional form
     new_shape = tuple(index_n + [-1])
-    data_grid = np.nan_to_num(df.to_numpy().reshape(new_shape))
+    data_grid = df.to_numpy().reshape(new_shape)
     # Return the index array and the data grid. Both are needed to construct a RegularGridInterpolator.
     return index, data_grid
 
 
 def hdf5_to_data_grid(filename: str) -> Tuple[List[np.array], np.array]:
     """
-    Shortcut function to read in an HDF5 file (as written by txt_to_hdf5) and turn it into a data grid.
-    Refer to hdf5_to_data_frame and data_frame_to_data_grid for further info; this function is defined purely
-    in terms of the composition of the two.
+    Shortcut function to read in an HDF5 file (as written by txt_to_hdf5) and turn it into a data grid. Refer to
+    hdf5_to_data_frame and data_frame_to_data_grid for further info; this function is defined purely in terms of the
+    composition of the two.
 
     :param filename: The HDF5 file to read in.
     :return: A 4-tuple of numpy arrays: (x, y, z, data_grid).

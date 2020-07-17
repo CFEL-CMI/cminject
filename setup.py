@@ -71,7 +71,6 @@ install_requires = [
     'pandas>=0.24.0',
     'matplotlib>=3.1.0',
     'h5py>=2.9.0',
-    'h5sparse>=0.1.0',
     'sphinx>=2.1.2',
     'sphinx_rtd_theme~=0.4.3',
     'tqdm>=4.41.1'
