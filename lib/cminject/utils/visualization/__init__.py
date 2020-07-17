@@ -23,22 +23,29 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
+from mpl_toolkits.mplot3d import Axes3D
 
 from cminject.utils.args import parse_dimension_description
+
+
+def _get_axis(ax: Optional[plt.Axes], dims: int):
+    if ax is None:
+        fig = plt.figure()
+        if dims == 3:
+            ax = fig.add_subplot(111, projection='3d')
+        else:
+            ax = fig.gca()
+    else:
+        if dims == 3 and not isinstance(ax, Axes3D):
+            warnings.warn("You seem to have passed a 2D axis for 3D data! The plot may look incorrect.")
+    return ax
 
 
 def plot_trajectories(trajectories: Iterable[np.array], ax: Optional[plt.Axes] = None, **plot_kwargs):
     if not any(True for _ in trajectories):
         return None
     dims = trajectories[0]['position'].shape[1]
-    if ax is None:
-        fig = plt.figure()
-        if dims == 3:
-            # noinspection PyUnresolvedReferences
-            from mpl_toolkits.mplot3d import Axes3D
-            ax = fig.add_subplot(111, projection='3d')
-        else:
-            ax = fig.gca()
+    ax = _get_axis(ax, dims)
 
     plots = []
     for traj in trajectories:
@@ -51,11 +58,8 @@ def plot_trajectories_colored(trajectories: Iterable[np.array], ax: Optional[plt
                               **line_collection_kwargs):
     if not any(True for _ in trajectories):
         return None
-
     dims = trajectories[0]['position'].shape[1]
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.gca()
+    ax = _get_axis(ax, dims)
 
     all_vmags = None
     all_segments = None
@@ -111,6 +115,9 @@ def plot_detectors(detectors: List[np.array], dimension_description: str,
         fig, axes = plt.subplots(xdim, ydim)
         axes = axes.flatten() if isinstance(axes, np.ndarray) else repeat(axes)
         fig.suptitle(dimension_description)
+        if len(axes) > n:
+            for ax in axes[n:]:
+                ax.remove()
     else:
         assert len(axes) == len(detectors) or type(axes) is plt.Axes, \
             "Number of axes must match number of detectors or there must only be one axis given"
