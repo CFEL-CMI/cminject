@@ -225,8 +225,8 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
         elif not np.isfinite(pressure):
             return self._nan_acceleration
 
-        return calc.a_roth(pressure, relative_velocity, self.m_gas, self.temperature,
-                           particle.temperature, particle.radius, particle.mass)
+        return fluid_flow.a_roth(pressure, relative_velocity, self.m_gas, self.temperature,
+                                 particle.temperature, particle.radius, particle.mass)
 
 ### Local Variables:
 ### fill-column: 100
