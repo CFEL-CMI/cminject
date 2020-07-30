@@ -110,7 +110,7 @@ def a_roth(p, delta_v, m_f, T_f, T_p, r_p, m_p):
         16/3 * p * np.sqrt(pi * h_f) * r_p**2 * delta_v,  # Epstein model
         -p * np.sqrt(pi) * r_p**2 * (
             -2 * np.exp(-h_f * delta_v**2) * np.sqrt(h_f) * delta_v * (1 + 2*h_f*delta_v**2) +
-            np.sqrt(pi * (1 - 4*h_f*delta_v**2 - 4*h_f**2*delta_v**4)) *
+            np.sqrt(pi) * (1 - 4*h_f*delta_v**2 - 4*h_f**2*delta_v**4) *
             erf_vec(np.sqrt(h_f) * delta_v)
         ) / (2 * h_f * delta_v**2)
     )
