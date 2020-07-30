@@ -193,9 +193,10 @@ def spatial_derivatives(time: float, phase_space_position: np.array,
 
 def simulate_particle(particle: Particle) -> Particle:
     """
-    Simulates the flight path of a single particle, with a list of devices that can affect the particle,
-    a list of detectors that can detect the particle, a list of actions that can affect the particle after each
-    integration step, a time interval to simulate the particle for, and a Z boundary to simulate the particle within.
+    Simulates the flight path of a single particle -- the "meat" of the trajectory simulations.
+
+    The description of the experiment is given implicitly, by global variables instead of as parameters. This is done
+    for efficiency reasons when using ``multiprocessing``. See the note in this docstring for further information.
 
     :param particle: The particle instance.
     :return: A modified version of the particle instance after the simulation has ended.
@@ -244,10 +245,7 @@ def simulate_particle(particle: Particle) -> Particle:
         postprocess_integration_step(particle, integral, position_mismatch=False, time_mismatch=False)
 
         # Check what 'simulation state' the particle is in wrt. the devices, experiment Z boundary, and integrator time
-        simulation_state = get_particle_simulation_state(
-            particle.position, integral.t, Z_BOUNDARY, DEVICES
-        )
-
+        simulation_state = get_particle_simulation_state(particle.position, integral.t, Z_BOUNDARY, DEVICES)
         if simulation_state in PARTICLE_STATES_CONSIDERED_AS_LOST:
             # Store that particle is lost and exit the loop
             particle.lost = True
