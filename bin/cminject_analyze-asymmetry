@@ -105,6 +105,7 @@ def main():
             else:
                 print(f"-------------------- Detector {detector_id} --------------------")
                 print(f"α: {alpha:1.3f}")
+                print()
                 print(f"e₀ = {eval0:.3e}\t e₁ = {eval1:.3e}")
                 print(f"θ₀ = {theta0/np.pi:1.3f}π\t θ₁ = {theta1/np.pi:1.3f}π")
                 print(f"μx = {mu0:.3e}\t μy = {mu1:.3e}")
