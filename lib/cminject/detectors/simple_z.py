@@ -64,7 +64,7 @@ class SimpleZDetector(Detector, ConfigSubscriber):
 
     def _hit_position3(self, ps_position: np.array) -> Optional[np.array]:
         if ps_position[2] == self.z_position:
-            return ps_position
+            return ps_position[:3]
 
         x, y, z, u, v, w = ps_position
         d = abs(z) - abs(self.z_position)
@@ -75,7 +75,7 @@ class SimpleZDetector(Detector, ConfigSubscriber):
 
     def _hit_position2(self, ps_position: np.array) -> Optional[np.array]:
         if ps_position[1] == self.z_position:
-            return ps_position
+            return ps_position[:2]
 
         x, z, vx, vz = ps_position
         d = abs(z) - abs(self.z_position)
