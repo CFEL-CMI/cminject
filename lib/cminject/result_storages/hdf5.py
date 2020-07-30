@@ -60,16 +60,20 @@ class HDF5ResultStorage(ResultStorage):
       exactly the same shape of data, and the same property description. This should probably be the case in any
       a typical implementation of a detector.
     """
-    def __init__(self, filename: str, mode: str = 'r', metadata: Dict[str, Any] = None):
+    def __init__(self, filename: str, mode: str = 'r', force_writable: bool = False, metadata: Dict[str, Any] = None):
         self.filename = filename
         self.mode = mode
         self.metadata = metadata
         self._handle: Union[h5py.File, None] = None  # will be set in __enter__
 
-        if self.mode != 'r':
+        if self.mode != 'r' and not force_writable:
             # Verify that the output file doesn't already exist, let's avoid overwriting existing data
             if os.path.isfile(filename):
                 raise ValueError(f"Output file {filename} already exists! Please delete or move the existing file.")
+
+    @property
+    def file_handle(self):
+        return self._require_handle()
 
     def _require_handle(self):
         if getattr(self, '_handle', None) is None:
