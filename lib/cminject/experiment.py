@@ -18,7 +18,7 @@
 import logging
 import multiprocessing
 import os
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 from tqdm import tqdm
 
 import numpy as np
@@ -72,27 +72,32 @@ def get_particle_simulation_state(particle_position: np.array, time: float,
         return PARTICLE_STATUS_BETWEEN_DEVICES
 
 
-def postprocess_integration_step(particle: Particle, integral: ode, position_changed: bool) -> None:
+def postprocess_integration_step(particle: Particle, integrator: ode,
+                                 position_mismatch: bool, time_mismatch: bool) -> None:
     """
     Does post-processing after an integration step, which consists of:
-      - running all actions, possibly re-instantiating the integrator when they change the particle position
+      - running all actions,
       - running all detectors, asking them to try and detect the particle
+      - IF particle position was changed or ``new_time`` was passed: resetting the integrator
 
     :param particle: The particle which experienced an integration step
-    :param integral: The integral (scipy.integrate.ode) instance.
-    :param position_changed:
-        Whether the position of the particle had been changed relative to the integral result,
-        _before_ this function was called.
+    :param integrator: The integrator (scipy.integrate.ode) instance.
+    :param position_mismatch: True if the position of the particle has been changed relative to the integrator result
+      before this function was called. False if it has not.
+    :param time_mismatch: True if the time of the particle has been changed relative to the integrator's time before
+      this function was called. False if it has not.
     """
-    # Run all actions for the particle with the current integral time
+    time = particle.time if time_mismatch else integrator.t
+
+    # Run all actions for the particle with the current integrator time
     for device in DEVICES:
-        position_changed |= device.run_actions(particle, integral.t)
+        position_mismatch |= device.run_actions(particle, time)
     for action in ACTIONS:
-        position_changed |= action(particle, integral.t)
-    # If some action changed the position, reset the integrator's initial value.
+        position_mismatch |= action(particle, time)
+    # If particle time/position are not consistent with the integrator, (re)set the integrator's initial value.
     # NOTE: this is (somewhat) slow and should be reserved for cases where the action cannot be modeled differently
-    if position_changed:
-        integral.set_initial_value(particle.phase_space_position, integral.t)
+    if position_mismatch or time_mismatch:
+        integrator.set_initial_value(particle.phase_space_position, particle.time)
 
     # Have each detector try to detect the particle
     for detector in DETECTORS:
@@ -138,14 +143,14 @@ def propagate_field_free(particle: Particle) -> None:
     """
     z, vz = particle.position[-1], particle.velocity[-1]
     if vz > 0:
-        if z <= Z_LOWER[0]:
+        if np.sign(z) == np.sign(Z_LOWER[0]) and abs(z) >= abs(Z_LOWER[0]):
             raise ImpossiblePropagationException(
                 f"Cannot propagate field-free from {z} until {Z_LOWER[0]} with v_z > 0."
             )
         idx = np.searchsorted(Z_LOWER, z, side='right')
         next_z = Z_LOWER[idx]
     elif vz < 0:
-        if z >= Z_UPPER[-1]:
+        if np.sign(z) == np.sign(Z_UPPER[-1]) and abs(z) >= abs(Z_UPPER[-1]):
             raise ImpossiblePropagationException(
                 f"Cannot propagate field-free from {z} until {Z_UPPER[-1]} with v_z < 0."
             )
@@ -160,6 +165,7 @@ def propagate_field_free(particle: Particle) -> None:
         particle.position + delta_t * particle.velocity,
         particle.velocity
     ])
+    particle.time += delta_t
     logging.info(f"Field-free propagation from {z} until {next_z} with velocities={particle.velocity} and "
                  f"delta_t={delta_t}.\nBefore: {prev_pos}. After: {particle.position}.")
 
@@ -235,9 +241,9 @@ def simulate_particle(particle: Particle) -> Particle:
         integral_result = integral.y
         particle.phase_space_position = integral_result
         particle.time = integral.t
-        postprocess_integration_step(particle, integral, position_changed=False)
+        postprocess_integration_step(particle, integral, position_mismatch=False, time_mismatch=False)
 
-        # Check what 'simulation state' the particle is in wrt. the devices, experiment Z boundary, and integral time
+        # Check what 'simulation state' the particle is in wrt. the devices, experiment Z boundary, and integrator time
         simulation_state = get_particle_simulation_state(
             particle.position, integral.t, Z_BOUNDARY, DEVICES
         )
@@ -249,12 +255,12 @@ def simulate_particle(particle: Particle) -> Particle:
         elif simulation_state is PARTICLE_STATUS_BETWEEN_DEVICES:
             try:
                 propagate_field_free(particle)
+                # Since we just "simulated" an integration step, we have to run the postprocessing again
+                postprocess_integration_step(particle, integral, position_mismatch=True, time_mismatch=True)
             except ImpossiblePropagationException as e:
                 logging.error(f"Impossible propagation for particle {particle.identifier}: {e}")
                 particle.lost = True
                 break
-            # Since we just "simulated" an integration step, we have to run the postprocessing again
-            postprocess_integration_step(particle, integral, position_changed=True)
 
         # Propagate by integrating until the next time step
         integral.integrate(integral.t + TIME_STEP)
