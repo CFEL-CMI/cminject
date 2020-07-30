@@ -15,15 +15,12 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from typing import List, Tuple, Iterable
+from typing import List, Tuple
 
 import numpy as np
-from scipy.interpolate import RegularGridInterpolator, interp1d
-
 from cminject.utils.cython_interpolation import interp2D, interp3D
+from scipy.interpolate import RegularGridInterpolator
 
-
-# --- For n-linear interpolation on a regular grid
 
 class Interp2D:
     """
@@ -140,7 +137,7 @@ def get_regular_grid_interpolator(grid, data):
         return InterpND(grid, data)
 
 
-# --- For interpolation along particle trajectories
+# --- For interpolation along particle trajectories (TODO implement fully on the new structured arrays, somehow...)
 
 def split_at_inflections(a: np.array) -> Tuple[List[np.array], np.array]:
     """
@@ -166,59 +163,6 @@ def split_at_inflections(a: np.array) -> Tuple[List[np.array], np.array]:
     # Split the input array at those indices, and return the split array along with the indices
     return np.split(a, idxs), idxs
 
-
-def slice_trajectories_across_dimension(trajectories: Iterable[np.array], xdims: List[int], zdim: int,
-                                        zs: List[float], interpolation_kind: str = 'linear') -> List[np.array]:
-    """
-    Reconstructs measured quantities (e.g. x/y positions) at a given z position from list of trajectories,
-    based on interpolating on each function piece of all trajectory curves.
-
-    :param trajectories: A list of trajectories. Each value contained should should be a (d, n)-shaped np.array,
-        where d is the number of interpolated quantities and n is the number of recorded points in the trajectory.
-    :param xdims: The indices (in the trajectory array) of the quantities to reconstruct.
-    :param zdim: The index (in the trajectory array) of the dimension corresponding to z.
-    :param zs: The z positions to reconstruct the quantities at.
-    :param interpolation_kind: The kind of interpolation to use. 'linear' by default.
-        Refer to scipy.interpolate.interp1d for more information, as this is the interpolator used.
-    :return: A list of (d, N_i)-shaped arrays of all interpolated quantities at each given z position,
-        where d is the number of interpolated quantities and 0 <= N_i is the number of points that could
-        be reconstructed at the i-th z position. N_i will be smaller than n if at least one trajectory did not pass
-        through the i-th z position, and it can be larger than n if some trajectories passed through the i-th
-        z position multiple times.
-    """
-    rec_zs = np.array(zs)
-    hit_xys = []
-
-    for i, traj in enumerate(trajectories):
-        zs = traj[zdim]
-        xys = traj[xdims]
-
-        if xys.shape[1] < 2:  # no trajectory recorded
-            continue
-
-        z_split, split_idxs = split_at_inflections(zs)
-        xys_split = np.split(xys, split_idxs, axis=1)
-
-        for j, z_piece in enumerate(z_split):
-            if z_piece.shape[0] < 2:  # skip over pieces that only contain 1 point
-                continue
-
-            z_piece, indices = np.unique(z_piece, return_index=True)
-            xy_piece = xys_split[j][:, indices]
-
-            ip = interp1d(z_piece, xy_piece, kind=interpolation_kind, bounds_error=False, fill_value=np.nan)
-            try:
-                hit_xys.append(ip(rec_zs))
-            except ValueError:
-                pass  # z was not in the function piece we're looking at
-
-    ds = []
-    hit_xys = np.array(hit_xys)
-    for j in range(hit_xys.shape[-1]):
-        d = hit_xys[..., j]
-        d = d[~np.isnan(d).any(axis=1)].transpose()
-        ds.append(d)
-    return ds
 
 ### Local Variables:
 ### fill-column: 100
