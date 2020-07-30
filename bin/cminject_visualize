@@ -51,18 +51,15 @@ if __name__ == '__main__':
 
         # Plot trajectories
         if args.T:
-            fig = plt.figure()
-            ax = fig.gca()
             # Get trajectories, potentially taking a sample
             trajectories = f.get_trajectories()
             if args.Tn:
                 trajectories = np.random.choice(trajectories, args.Tn, replace=False)
             # Plot trajectories
             if args.Tc:
-                plot_trajectories_colored(trajectories, ax=ax)
+                plot_trajectories_colored(trajectories)
             else:
-                plot_trajectories(trajectories, ax=ax, color='k')
-            fig.show()
+                plot_trajectories(trajectories, color='k')
 
     plt.show()
 
