@@ -143,6 +143,14 @@ def parse_single_dimension_description(s: str) -> Callable[[np.array], Any]:
 
 
 def parse_dimension_description(s: str):
+    """
+    Parses a dimension description, which is either one name of a dimension like
+      :func:`parse_single_dimension_description` accepts, or a pair of such names separated by a single comma.
+
+    :param s: The string to parse as a dimension description.
+    :return: A Callable that will return the appropriate component(s) from a given np.array. If a pair of components was
+      given as 's', this callable will return a tuple of both components.
+    """
     if ',' in s:
         left, right = s.split(',')
         left = parse_single_dimension_description(left)

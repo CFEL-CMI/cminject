@@ -15,6 +15,14 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Code for working with (interpolation) fields stored in .txt and .hdf5 files:
+  * Conversion code for txt->hdf5.
+  * Code to read HDF5, for hdf5->pandas.DataFrame, and hdf5->datagrid (a tuple of coordinates and values)
+
+Used by the tool ``cminject_txt-to-hdf5``.
+"""
+
 import logging
 import re
 import warnings
@@ -297,7 +305,7 @@ def data_frame_to_data_grid(df: pd.DataFrame) -> Tuple[List[np.array], np.array]
 
     :param df: The pandas DataFrame. Must be constructed by or adhere to the format that hdf5_to_data_frame defines.
     :return: A 2-tuple like ([x, y, ...], data_grid), where the first component is a list of all index arrays,
-    and the second component is the data grid matching this index.
+      and the second component is the data grid matching this index.
     """
     # Gather index and number of indices along each axis from the DataFrame's MultiIndex
     index = [level.values for level in df.index.levels]

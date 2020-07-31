@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Calculation code for models of forces exerted on particles by flowing fluids.
+"""
+
 import numba
 import numpy as np
 from numpy import pi
@@ -120,6 +124,20 @@ def a_roth(p, delta_v, m_f, T_f, T_p, r_p, m_p):
 @numba.jit("float64[::1](float64, float64, float64, float64, float64, float64, float64, int32)",
            nopython=True, error_model='numpy')
 def a_brown_roth(p, m_f, T_f, T_p, r_p, m_p, dt, n):
+    """
+    Returns a random (Brownian) acceleration with a spectral intensity as described in https://arxiv.org/abs/2006.10652,
+    depending on particle and fluid properties at a certain position.
+
+    :param p: The pressure at the point.
+    :param m_f: The mass of a single particle of the fluid.
+    :param T_f: The temperature of the fluid.
+    :param T_p: The temperature of the particle.
+    :param r_p: The radius of the particle.
+    :param m_p: The mass of the particle.
+    :param dt: The numerical time-step.
+    :param n: The number of spatial dimensions.
+    :return: An (n,)-shaped np.array containing the acceleration components in each spatial dimension.
+    """
     h = m_f / (2 * Boltzmann * T_f)
     s0 = (16/3 + 2/3*pi*np.sqrt(T_p / T_f)) * np.sqrt(pi / h) * p * m_f * r_p**2
     return np.random.normal(0.0, 1.0, n) * np.sqrt(s0 / dt) / m_p

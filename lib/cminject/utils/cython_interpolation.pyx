@@ -1,3 +1,7 @@
+"""
+Efficient Cython implementations of interpolation code at a single point.
+"""
+
 from libc.math cimport floor
 from cython cimport boundscheck, wraparound, nonecheck, cdivision
 
@@ -9,6 +13,7 @@ cpdef int interp2d(double[:,:,::1] v, double x, double y,
                    int nd, int nx, int ny, double[::1] out) except -1:
     """
     Interpolates a n-dimensional vector field bilinearly based on a 2D regular data grid.
+    Found to be much more efficient than :class:`scipy.interpolate.RegularGridInterpolator` for a single 2D point.
 
     :param v: The data array. (nx, ny, nd)-shaped, where nx and ny are the number of points in each
         dimension of the regular grid, and nd is the number of dimensions that are interpolated
@@ -63,6 +68,7 @@ cpdef int interp3d(double[:,:,:,::1] v, double x, double y, double z,
                    int nd, int nx, int ny, int nz, double[::1] out) except -1:
     """
     Interpolates a n-dimensional vector field trilinearly based on a 3D regular data grid.
+    Found to be much more efficient than :class:`scipy.interpolate.RegularGridInterpolator` for a single 3D point.
 
     :param v: The data array. (nx, ny, nz, nd)-shaped, where nx, ny, nz are the number of points in
       each dimension of the regular grid, and nd is the number of dimensions that are interpolated

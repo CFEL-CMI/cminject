@@ -1,6 +1,11 @@
 cminject.boundaries package
 ===========================
 
+.. automodule:: cminject.boundaries
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Submodules
 ----------
 
@@ -36,11 +41,3 @@ cminject.boundaries.simple\_z module
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: cminject.boundaries
-   :members:
-   :undoc-members:
-   :show-inheritance:

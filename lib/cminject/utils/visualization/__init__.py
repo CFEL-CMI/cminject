@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Code for visualization of virtual experiment results.
+"""
+
 import math
 import warnings
 from itertools import repeat
@@ -54,6 +58,7 @@ def _get_axis(ax: Optional[plt.Axes], dims: int):
 def plot_trajectories(trajectories: Sequence[np.array], ax: Optional[plt.Axes] = None, **plot_kwargs):
     """
     Plots multiple trajectories as simple line plots (plt.plot).
+
     :param trajectories: An iterable of trajectories.
     :param ax: The axis to plot on; if None, a new figure and axis will be created.
     :param plot_kwargs: Keyword arguments that will be passed directly to ax.plot.
@@ -76,6 +81,7 @@ def plot_trajectories_colored(trajectories: Sequence[np.array], ax: Optional[plt
                               autoscale: bool = True, **line_collection_kwargs):
     """
     Plots multiple trajectories, segments colored by the magnitude of the (approximate) velocities.
+
     :param trajectories: An iterable of trajectories.
     :param ax: The axis to plot on; if None, a new figure and axis will be created.
     :param autoscale: If True, the axes will be scaled to fit the created LineCollection/Line3DCollection.
@@ -107,6 +113,7 @@ def plot_trajectories_colored(trajectories: Sequence[np.array], ax: Optional[plt
             segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
         all_vmags = vmag if all_vmags is None else np.concatenate((all_vmags, vmag), axis=0)
+        # noinspection PyUnboundLocalVariable
         all_segments = segments if all_segments is None else np.concatenate((all_segments, segments), axis=0)
 
     if dims == 3:
@@ -134,6 +141,7 @@ def plot_detector(detector: np.array, dimension_description: Union[str, Callable
                   ax: plt.Axes, **kwargs):
     """
     Plots 1D/2D histograms of one or a pair of measured quantities at a single detector.
+
     :param detector: An np.ndarray representing all measurements (hits) made at the detector.
     :param dimension_description: A string like :func:`cminject.utils.args.parse_dimension_description`
       accepts or a Callable as :func:`cminject.utils.args.parse_dimension_description` returns.
@@ -162,6 +170,7 @@ def plot_detectors(detectors: List[np.array], dimension_description: str,
                    axes: Union[None, plt.Axes, List[plt.Axes]] = None, **kwargs):
     """
     Plots 1D/2D histograms of one or a pair of measured quantities at multiple detectors.
+
     :param detectors: The list of detectors, i.e., a list of what :func:`plot_detector` accepts.
     :param dimension_description: See docs for :func:`plot_detector`.
     :param axes: A list of axes or a single axis (plt.Axes instance). If one axis is passed, all plots will be made

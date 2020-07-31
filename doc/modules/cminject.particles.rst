@@ -1,6 +1,11 @@
 cminject.particles package
 ==========================
 
+.. automodule:: cminject.particles
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Submodules
 ----------
 
@@ -20,11 +25,3 @@ cminject.particles.spherical module
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: cminject.particles
-   :members:
-   :undoc-members:
-   :show-inheritance:

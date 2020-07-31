@@ -1,6 +1,11 @@
 cminject.calc package
 =====================
 
+.. automodule:: cminject.calc
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Submodules
 ----------
 
@@ -20,11 +25,3 @@ cminject.calc.fluid\_flow module
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: cminject.calc
-   :members:
-   :undoc-members:
-   :show-inheritance:

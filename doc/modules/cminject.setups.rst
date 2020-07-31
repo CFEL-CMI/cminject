@@ -1,6 +1,11 @@
 cminject.setups package
 =======================
 
+.. automodule:: cminject.setups
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Submodules
 ----------
 
@@ -28,11 +33,3 @@ cminject.setups.one\_flow\_field module
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: cminject.setups
-   :members:
-   :undoc-members:
-   :show-inheritance:

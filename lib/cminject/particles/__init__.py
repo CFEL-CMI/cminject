@@ -15,6 +15,13 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+A collection of subclasses of :class:`cminject.base.Particle`, containing (at least)
+  * a simple spherical particle model, with a radius and density determining mass
+  * an extension of this model, with particles having temperature and other properties relevant to heat exchange
+  * ...your own and more?
+"""
+
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t

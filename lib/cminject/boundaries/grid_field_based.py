@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Boundaries based on (existing) grids, for instance defined by a :class:`RegularGridInterpolationField`.
+"""
+
 from typing import Tuple
 
 import numpy as np
@@ -24,6 +28,11 @@ from cminject.fields.regular_grid_interpolation import RegularGridInterpolationF
 
 
 class GridFieldBasedBoundary(Boundary):
+    """
+    A Boundary defined in terms of a :class:`RegularGridInterpolationField`. Fully delegates the implementation of
+    :meth:`is_particle_inside` to the method :meth:`RegularGridInterpolationField.is_particle_inside`, as well
+    as the definition of :meth:`z_boundary`.
+    """
     def __init__(self, field: RegularGridInterpolationField):
         self.field = field
 

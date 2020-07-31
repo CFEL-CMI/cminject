@@ -15,6 +15,14 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Contains a collection of useful subclasses of :class:`cminject.base.Setup`, to be
+  * simply used in simulations, or
+  * changed/extended/improved and possibly merged back into this repository via a pull request
+
+New Setup subclasses that are useful to others will gladly be accepted via pull requests as well.
+"""
+
 __all__ = ['OneFlowFieldSetup', 'DesyatnikovPhotophoresisSetup']
 
 from .one_flow_field import OneFlowFieldSetup

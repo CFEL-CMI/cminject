@@ -15,6 +15,11 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Efficient code for calculating any kind of complex formula that is relevant to some physics model in the framework.
+Code that lives here should be optimized--manually and automatically--wherever possible.
+"""
+
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t

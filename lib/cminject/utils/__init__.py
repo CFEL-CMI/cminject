@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from . import cython_interpolation
+"""
+A generic utility module. Contains code for parsing arguments, data visualization and analysis, high-performance
+interpolation, performance utilities, global configuration pub-sub, ...
+"""
 
 empty_interval = (float('inf'), float('-inf'))
 infinite_interval = (float('-inf'), float('inf'))

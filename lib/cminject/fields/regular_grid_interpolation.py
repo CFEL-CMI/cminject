@@ -15,13 +15,18 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Fields that use interpolation on a regular spatial grid to determine some number of quantities at any point in space
+that they are defined at.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Tuple, Any
 
 import numpy as np
 
 from cminject.base import Field
-from cminject.tools.structured_txt_hdf5_tools import hdf5_to_data_grid
+from cminject.utils.structured_txt_hdf5 import hdf5_to_data_grid
 from cminject.utils.interpolation import get_regular_grid_interpolator
 from cminject.utils.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
 

@@ -15,11 +15,12 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from cminject.utils.perf import cached_property
+"""A collection of subclasses of :class:`cminject.base.Particle`s, modeling spherical particles."""
 
 import numpy as np
 
 from cminject.base import Particle
+from cminject.utils.perf import cached_property
 
 
 class SphericalParticle(Particle):

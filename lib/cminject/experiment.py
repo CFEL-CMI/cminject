@@ -15,6 +15,11 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Code for defining and running a virtual :class:`Experiment`, by using numerical integration,
+and parallelization via the ``multiprocessing`` module.
+"""
+
 import logging
 import multiprocessing
 import os
@@ -37,6 +42,10 @@ Z_LOWER, Z_UPPER = None, None
 
 
 class ImpossiblePropagationException(Exception):
+    """
+    Can occur when a Particle could not be propagated due to a logical error, e.g. when trying to propagate a
+    particle with a velocity of exactly 0 in all directions.
+    """
     pass
 
 
@@ -74,8 +83,8 @@ def postprocess_integration_step(particle: Particle, integrator: ode,
                                  position_mismatch: bool, time_mismatch: bool) -> None:
     """
     Does post-processing after an integration step, which consists of:
-      - running all actions,
-      - running all detectors, asking them to try and detect the particle
+      - running all actions
+      - running all detectors
       - IF particle position was changed or ``new_time`` was passed: resetting the integrator
 
     :param particle: The particle which experienced an integration step
@@ -102,12 +111,23 @@ def postprocess_integration_step(particle: Particle, integrator: ode,
         detector.try_to_detect(particle)
 
 
-def postprocess_particle(particle: Particle, integral: ode, t_end: float) -> None:
+def postprocess_particle(particle: Particle, integrator: ode, t_end: float) -> None:
+    """
+    Does post-processing after a full simulation of a single particle's trajectory, by:
+      - running all actions
+      - running all detectors
+      - logging (for logging.INFO and more verbose loglevels) information about how the simulation ended
+    
+    :param particle: The fully simulated particle to postprocess.
+    :param integrator: The integrator (scipy.integrate.ode) instance.
+    :param t_end: The maximum time this particle could have been simulated for. Used only for logging.
+    """
+
     # Run the actions and detectors one last time after simulation completed
     for device in DEVICES:
-        device.run_actions(particle, integral.t)
+        device.run_actions(particle, integrator.t)
     for action in ACTIONS:
-        action(particle, integral.t)
+        action(particle, integrator.t)
     for detector in DETECTORS:
         detector.try_to_detect(particle)
 
@@ -119,7 +139,7 @@ def postprocess_particle(particle: Particle, integral: ode, t_end: float) -> Non
                 reason = 'hit boundary within the experiment'
             else:
                 reason = f'left experiment Z boundary (at {z_position:.2g})'
-        elif integral.t >= t_end:
+        elif integrator.t >= t_end:
             reason = 'whole timespan simulated'
         else:
             reason = 'unknown reason'
@@ -266,6 +286,24 @@ def simulate_particle(particle: Particle) -> Particle:
 
 
 class Experiment:
+    """
+    A description of a virtual experiment that can be simulated. Consists of:
+
+      * :class:`cminject.base.Source`s, generating :class:`cminject.base.Particle`s
+      * :class:`cminject.base.Device`s affecting particles via acceleration by their
+        :class:`cminject.base.Field`s, decisions made about whether to keep simulating particles by each Device's
+        :class:`cminject.base.Boundary`, and generic effects occurring after each time step by their
+        :class:`cminject.base.Action`s.
+      * :class:`cminject.base.Detector`s detecting particles
+      * :class:`cminject.base.Action`s that are indiscriminately run for every particle after every integration step
+      * Constants relevant to the simulation logic, like the time-interval and time-step, seed to use for random
+        generation, the boundary in Z direction, ...
+      * A :class:`cminject.base.ResultStorage` that will store the simulation results.
+
+    All of the above are optional, but of course running an "empty" experiment will return an empty result,
+    and an experiment containing particles but no :class:`cminject.base.Device`s, :class:`cminject.base.Action`s etc.
+    will return 'boring' results.
+    """
     def __init__(self, number_of_dimensions: int, time_interval: Tuple[float, float], time_step: float = 1e-5,
                  z_boundary: Optional[Tuple[float, float]] = None, random_seed=None,
                  result_storage: Optional[ResultStorage] = None):
@@ -341,6 +379,7 @@ class Experiment:
 
     @property
     def time_interval(self):
+        """The time interval this experiment will be run within (for every particle)"""
         return self.__time_interval
 
     @time_interval.setter
@@ -355,6 +394,7 @@ class Experiment:
 
     @property
     def time_step(self):
+        """The time step to use for numerical simulation (in seconds)."""
         return self.__time_step
 
     @time_step.setter
@@ -365,6 +405,7 @@ class Experiment:
 
     @property
     def z_boundary(self):
+        """The full boundary in the Z dimension of this experiment"""
         return self.__z_boundary
 
     @z_boundary.setter

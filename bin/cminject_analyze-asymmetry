@@ -40,6 +40,19 @@ The printed values are:
 
 
 def moment_of_inertia(x, y):
+    """
+    Receives a 2D distribution and calculates measurements made by diagonalization of the 2x2 inertia tensor, assuming
+    constant mass.
+
+    :param x: The points' first coordinates. (n,)-shaped.
+    :param y: The points' second coordinates. (n,)-shaped.
+    :return: A dictionary containing
+      - 'evecs', A 2-tuple of the eigenvectors
+      - 'evals', A 2-tuple of the eigenvalues
+      - 'thetas', A 2-tuple of the angles of the eigenvectors to the x-axis
+      - 'alpha', a float measuring of the asymmetry of the distribution, defined as: (eval1 - eval0) / (eval1 + eval0)
+      - 'center', an np.array defining the center of mass (the mean in both dimensions)
+    """
     # Get x and y positions, shift them to move the mean to (0,0)
     center = np.mean([x, y], axis=1)
     x = x - center[0]
@@ -65,7 +78,7 @@ def moment_of_inertia(x, y):
     alpha = (eval1 - eval0) / (eval1 + eval0)
 
     return {'evecs': (evec0, evec1), 'evals': (eval0, eval1),
-            'thetas': [theta0, theta1], 'alpha': alpha, 'center': center}
+            'thetas': (theta0, theta1), 'alpha': alpha, 'center': center}
 
 
 def main():

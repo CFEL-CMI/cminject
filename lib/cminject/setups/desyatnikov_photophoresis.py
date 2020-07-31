@@ -15,6 +15,12 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Setups for simulating photophoretic effects with the model described in: A. Desyatnikov, V. Shvedov, A. Rode,
+W. Krolikowski, and Y. Kivshar, "Photophoretic manipulation of absorbing aerosol particles with vortex beams: theory
+versus experiment," Opt. Express  17, 8201-8211 (2009).
+"""
+
 import argparse
 
 from cminject.base import Particle, Action, Setup
@@ -40,6 +46,11 @@ class MarkAsLostWhenVZIsPositive(Action):
 
 
 class DesyatnikovPhotophoresisSetup(Setup):
+    """
+    A setup simulating photophoretic effects with the model described in: A. Desyatnikov, V. Shvedov, A. Rode,
+    W. Krolikowski, and Y. Kivshar, "Photophoretic manipulation of absorbing aerosol particles with vortex beams: theory
+    versus experiment," Opt. Express  17, 8201-8211 (2009).
+    """
     @staticmethod
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
         experiment = Experiment(

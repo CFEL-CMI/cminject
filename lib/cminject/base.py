@@ -24,14 +24,13 @@ __all__ = ['ZBounded', 'Particle', 'Boundary', 'Detector', 'Device', 'Field', 'A
 
 import argparse
 from abc import ABC, abstractmethod
-from functools import lru_cache
 from typing import Tuple, Optional, List, Any, Dict, Iterable, Union
 
 import numpy as np
 
-from cminject.utils.perf import cached_property
-from cminject.utils.global_config import ConfigSubscriber, GlobalConfig, ConfigKey
 from cminject.utils.args import SetupArgumentParser
+from cminject.utils.global_config import ConfigSubscriber, GlobalConfig, ConfigKey
+from cminject.utils.perf import cached_property
 
 
 class ZBounded(ABC):
@@ -94,6 +93,7 @@ class Particle(ABC):
 
     @property
     def position(self):
+        """The spatial position of the particle."""
         return self.phase_space_position[:self.number_of_dimensions]
 
     @position.setter
@@ -102,6 +102,7 @@ class Particle(ABC):
 
     @property
     def velocity(self):
+        """The spatial velocity of the particle."""
         return self.phase_space_position[self.number_of_dimensions:]
 
     @velocity.setter
@@ -110,15 +111,28 @@ class Particle(ABC):
 
     @property
     def initial_tracked_properties(self):
+        """An array representing the state of all tracked properties of this particle, at its time of creation."""
         return self._initial_tracked_properties
 
     @cached_property
     @abstractmethod
     def mass(self) -> float:
+        """
+        The mass of the particle.
+
+        ..warning ::
+          Please ensure that you also use the @cached_property decorator when overriding this property, so that the mass
+          calculation is done exactly once and the result is stored, for (time) efficiency.
+        """
         pass
 
     @cached_property
     def tracked_properties(self):
+        """
+        The definition of the particle's tracked properties, i.e. properties that are changing along the trajectory
+        of the particle. Must return a list in `NumPy structured dtype format
+        <https://numpy.org/doc/stable/user/basics.rec.html#structured-datatype-creation>`).
+        """
         return [
             ('position', (np.float64, self.number_of_dimensions)),
             ('velocity', (np.float64, self.number_of_dimensions)),
@@ -127,6 +141,11 @@ class Particle(ABC):
 
     @cached_property
     def constant_properties(self):
+        """
+        The definition of the particle's constant properties, i.e. properties that do *NOT* change along the
+        trajectory of the particle. Must return a list in `NumPy structured dtype format
+        <https://numpy.org/doc/stable/user/basics.rec.html#structured-datatype-creation>`).
+        """
         return [
             ('identifier', np.int32),
             ('mass', np.float64)
@@ -189,12 +208,12 @@ class Boundary(ZBounded, ABC):
     @abstractmethod
     def is_particle_inside(self, position: np.array, time: float) -> bool:
         """
-        Tells whether the passed Particle is inside of this Boundary or not.
+        Tells whether the given position is inside this boundary at the given time.
 
-        :param position: The Particle's spatial position to tell this for.
+        :param position: A spatial position to tell this for.
         :param time: The time to tell this for.
         :return: True if the particle is definitely inside this Boundary,
-            False if it is not inside this Boundary or if this cannot be known.
+            False if it is not inside this Boundary (or if this is unknown).
         """
         pass
 
@@ -379,25 +398,43 @@ class Device(ZBounded, ConfigSubscriber, ABC):
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
+        """The Z boundary (z_min, z_max) of this device."""
         return self._boundary.z_boundary
 
     @property
-    def fields(self):
+    def fields(self) -> List[Field]:
+        """The list of fields (:class:`Field` instances) that this Device contains."""
         return self._fields
 
-    def add_field(self, field: Field):
+    def add_field(self, field: Field) -> None:
+        """
+        Adds a field (:class:`Field` instance) to this Device.
+
+        :param field: The field to add.
+        """
         self._fields.append(field)
         self._auto_overwrite_calculate_acceleration()
 
     @property
-    def actions(self):
+    def actions(self) -> List[Action]:
+        """The list of actions (:class:`Action` instances) that this Device contains."""
         return self._actions
 
-    def add_action(self, action: Action):
+    def add_action(self, action: Action) -> None:
+        """
+        Adds an action (:class:`Action` instance) to this Device.
+
+        :param action: The action to add.
+        """
         self._actions.append(action)
 
     @property
     def boundary(self):
+        """
+        The boundary (:class:`Boundary instance) that this device has.
+
+        :return: The current boundary of this device.
+        """
         return self._boundary
 
     @boundary.setter
@@ -465,26 +502,61 @@ class ResultStorage(ABC):
 
     @abstractmethod
     def get_dimensions(self) -> int:
+        """
+        The number of spatial dimensions that the stored simulation had.
+        """
         pass
 
     @abstractmethod
-    def get_properties(self) -> Iterable:
+    def get_properties(self) -> Optional[Iterable]:
+        """
+        The collection of constant particle properties, i.e., the values of their
+        :meth:`Particle.constant_properties`.
+
+        :return: See above; None if these weren't stored.
+        """
         pass
 
     @abstractmethod
     def get_tracked_initial(self) -> Optional[Iterable]:
+        """
+        The collection of initial particle states, i.e., the initial values of their
+        :meth:`Particle.tracked_properties`.
+
+        :return: See above; None if these weren't stored.
+        """
         pass
 
     @abstractmethod
     def get_tracked_final(self) -> Optional[Iterable]:
+        """
+        The collection of final particle states, i.e., the final values of their
+        :meth:`Particle.tracked_properties`.
+
+        :return: See above; None if these weren't stored.
+        """
         pass
 
     @abstractmethod
     def get_trajectories(self) -> Optional[Iterable]:
+        """
+        The collection of all particles' trajectories.
+
+        :return: See above; None if these weren't stored.
+        """
         pass
 
     @abstractmethod
     def get_detectors(self) -> Optional[Dict[str, Iterable]]:
+        """
+        The collection of all detectors.
+
+        :return: The detectors, in a dictionary mapping their identifying string to their collection of detected hits.
+
+        .. note::
+          Detectors that did not detect at least one particle are not necessarily part of the output of this method,
+          and that if there were no detectors or no detector detected at least one particle, None is returned.
+        """
         pass
 
 

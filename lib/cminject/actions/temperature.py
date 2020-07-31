@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""Actions that affect a Particle's ``temperature`` in some way."""
+
 from typing import Any
 
 import numpy as np
@@ -26,7 +28,12 @@ from cminject.particles.spherical import ThermallyConductiveSphericalParticle
 from cminject.utils.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
 
 
-class UpdateTemperature(Action, ConfigSubscriber):
+class MolecularFlowUpdateTemperature(Action, ConfigSubscriber):
+    """
+    Updates the temperature of a ThermallyConductiveSphericalParticle, based on the pressure exerted by a
+    MolecularFlowDragForceField at the point the particle is at, the particle's specific heat and mass,
+    and the chosen time step. The formulae are described in Nils Roth's paper, https://arxiv.org/abs/2006.10652
+    """
     def __init__(self, field: MolecularFlowDragForceField):
         self.field = field
         self.dt = None

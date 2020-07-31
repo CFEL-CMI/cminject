@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Fields modeling photophoresis phenomena.
+"""
+
 from abc import ABC
 from typing import Union, Tuple
 
@@ -30,6 +34,10 @@ from .fluid_flow import DragForceInterpolationField
 
 
 class VortexBeamPhotophoreticForceField(Field, ABC):
+    """
+    A base class that can calculate the irradiance of a Laguerre-Gaussian order 1 vortex beam, for a point in radial
+    coordinates (r, z).
+    """
     z_boundary = empty_interval
 
     def __init__(self, beam_power: float, beam_waist_radius: float, beam_lambda: float = 523e-9):
@@ -53,6 +61,10 @@ class VortexBeamPhotophoreticForceField(Field, ABC):
 
 
 class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
+    """
+    A Field that represents the acceleration exerted by an LG01 beam (in radial coordinates), according to the model
+    by Desyatnikov, 2009.
+    """
     def __init__(self,
                  gas_viscosity: float, gas_temperature: float, gas_thermal_conductivity: float,
                  gas_density: Union[float, Tuple[float, DragForceInterpolationField]], gas_mass: float,
@@ -70,6 +82,7 @@ class DesyatnikovPhotophoreticLaserField(VortexBeamPhotophoreticForceField):
         self.z_position = z_position or 0.0
 
     def kappa(self, particle_radius: float, particle_thermal_conductivity: float, gas_density: float):
+        """The phenomenological constant \kappa, as described in Desyatnikov's 2009 paper."""
         return -self.j1 * 9*self.gas_viscosity**2 / \
                (2*particle_radius * gas_density * self.gas_temperature *
                 (particle_thermal_conductivity + 2*self.gas_thermal_conductivity))

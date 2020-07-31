@@ -23,7 +23,7 @@ import importlib
 from typing import Type
 
 from cminject.base import Setup
-from cminject.actions.track_trajectory import TrackTrajectory
+from cminject.actions import TrackTrajectory
 from cminject.result_storages.hdf5 import HDF5ResultStorage
 from cminject.utils.args import natural_number
 

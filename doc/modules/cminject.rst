@@ -1,11 +1,15 @@
 cminject package
 ================
 
+.. automodule:: cminject
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 4
 
    cminject.actions
    cminject.boundaries
@@ -17,7 +21,6 @@ Subpackages
    cminject.result_storages
    cminject.setups
    cminject.sources
-   cminject.tools
    cminject.utils
 
 Submodules
@@ -39,11 +42,3 @@ cminject.experiment module
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: cminject
-   :members:
-   :undoc-members:
-   :show-inheritance:

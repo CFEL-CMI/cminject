@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Implementations of :class:`cminject.base.ResultStorage` that store results as HDF5 files.
+"""
+
 import os
 import warnings
 from typing import Dict, Any, List, Union
@@ -73,6 +77,12 @@ class HDF5ResultStorage(ResultStorage):
 
     @property
     def file_handle(self):
+        """
+        Returns the file handle (a h5py.File instance) that this result storage currently has opened.
+        :return: The file handle.
+        :raises: ``RuntimeError``, if the file handle is not set (e.g., due to the result storage being accessed outside
+          a with-block)
+        """
         return self._require_handle()
 
     def _require_handle(self):

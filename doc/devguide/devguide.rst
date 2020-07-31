@@ -45,7 +45,7 @@ new subclass and use it. The next typical thing to define is a new kind of exper
 based on the Setup subclass (see :ref:`list-of-setups`) and a combination of existing or newly
 implemented subclasses of Particle, Field, etc.
 
-You can also refer to the ``examples/``folder at the root of this repository, where a minimal
+You can also refer to the ``examples/`` folder at the root of this repository, where a minimal
 such setup is defined. :)
 
 Performance considerations

@@ -18,14 +18,16 @@
 from typing import Tuple, Union
 
 from cminject.base import Device
-from cminject.boundaries.cuboid import CuboidBoundary
+from cminject.boundaries.simple import CuboidBoundary
 from cminject.fields.fluid_flow import StokesDragForceField
 from cminject.fields.photophoresis import DesyatnikovPhotophoreticLaserField
 
 
 class DesyatnikovPhotophoresisDevice(Device):
     """
-    A photophoretic LG01 vortex laser device based on Desyatnikov 2009.
+    A Device for simulating photophoretic effects with the model described in: A. Desyatnikov, V. Shvedov, A. Rode,
+    W. Krolikowski, and Y. Kivshar, "Photophoretic manipulation of absorbing aerosol particles with vortex beams: theory
+    versus experiment," Opt. Express  17, 8201-8211 (2009).
     """
     def __init__(self, r_boundary: Tuple[float, float], z_boundary: Tuple[float, float],
                  gas_temperature: float, gas_viscosity: float, gas_thermal_conductivity: float,

@@ -15,16 +15,21 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+
+"""A device for one flow field."""
+
+
 from enum import Enum
 
 from cminject.actions.brownian_motion import MolecularFlowBrownianMotionStep, StokesBrownianMotionStep
-from cminject.actions.temperature import UpdateTemperature
+from cminject.actions.temperature import MolecularFlowUpdateTemperature
 from cminject.base import Device
 from cminject.boundaries.grid_field_based import GridFieldBasedBoundary
 from cminject.fields.fluid_flow import MolecularFlowDragForceField, StokesDragForceField
 
 
 class FlowType(Enum):
+    """An enumeration representing the available types of fluid flow models."""
     MOLECULAR_FLOW = 'Molecular flow (modified Epstein force by Nils Roth)'
     STOKES = 'Stokes'
 
@@ -45,7 +50,7 @@ class FluidFlowDevice(Device):
         boundary = GridFieldBasedBoundary(field=field)
         actions = []
         if flow_type == FlowType.MOLECULAR_FLOW:
-            actions.append(UpdateTemperature(field))
+            actions.append(MolecularFlowUpdateTemperature(field))
         if brownian_motion:
             actions.append(bm_class(field))
 

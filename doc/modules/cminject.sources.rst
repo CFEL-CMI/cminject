@@ -1,6 +1,11 @@
 cminject.sources package
 ========================
 
+.. automodule:: cminject.sources
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Submodules
 ----------
 
@@ -12,11 +17,3 @@ cminject.sources.variable\_distributions module
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: cminject.sources
-   :members:
-   :undoc-members:
-   :show-inheritance:

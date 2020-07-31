@@ -15,6 +15,12 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Implementations of :class:`cminject.base.Device`, containing (at least)
+
+  * A generic device that contains a flowing fluid, potentially with Brownian forces exerted on particles
+  * A device implementing a photophoretic force exerted by an LG01 laser, inside a cuboid region of space
+"""
 
 ### Local Variables:
 ### fill-column: 100

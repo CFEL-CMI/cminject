@@ -14,7 +14,7 @@ help:
 # Generate Apidoc from lib/cminject/, output to doc/modules/, do not generate toctree file
 apidoc:
 	pushd ../lib/ >/dev/null;\
-	sphinx-apidoc -T -o ../doc/modules/ cminject/;\
+	sphinx-apidoc -M -T -o ../doc/modules/ cminject/;\
 	popd >/dev/null
 
 .PHONY: help Makefile

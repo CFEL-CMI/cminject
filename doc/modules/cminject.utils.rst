@@ -1,11 +1,15 @@
 cminject.utils package
 ======================
 
+.. automodule:: cminject.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 4
 
    cminject.utils.visualization
 
@@ -16,14 +20,6 @@ cminject.utils.args module
 --------------------------
 
 .. automodule:: cminject.utils.args
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-cminject.utils.cython\_interpolation module
--------------------------------------------
-
-.. automodule:: cminject.utils.cython_interpolation
    :members:
    :undoc-members:
    :show-inheritance:
@@ -68,11 +64,11 @@ cminject.utils.perf module
    :undoc-members:
    :show-inheritance:
 
+cminject.utils.structured\_txt\_hdf5 module
+-------------------------------------------
 
-Module contents
----------------
-
-.. automodule:: cminject.utils
+.. automodule:: cminject.utils.structured_txt_hdf5
    :members:
    :undoc-members:
    :show-inheritance:
+

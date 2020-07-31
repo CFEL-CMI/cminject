@@ -15,6 +15,11 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Actions that model Brownian motion by applying a random force (with a reasonable spectral intensity) after every
+integration step.
+"""
+
 from typing import Any
 
 from cminject.base import Action

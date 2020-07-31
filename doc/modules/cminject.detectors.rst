@@ -1,6 +1,11 @@
 cminject.detectors package
 ==========================
 
+.. automodule:: cminject.detectors
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Submodules
 ----------
 
@@ -12,11 +17,3 @@ cminject.detectors.simple\_z module
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: cminject.detectors
-   :members:
-   :undoc-members:
-   :show-inheritance:

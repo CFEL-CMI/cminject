@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Calculation functions that are potentially useful for several different physics models.
+"""
+
 import math
 import numpy as np
 import numba
@@ -28,6 +32,7 @@ def erf_vec(a):
     """
     A 1D vectorized version of the error function, implemented in terms of math.erf.
     Mainly exists so we can call it for a 1D vector from Numba, which lacks support for scipy.special.erf.
+
     :param a: A 1D array of float64, to calculate erf component-wise for.
     :return: The component-wise application of erf to a.
     """
@@ -38,6 +43,7 @@ def is_finite(x: float):
     """
     Like np.isfinite for a single floating point value (much faster). Returns True if x is not equal to +inf,
     -inf and if x is not NaN.
+
     :param x: The number to check.
     :return: True if x is finite, False otherwise.
     """

@@ -1,6 +1,11 @@
 cminject.fields package
 =======================
 
+.. automodule:: cminject.fields
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Submodules
 ----------
 
@@ -36,11 +41,3 @@ cminject.fields.regular\_grid\_interpolation module
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: cminject.fields
-   :members:
-   :undoc-members:
-   :show-inheritance:

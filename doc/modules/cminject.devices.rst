@@ -1,6 +1,11 @@
 cminject.devices package
 ========================
 
+.. automodule:: cminject.devices
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Submodules
 ----------
 
@@ -20,11 +25,3 @@ cminject.devices.fluid\_flow\_device module
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: cminject.devices
-   :members:
-   :undoc-members:
-   :show-inheritance:

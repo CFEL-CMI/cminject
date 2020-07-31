@@ -1,6 +1,11 @@
 cminject.actions package
 ========================
 
+.. automodule:: cminject.actions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Submodules
 ----------
 
@@ -28,11 +33,3 @@ cminject.actions.track\_trajectory module
    :undoc-members:
    :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: cminject.actions
-   :members:
-   :undoc-members:
-   :show-inheritance:

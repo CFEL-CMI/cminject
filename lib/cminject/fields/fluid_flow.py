@@ -15,6 +15,10 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Acceleration fields that model flowing fluids.
+"""
+
 import logging
 import warnings
 from abc import ABC
@@ -39,16 +43,32 @@ class DragForceInterpolationField(RegularGridInterpolationField, ABC):
         super().__init__(filename=filename, *args, **kwargs)
 
     def get_local_properties(self, phase_space_position: np.array) -> Tuple[float, np.array]:
+        """
+        Gets the properties of the fluid at the phase-space position (position + velocity) of a particle.
+
+        :param phase_space_position: The phase-space position of the particle.
+        :return: A 2-tuple, containing
+          * The pressure of the fluid at that point
+          * The relative velocity (v_fluid - v_particle)
+        """
         data = self.interpolate(phase_space_position[:self.number_of_dimensions])
         relative_velocity = data[:self.number_of_dimensions] - phase_space_position[self.number_of_dimensions:]
         pressure = data[self.number_of_dimensions]
         return pressure, relative_velocity
 
     def interpolate(self, position: np.array) -> np.array:
+        """
+        Return the raw results of interpolating on this field at a certain position in space.
+
+        :param position: The position in space to interpolate this field for.
+        :return:
+          * An np.array containing all interpolated quantities at the given position, or
+          * An np.array containing only NaN, if the interpolator raised a ``ValueError``.
+        """
         try:
             return self._interpolator(position)
         except ValueError:
-            return np.zeros(self.number_of_dimensions + 1)  # vr,vz,p / vx,vy,vz,p / ...
+            return np.full(self.number_of_dimensions + 1, np.nan)  # vr,vz,p / vx,vy,vz,p / ...
 
     def is_particle_inside(self, position: np.array, time: float) -> bool:
         return self.interpolate(position)[self.number_of_dimensions] > 0.0
