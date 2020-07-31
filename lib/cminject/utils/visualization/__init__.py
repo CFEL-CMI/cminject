@@ -59,7 +59,8 @@ def plot_trajectories(trajectories: Sequence[np.array], ax: Optional[plt.Axes] =
     :param plot_kwargs: Keyword arguments that will be passed directly to ax.plot.
     :return: A list of the values returned by each ax.plot call.
     """
-    if not any(True for _ in trajectories):
+    if trajectories is None or not any(True for _ in trajectories):
+        warnings.warn('No trajectories to plot were passed!')
         return None
     dims = trajectories[0]['position'].shape[1]
     ax = _get_axis(ax, dims)
@@ -81,7 +82,8 @@ def plot_trajectories_colored(trajectories: Sequence[np.array], ax: Optional[plt
     :param line_collection_kwargs: Keyword arguments that will be passed directly to the Line[3D]Collection constructor.
     :return: The Line[3D]Collection object representing all plotted lines.
     """
-    if not any(True for _ in trajectories):
+    if trajectories is None or not any(True for _ in trajectories):
+        warnings.warn('No trajectories to plot were passed!')
         return None
     dims = trajectories[0]['position'].shape[1]
     assert dims == 2 or dims == 3, f"Don't know how to plot a {dims}-dimensional trajectory!"
