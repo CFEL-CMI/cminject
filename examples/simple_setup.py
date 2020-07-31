@@ -19,7 +19,7 @@
 This file defines a simple example setup. It is, at its core, a reduced version of
 cminject.definitions.setups.OneFlowFieldSetup, and should only be used as an example to derive own setups from.
 
-See README.md for further information on how to run this setup.
+See README.md in this directory for further information on how to run this setup.
 """
 
 # We need argparse for parsing arguments from the command line
@@ -30,17 +30,14 @@ import argparse
 from cminject.experiment import Experiment
 from cminject.base import Setup
 from cminject.utils.args import SetupArgumentParser
-
 # Import some concrete class implementations to be able to define a simple setup:
-# A source which can generate different distributions
+# * A source which can generate different distributions
 from cminject.sources import VariableDistributionSource
-# A detector which is positioned at some Z position
+# * A detector which is positioned at some Z position
 from cminject.detectors import SimpleZDetector
-# A device for fluid flow based on an HDF5 file, together with an enumeration of the possible models to pick (FlowType).
-# (this setup only imports FlowType to access FlowType.STOKES, and doesn't allow picking by a user)
-from cminject.devices.fluid_flow_field_device import FluidFlowFieldDevice, FlowType
-# A Action for modeling Brownian motion based on a Stokes drag force.
-from cminject.actions.brownian_motion import StokesBrownianMotionStep
+# * A device for fluid flow based on an HDF5 file, together with FlowType, an enumeration of the possible models to use
+#   (this setup only imports FlowType to access FlowType.STOKES, and doesn't allow picking by a user)
+from cminject.devices.fluid_flow_device import FluidFlowDevice, FlowType
 
 
 class SimpleSetup(Setup):
@@ -51,42 +48,28 @@ class SimpleSetup(Setup):
     """
     @staticmethod
     def construct_experiment(main_args: argparse.Namespace, args: argparse.Namespace) -> Experiment:
-        device = FluidFlowFieldDevice(filename=args.filename, flow_type=FlowType.STOKES)
         dt = 1e-5
+        experiment = Experiment(number_of_dimensions=2, time_step=dt, time_interval=(0, 1))
+        experiment.add_source(VariableDistributionSource(
+            number_of_particles=main_args.nof_particles,
+            position=[{'kind': 'radial_gaussian', 'mu': 0.0, 'sigma': 1e-3}, 0.0],
+            velocity=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 1e-3}, {'kind': 'gaussian', 'mu': 2.0, 'sigma': 0.5}],
+            radius=5e-9,
+            density=args.rho
+        ))
+        experiment.add_device(FluidFlowDevice(filename=args.filename, flow_type=FlowType.STOKES, brownian_motion=True))
+        for i, z in enumerate([0.0, 0.01, 0.02]):
+            experiment.add_detector(SimpleZDetector(z, z))
 
-        return Experiment(
-            detectors=[
-                SimpleZDetector(identifier=0, z_position=0.0),
-                SimpleZDetector(identifier=1, z_position=0.01),
-                SimpleZDetector(identifier=2, z_position=0.02),
-            ],
-            sources=[VariableDistributionSource(
-                number_of_particles=main_args.nof_particles,
-                position=[
-                    {'kind': 'radial_gaussian', 'mu': 0.0, 'sigma': 1e-3},
-                    0.0
-                ],
-                velocity=[
-                    {'kind': 'gaussian', 'mu': 0.0, 'sigma': 1e-3},
-                    {'kind': 'gaussian', 'mu': 2.0, 'sigma': 0.5}
-                ],
-                radius=5e-9,
-                density=args.rho
-            )],
-            devices=[device],
-            property_updaters=[
-                BrownianMotionPropertyUpdater(field=device._fields[0], dt=dt)
-            ],
-            time_step=dt,
-            number_of_dimensions=2,
-        )
+        return experiment
 
     @staticmethod
     def get_parser() -> SetupArgumentParser:
         parser = SetupArgumentParser()
-        parser.add_argument('-f', '--filename', help='The filename of the flow field (HDF5).', type=str)
+        parser.add_argument('-f', '--filename', help='The filename of the flow field (HDF5).', type=str, required=True)
         parser.add_argument('--rho', help='The density of the particle material [kg/m^3].', type=float, default=1050.0)
         return parser
+
 
 ### Local Variables:
 ### fill-column: 100
