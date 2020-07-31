@@ -27,15 +27,17 @@ from cminject.utils.global_config import GlobalConfig, ConfigSubscriber, ConfigK
 
 
 class UpdateTemperature(Action, ConfigSubscriber):
-    def __init__(self, field: MolecularFlowDragForceField, dt: float):
+    def __init__(self, field: MolecularFlowDragForceField):
         self.field = field
-        self.dt = dt
+        self.dt = None
         self.number_of_dimensions = None
-        GlobalConfig().subscribe(self, [ConfigKey.NUMBER_OF_DIMENSIONS])
+        GlobalConfig().subscribe(self, [ConfigKey.NUMBER_OF_DIMENSIONS, ConfigKey.TIME_STEP])
 
     def config_change(self, key: ConfigKey, value: Any):
         if key is ConfigKey.NUMBER_OF_DIMENSIONS:
             self.number_of_dimensions = value
+        if key is ConfigKey.TIME_STEP:
+            self.dt = value
 
     def __call__(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
         pressure = self.field.interpolate(particle.position)[self.number_of_dimensions]
@@ -44,7 +46,7 @@ class UpdateTemperature(Action, ConfigSubscriber):
         deltaE = 4 * pressure * np.sqrt(np.pi) * particle.radius**2 * (np.sqrt(h)/h_ - 1/np.sqrt(h))
         deltaT = deltaE / (particle.specific_heat * particle.mass)
 
-        particle.temperature += deltaT * self.dt
+        particle.temperature -= deltaT * self.dt
         return False
 
 ### Local Variables:

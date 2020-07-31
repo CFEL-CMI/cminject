@@ -49,7 +49,8 @@ class OneFlowFieldSetup(Setup):
             # Need to set subclass and pass starting temperature when using molecular flow
             source_kwargs = {
                 **source_kwargs, 'subclass': ThermallyConductiveSphericalParticle,
-                'subclass_kwargs': {'temperature': args.particle_temperature}
+                'subclass_kwargs': {'temperature': args.particle_temperature, 'thermal_conductivity': None,
+                                    'specific_heat': args.particle_specific_heat}
             }
         else:
             # Need to pass along slip correction scale if using stokes flow
@@ -102,6 +103,10 @@ class OneFlowFieldSetup(Setup):
                             help='(Initial) temperature of the particles in K. Ignored if --flow-type=stokes, '
                                  'required if --flow-type=molecular_flow.',
                             type=float, required=False)
+        parser.add_argument('-psh', '--particle-specific-heat',
+                            help='Specific heat of the particle material. Ignored if --flow-type=stokes, '
+                                 'required if --flow-type=molecular_flow.',
+                            type=float, required=False)
         return parser
 
     @staticmethod
@@ -116,10 +121,11 @@ class OneFlowFieldSetup(Setup):
                 "The length of the velocity description vectors must match the simulation dimensionality!"
             )
         # Verify that particle temperature is passed when using molecular flow
-        if args.flow_type == 'molecular_flow' and args.particle_temperature is None:
-            raise ValueError(
-                "--particle-temperature must be passed when --flow-type=molecular_flow!"
-            )
+        if args.flow_type == 'molecular_flow':
+            if args.particle_temperature is None:
+                raise ValueError("--particle-temperature must be passed when --flow-type=molecular_flow!")
+            if args.particle_specific_heat is None:
+                raise ValueError("--particle-specific-heat must be passed when --flow-type=molecular_flow!")
 
 
 ### Local Variables:

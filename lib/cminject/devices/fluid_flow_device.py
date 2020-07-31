@@ -18,6 +18,7 @@
 from enum import Enum
 
 from cminject.actions.brownian_motion import MolecularFlowBrownianMotionStep, StokesBrownianMotionStep
+from cminject.actions.temperature import UpdateTemperature
 from cminject.base import Device
 from cminject.boundaries.grid_field_based import GridFieldBasedBoundary
 from cminject.fields.fluid_flow import MolecularFlowDragForceField, StokesDragForceField
@@ -41,8 +42,13 @@ class FluidFlowDevice(Device):
         bm_class = StokesBrownianMotionStep if flow_type == FlowType.STOKES else MolecularFlowBrownianMotionStep
 
         field = field_class(filename=filename, *args, **kwargs)
-        actions = [bm_class(field=field)] if brownian_motion else None
         boundary = GridFieldBasedBoundary(field=field)
+        actions = []
+        if flow_type == FlowType.MOLECULAR_FLOW:
+            actions.append(UpdateTemperature(field))
+        if brownian_motion:
+            actions.append(bm_class(field))
+
         super().__init__(fields=[field], boundary=boundary, actions=actions)
 
 ### Local Variables:
