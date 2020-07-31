@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-"""A collection of simple implementations of :class:`cminject.base.Boundary`s."""
+"""A collection of simple implementations of :class:`cminject.base.Boundary`."""
 
 from typing import Tuple, List, Any
 

@@ -25,11 +25,3 @@ cminject.actions.temperature module
    :undoc-members:
    :show-inheritance:
 
-cminject.actions.track\_trajectory module
------------------------------------------
-
-.. automodule:: cminject.actions.track_trajectory
-   :members:
-   :undoc-members:
-   :show-inheritance:
-

@@ -289,19 +289,19 @@ class Experiment:
     """
     A description of a virtual experiment that can be simulated. Consists of:
 
-      * :class:`cminject.base.Source`s, generating :class:`cminject.base.Particle`s
-      * :class:`cminject.base.Device`s affecting particles via acceleration by their
-        :class:`cminject.base.Field`s, decisions made about whether to keep simulating particles by each Device's
+      * :class:`cminject.base.Source` s, generating :class:`cminject.base.Particle` s
+      * :class:`cminject.base.Device` s affecting particles via acceleration by their
+        :class:`cminject.base.Field` s, decisions made about whether to keep simulating particles by each Device's
         :class:`cminject.base.Boundary`, and generic effects occurring after each time step by their
-        :class:`cminject.base.Action`s.
-      * :class:`cminject.base.Detector`s detecting particles
-      * :class:`cminject.base.Action`s that are indiscriminately run for every particle after every integration step
+        :class:`cminject.base.Action` s.
+      * :class:`cminject.base.Detector` s detecting particles
+      * :class:`cminject.base.Action` s that are indiscriminately run for every particle after every integration step
       * Constants relevant to the simulation logic, like the time-interval and time-step, seed to use for random
         generation, the boundary in Z direction, ...
       * A :class:`cminject.base.ResultStorage` that will store the simulation results.
 
     All of the above are optional, but of course running an "empty" experiment will return an empty result,
-    and an experiment containing particles but no :class:`cminject.base.Device`s, :class:`cminject.base.Action`s etc.
+    and an experiment containing particles but no :class:`cminject.base.Device` s, :class:`cminject.base.Action` s etc.
     will return 'boring' results.
     """
     def __init__(self, number_of_dimensions: int, time_interval: Tuple[float, float], time_step: float = 1e-5,

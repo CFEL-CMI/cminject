@@ -32,14 +32,6 @@ cminject.utils.cython\_interpolation module
    :undoc-members:
    :show-inheritance:
 
-cminject.utils.cython\_interpolation module
--------------------------------------------
-
-.. automodule:: cminject.utils.cython_interpolation
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 cminject.utils.global\_config module
 ------------------------------------
 

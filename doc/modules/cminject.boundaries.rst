@@ -9,14 +9,6 @@ cminject.boundaries package
 Submodules
 ----------
 
-cminject.boundaries.cuboid module
----------------------------------
-
-.. automodule:: cminject.boundaries.cuboid
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 cminject.boundaries.grid\_field\_based module
 ---------------------------------------------
 
@@ -25,18 +17,10 @@ cminject.boundaries.grid\_field\_based module
    :undoc-members:
    :show-inheritance:
 
-cminject.boundaries.infinite module
------------------------------------
+cminject.boundaries.simple module
+---------------------------------
 
-.. automodule:: cminject.boundaries.infinite
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-cminject.boundaries.simple\_z module
-------------------------------------
-
-.. automodule:: cminject.boundaries.simple_z
+.. automodule:: cminject.boundaries.simple
    :members:
    :undoc-members:
    :show-inheritance:

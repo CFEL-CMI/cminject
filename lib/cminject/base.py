@@ -120,7 +120,7 @@ class Particle(ABC):
         """
         The mass of the particle.
 
-        ..warning ::
+        .. warning::
           Please ensure that you also use the @cached_property decorator when overriding this property, so that the mass
           calculation is done exactly once and the result is stored, for (time) efficiency.
         """
@@ -131,7 +131,7 @@ class Particle(ABC):
         """
         The definition of the particle's tracked properties, i.e. properties that are changing along the trajectory
         of the particle. Must return a list in `NumPy structured dtype format
-        <https://numpy.org/doc/stable/user/basics.rec.html#structured-datatype-creation>`).
+        <https://numpy.org/doc/stable/user/basics.rec.html#structured-datatype-creation>`_).
         """
         return [
             ('position', (np.float64, self.number_of_dimensions)),
@@ -144,7 +144,7 @@ class Particle(ABC):
         """
         The definition of the particle's constant properties, i.e. properties that do *NOT* change along the
         trajectory of the particle. Must return a list in `NumPy structured dtype format
-        <https://numpy.org/doc/stable/user/basics.rec.html#structured-datatype-creation>`).
+        <https://numpy.org/doc/stable/user/basics.rec.html#structured-datatype-creation>`_).
         """
         return [
             ('identifier', np.int32),
@@ -431,7 +431,7 @@ class Device(ZBounded, ConfigSubscriber, ABC):
     @property
     def boundary(self):
         """
-        The boundary (:class:`Boundary instance) that this device has.
+        The boundary (:class:`Boundary` instance) that this device has.
 
         :return: The current boundary of this device.
         """

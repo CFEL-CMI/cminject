@@ -79,6 +79,7 @@ class HDF5ResultStorage(ResultStorage):
     def file_handle(self):
         """
         Returns the file handle (a h5py.File instance) that this result storage currently has opened.
+
         :return: The file handle.
         :raises: ``RuntimeError``, if the file handle is not set (e.g., due to the result storage being accessed outside
           a with-block)

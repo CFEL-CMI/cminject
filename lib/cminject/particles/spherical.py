@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-"""A collection of subclasses of :class:`cminject.base.Particle`s, modeling spherical particles."""
+"""A collection of subclasses of :class:`cminject.base.Particle`, modeling spherical particles."""
 
 import numpy as np
 
