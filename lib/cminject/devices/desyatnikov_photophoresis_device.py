@@ -15,21 +15,12 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from typing import List, Tuple, Union
+from typing import Tuple, Union
 
-import numpy as np
-from scipy.constants import Boltzmann
-
-from cminject.base import Device, Field
+from cminject.base import Device
 from cminject.boundaries.cuboid import CuboidBoundary
-from cminject.boundaries.infinite import InfiniteBoundary
-from cminject.calc.fluid_flow import a_stokes, slip_correction_hutchins, a_brown_stokes
 from cminject.fields.fluid_flow import StokesDragForceField
 from cminject.fields.photophoresis import DesyatnikovPhotophoreticLaserField
-from cminject.fields.function_based import FunctionField
-from cminject.particles.spherical import ThermallyConductiveSphericalParticle, SphericalParticle
-from cminject.actions.brownian_motion import StokesBrownianMotionStep
-from cminject.utils import infinite_interval
 
 
 class DesyatnikovPhotophoresisDevice(Device):

@@ -31,7 +31,7 @@ class cached_property:
     """
     Copied verbatim from the Python 3.8 source code. See the documentation for functools.cached_property there.
     The reason it lives here is that this is the only part in CMInject currently requiring Python >3.6, and by copying
-    over this self-contained implementation, we can
+    over this self-contained implementation, we can keep the version requirement at >3.6.
     """
     def __init__(self, func):
         self.func = func
@@ -92,14 +92,14 @@ def numpy_method_cache(*args, **kwargs):
 
     def decorator(function):
         @wraps(function)
-        def wrapper(_self, np_array, *args, **kwargs):
+        def wrapper(_self, np_array, *wrapped_args, **wrapped_kwargs):
             hashable_array = tuple(np_array)
-            return cached_wrapper(_self, hashable_array, *args, **kwargs)
+            return cached_wrapper(_self, hashable_array, *wrapped_args, **wrapped_kwargs)
 
         @lru_cache(*args, **kwargs)
-        def cached_wrapper(_self, hashable_array, *args, **kwargs):
+        def cached_wrapper(_self, hashable_array, *wrapped_args, **wrapped_kwargs):
             array = np.array(hashable_array)
-            return function(_self, array, *args, **kwargs)
+            return function(_self, array, *wrapped_args, **wrapped_kwargs)
 
         # copy refs for lru_cache attributes over
         wrapper.cache_info = cached_wrapper.cache_info

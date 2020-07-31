@@ -5,7 +5,7 @@ from cython cimport boundscheck, wraparound, nonecheck, cdivision
 @boundscheck(False)
 @wraparound(False)
 @nonecheck(False)
-cpdef int interp2D(double[:,:,::1] v, double x, double y,
+cpdef int interp2d(double[:,:,::1] v, double x, double y,
                    int nd, int nx, int ny, double[::1] out) except -1:
     """
     Interpolates a n-dimensional vector field bilinearly based on a 2D regular data grid.
@@ -59,7 +59,7 @@ cpdef int interp2D(double[:,:,::1] v, double x, double y,
 @boundscheck(False)
 @wraparound(False)
 @nonecheck(False)
-cpdef int interp3D(double[:,:,:,::1] v, double x, double y, double z,
+cpdef int interp3d(double[:,:,:,::1] v, double x, double y, double z,
                    int nd, int nx, int ny, int nz, double[::1] out) except -1:
     """
     Interpolates a n-dimensional vector field trilinearly based on a 3D regular data grid.

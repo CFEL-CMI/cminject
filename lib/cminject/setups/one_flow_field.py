@@ -17,17 +17,12 @@
 
 import argparse
 
-from cminject.boundaries.grid_field_based import GridFieldBasedBoundary
+from cminject.base import Setup
 from cminject.detectors.simple_z import SimpleZDetector
 from cminject.devices.fluid_flow_device import FluidFlowDevice, FlowType
-from cminject.fields.fluid_flow import StokesDragForceField, MolecularFlowDragForceField
-from cminject.particles.spherical import SphericalParticle, ThermallyConductiveSphericalParticle
-from cminject.actions.brownian_motion import\
-    StokesBrownianMotionStep, MolecularFlowBrownianMotionStep
-from cminject.base import Setup, Device
-from cminject.sources.variable_distributions import VariableDistributionSource
-
 from cminject.experiment import Experiment
+from cminject.particles.spherical import ThermallyConductiveSphericalParticle
+from cminject.sources.variable_distributions import VariableDistributionSource
 from cminject.utils.args import dist_description, SetupArgumentParser
 
 

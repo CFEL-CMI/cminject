@@ -17,13 +17,10 @@
 
 from typing import Any
 
-import numpy as np
-from scipy.constants import Boltzmann, pi
-
-from cminject.calc import fluid_flow as calc
 from cminject.base import Action
-from cminject.particles.spherical import SphericalParticle, ThermallyConductiveSphericalParticle
+from cminject.calc import fluid_flow as calc
 from cminject.fields.fluid_flow import StokesDragForceField, MolecularFlowDragForceField
+from cminject.particles.spherical import SphericalParticle, ThermallyConductiveSphericalParticle
 from cminject.utils.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
 
 

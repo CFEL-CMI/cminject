@@ -133,7 +133,7 @@ def parse_single_dimension_description(s: str) -> Callable[[np.array], Any]:
         return lambda x: x['velocity'][:, int(s[1:])]
 
     try:
-        a, b, *rest = re.split('(\d+)', s)
+        a, b, *rest = re.split(r'(\d+)', s)
         if rest != ['']:
             warnings.warn(f'Ignored part of description: {rest}')
         return lambda x: x[a][:, int(b)]
@@ -144,10 +144,10 @@ def parse_single_dimension_description(s: str) -> Callable[[np.array], Any]:
 
 def parse_dimension_description(s: str):
     if ',' in s:
-        l, r = s.split(',')
-        l = parse_single_dimension_description(l)
-        r = parse_single_dimension_description(r)
-        return lambda x: (l(x), r(x))
+        left, right = s.split(',')
+        left = parse_single_dimension_description(left)
+        right = parse_single_dimension_description(right)
+        return lambda x: (left(x), right(x))
     else:
         return parse_single_dimension_description(s)
 

@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+import math
 import warnings
 from itertools import repeat
-from typing import Optional, Iterable, Callable, Any, List, Union
-import math
+from typing import Optional, Callable, Any, List, Union, Sequence
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -51,7 +51,7 @@ def _get_axis(ax: Optional[plt.Axes], dims: int):
     return ax
 
 
-def plot_trajectories(trajectories: Iterable[np.array], ax: Optional[plt.Axes] = None, **plot_kwargs):
+def plot_trajectories(trajectories: Sequence[np.array], ax: Optional[plt.Axes] = None, **plot_kwargs):
     """
     Plots multiple trajectories as simple line plots (plt.plot).
     :param trajectories: An iterable of trajectories.
@@ -71,7 +71,7 @@ def plot_trajectories(trajectories: Iterable[np.array], ax: Optional[plt.Axes] =
     return plots
 
 
-def plot_trajectories_colored(trajectories: Iterable[np.array], ax: Optional[plt.Axes] = None,
+def plot_trajectories_colored(trajectories: Sequence[np.array], ax: Optional[plt.Axes] = None,
                               autoscale: bool = True, **line_collection_kwargs):
     """
     Plots multiple trajectories, segments colored by the magnitude of the (approximate) velocities.
@@ -84,6 +84,7 @@ def plot_trajectories_colored(trajectories: Iterable[np.array], ax: Optional[plt
     if not any(True for _ in trajectories):
         return None
     dims = trajectories[0]['position'].shape[1]
+    assert dims == 2 or dims == 3, f"Don't know how to plot a {dims}-dimensional trajectory!"
     ax = _get_axis(ax, dims)
 
     all_vmags = None
@@ -117,8 +118,8 @@ def plot_trajectories_colored(trajectories: Iterable[np.array], ax: Optional[plt
 
     if autoscale:
         # We could use ax.autoscale_view() in theory, but, alas: https://github.com/matplotlib/matplotlib/issues/17130
-        mins = np.min(all_segments, axis=(0,1))
-        maxs = np.max(all_segments, axis=(0,1))
+        mins = np.min(all_segments, axis=(0, 1))
+        maxs = np.max(all_segments, axis=(0, 1))
         ax.set_xlim(mins[0], maxs[0])
         ax.set_ylim(mins[1], maxs[1])
         if dims == 3:
@@ -139,15 +140,19 @@ def plot_detector(detector: np.array, dimension_description: Union[str, Callable
     :param kwargs: Keyword args that will be passed directly to the plt.hist/hist2d call.
     :return: The result of the plt.hist/hist2d call made to plot the 1D/2D histogram.
     """
-    if type(dimension_description) is str:
-        extractor = parse_dimension_description(dimension_description)
-    else:
-        extractor = dimension_description
-
+    extractor = parse_dimension_description(dimension_description) if type(dimension_description) is str\
+        else dimension_description
     result = extractor(detector)
+
     if type(result) is tuple:
+        if 'bins' not in kwargs:
+            bins = int(len(detector) / 10)
+            kwargs.update({'bins': (bins, bins)})
         return ax.hist2d(result[0], result[1], **kwargs)
     else:
+        if 'bins' not in kwargs:
+            bins = int(len(detector) / 10)
+            kwargs.update({'bins': bins})
         return ax.hist(result, **kwargs)
 
 

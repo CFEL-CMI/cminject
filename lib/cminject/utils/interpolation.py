@@ -18,7 +18,7 @@
 from typing import List, Tuple
 
 import numpy as np
-from cminject.utils.cython_interpolation import interp2D, interp3D
+from cminject.utils.cython_interpolation import interp2d, interp3d
 from scipy.interpolate import RegularGridInterpolator
 
 
@@ -42,7 +42,7 @@ class Interp2D:
         # A vector of appropriate output size to copy, modify and return from each call
         self._nanvec = np.full(self.data.shape[0], np.nan, dtype=np.float64)
 
-    def __call__(self, t):
+    def __call__(self, coord):
         """
         Return the interpolated data at the 3D coordinate coord.
 
@@ -52,11 +52,11 @@ class Interp2D:
         # Get the size of the data grid in the output, X, and Y dimension
         D, X, Y = self.data.shape
         # Map the x,y position to the scale of the array indices
-        x = (t[0] - self.min_x) / self.delta_x
-        y = (t[1] - self.min_y) / self.delta_y
+        x = (coord[0] - self.min_x) / self.delta_x
+        y = (coord[1] - self.min_y) / self.delta_y
 
         out = self._nanvec.copy()
-        interp2D(self.data, x, y, D, X, Y, out)
+        interp2d(self.data, x, y, D, X, Y, out)
         return out
 
 
@@ -94,7 +94,7 @@ class Interp3D:
         z = (coord[2] - self.min_z) / self.delta_z
 
         out = self._nanvec.copy()
-        interp3D(self.data, x, y, z, D, X, Y, Z, out)
+        interp3d(self.data, x, y, z, D, X, Y, Z, out)
         return out
 
 

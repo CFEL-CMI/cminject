@@ -18,18 +18,16 @@
 import logging
 import multiprocessing
 import os
-from typing import List, Tuple, Optional, Union
-from tqdm import tqdm
+from typing import List, Tuple, Optional
 
 import numpy as np
 from scipy.integrate import ode
+from tqdm import tqdm
 
 from cminject.base import ZBounded, Device, Detector, Particle, Action, ResultStorage, Source
 from cminject.particles.particle_status import *
 from cminject.utils import infinite_interval
 from cminject.utils.global_config import GlobalConfig, ConfigKey
-
-# FIXME file should maybe be split into parts
 
 PARTICLE_STATES_CONSIDERED_AS_LOST = [PARTICLE_STATUS_LOST, PARTICLE_STATUS_OUTSIDE_EXPERIMENT]
 
@@ -225,7 +223,7 @@ def simulate_particle(particle: Particle) -> Particle:
         - BASE_SEED: The "base seed", i.e. the random seed the experiment was defined with, to derive a local
           random seed from.
     """
-    np.random.seed(BASE_SEED + int(particle.identifier))  # reseed RandomState from the base seed and particle ID
+    np.random.seed(BASE_SEED + particle.identifier)  # reseed RandomState from the base seed and particle ID
 
     # Construct integrals
     integral = ode(spatial_derivatives)
@@ -516,7 +514,7 @@ class Experiment:
         An internal method to gather the lower and upper bounds of all intervals, grouped into an array
         of lower bounds and another array of upper bounds.
 
-        :param z_bounded_objects: A list of Z bounded objects.
+        :param z_boundaries: A list of Z bounded objects.
         :return: A 2-tuple of (min_z, max_z).
         """
         arr = np.array(z_boundaries)

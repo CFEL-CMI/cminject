@@ -24,6 +24,7 @@ __all__ = ['ZBounded', 'Particle', 'Boundary', 'Detector', 'Device', 'Field', 'A
 
 import argparse
 from abc import ABC, abstractmethod
+from functools import lru_cache
 from typing import Tuple, Optional, List, Any, Dict, Iterable, Union
 
 import numpy as np
@@ -53,7 +54,7 @@ class ZBounded(ABC):
         pass
 
 
-class Particle(ConfigSubscriber, ABC):
+class Particle(ABC):
     """
     Describes a particle whose trajectory we want to simulate.
     It is first and foremost a data container, and it and its subclasses should be written and used as such.
@@ -61,20 +62,16 @@ class Particle(ConfigSubscriber, ABC):
     It can be read by any part of the code, but should only be written to by instances of Experiment
     (or subclasses thereof).
 
-    This class declares a few basic properties within __init__ that we expect every particle
-    to have:
-    - identifier (a unique id),
+    This class declares a few basic properties that we expect every particle to have:
+    - identifier (a unique integer id),
     - lost (a flag storing whether the particle is considered lost)
-    - detector_hits (a dict mapping detector identifiers to hit lists)
-    # TODO more props
     - position (the particle's position)
-    - velocity (the particle's velocity)
-    - initial_position (the particle's initial position)
     - velocity (the particle's velocity)
     - mass (the particle's mass)
     - trajectory (a list describing points in the particle's path)
+    - detector_hits (a dict mapping detector identifiers to hit lists)
     """
-    def __init__(self, identifier: Any, start_time: float, position: np.array, velocity: np.array, *args, **kwargs):
+    def __init__(self, identifier: int, start_time: float, position: np.array, velocity: np.array, *args, **kwargs):
         """
         The constructor for Particle.
 
@@ -91,16 +88,9 @@ class Particle(ConfigSubscriber, ABC):
             "Position and velocity must have same length but have shapes %s and %s" % (position.shape, velocity.shape)
         self.number_of_dimensions = len(position)
         self.phase_space_position: np.array = np.concatenate((position, velocity))  # this copies implicitly
-        self._initial_tracked_properties: np.array = self.as_array('tracked')
         self.trajectory: List[np.array] = []
-
-        self.detector_hits: Dict[int, List['ParticleDetectorHit']] = {}  # TODO naming is nonagnostic about detectors...
-        GlobalConfig().subscribe(self, ConfigKey.NUMBER_OF_DIMENSIONS)
-
-    def config_change(self, key: ConfigKey, value: Any):
-        if key is ConfigKey.NUMBER_OF_DIMENSIONS:
-            if value != self.number_of_dimensions:
-                raise ValueError(f"Number of dimensions changed to {value}, but {self} had {self.number_of_dimensions}")
+        self.detector_hits: Dict[int, List['ParticleDetectorHit']] = {}
+        self._initial_tracked_properties: np.array = self.as_array('tracked')
 
     @property
     def position(self):
@@ -127,8 +117,7 @@ class Particle(ConfigSubscriber, ABC):
     def mass(self) -> float:
         pass
 
-    @property
-    @abstractmethod
+    @cached_property
     def tracked_properties(self):
         return [
             ('position', (np.float64, self.number_of_dimensions)),
@@ -136,8 +125,7 @@ class Particle(ConfigSubscriber, ABC):
             ('time', np.float64)
         ]
 
-    @property
-    @abstractmethod
+    @cached_property
     def constant_properties(self):
         return [
             ('identifier', np.int32),

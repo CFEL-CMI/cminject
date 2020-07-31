@@ -31,16 +31,12 @@ class SphericalParticle(Particle):
         self.rho = rho
         super().__init__(*args, **kwargs)
 
-    @property
+    @cached_property
     def constant_properties(self):
         return super().constant_properties + [
             ('radius', np.float64),
             ('rho', np.float64)
         ]
-
-    @property
-    def tracked_properties(self):
-        return super().tracked_properties
 
     @cached_property
     def mass(self):
@@ -59,14 +55,14 @@ class ThermallyConductiveSphericalParticle(SphericalParticle):
         self.specific_heat = specific_heat
         super().__init__(*args, **kwargs)
 
-    @property
+    @cached_property
     def constant_properties(self):
         return super().constant_properties + [
             ('thermal_conductivity', np.float64),
             ('specific_heat', np.float64)
         ]
 
-    @property
+    @cached_property
     def tracked_properties(self):
         return super().tracked_properties + [
             ('temperature', np.float64)

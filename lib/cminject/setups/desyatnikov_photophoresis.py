@@ -48,8 +48,8 @@ class DesyatnikovPhotophoresisSetup(Setup):
         )
 
         experiment.add_source(VariableDistributionSource(
-            main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius, density=args.rho,
-            subclass=ThermallyConductiveSphericalParticle,
+            main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius,
+            density=args.rho, subclass=ThermallyConductiveSphericalParticle,
             subclass_kwargs={
                 'specific_heat': 0.0, 'temperature': 293.15, 'thermal_conductivity': args.thermal_conductivity
             }
@@ -64,6 +64,8 @@ class DesyatnikovPhotophoresisSetup(Setup):
 
         for i, pos in enumerate(args.detectors):
             experiment.add_detector(SimpleZDetector(identifier=i, z_position=pos))
+
+        return experiment
 
     @staticmethod
     def get_parser() -> SetupArgumentParser:
@@ -95,7 +97,7 @@ class DesyatnikovPhotophoresisSetup(Setup):
 
         parser.set_defaults(
             # Defaults given to me by Andrei Rode
-            position=[{'kind': 'radial_gaussian', 'mu': 0.0, 'sigma': 20e-6},#42.47e-6},
+            position=[{'kind': 'radial_gaussian', 'mu': 0.0, 'sigma': 20e-6},
                       0.9e-3],
             velocity=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.01},
                       {'kind': 'gaussian', 'mu': -10.0, 'sigma': 0.01}],
