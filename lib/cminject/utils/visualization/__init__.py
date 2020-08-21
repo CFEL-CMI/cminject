@@ -72,8 +72,7 @@ def plot_trajectories(trajectories: Sequence[np.array], ax: Optional[plt.Axes] =
 
     plots = []
     for traj in trajectories:
-        pos = traj['position']
-        plots.append(ax.plot(*pos.T, **plot_kwargs))
+        plots.append(ax.plot(*traj['position'].T, **plot_kwargs))
     return plots
 
 

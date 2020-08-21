@@ -156,7 +156,7 @@ class HDF5ResultStorage(ResultStorage):
                     detector_hits[detector_id] += hits
 
         # Store trajectories
-        if np.any(trajectories):  # if any of the particles had a non-empty trajectory
+        if np.any(len(traj) for traj in trajectories):  # if any of the particles had a non-empty trajectory
             vlen_dtype = h5py.vlen_dtype(tracked_dtype)
             ds = tg.create_dataset('trajectories', (n,), dtype=vlen_dtype)
             for i in range(n):
