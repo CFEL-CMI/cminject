@@ -384,8 +384,13 @@ class Experiment:
 
     @time_interval.setter
     def time_interval(self, val):
-        if not isinstance(val, tuple) or not len(val) == 2:
-            raise ValueError("time_interval must be a tuple of two floats (t_begin, t_end)!")
+        try:
+            val = tuple(val)
+        except TypeError:
+            raise ValueError("time_interval must be convertable to a tuple!")
+        if not len(val) == 2:
+            raise ValueError("time_interval must be a 2-tuple of (t_begin, t_end), or convertable to such!")
+
         time_begin, time_end = val
         if time_begin >= time_end:
             errmsg = f"time_begin must be less than time_end, but time_begin={time_begin}, time_end={time_end}!"
