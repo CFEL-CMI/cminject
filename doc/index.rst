@@ -21,7 +21,7 @@ or want to develop CMInject further, please refer to the :ref:`developer-guide`.
 
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 4
    :caption: Contents:
 
    userguide/userguide

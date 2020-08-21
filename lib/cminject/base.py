@@ -58,17 +58,18 @@ class Particle(ABC):
     Describes a particle whose trajectory we want to simulate.
     It is first and foremost a data container, and it and its subclasses should be written and used as such.
 
-    It can be read by any part of the code, but should only be written to by instances of Experiment
-    (or subclasses thereof).
+    It can be read by any part of the code, but should only be written to by instances of
+    :class:`cminject.experiment.Experiment` and :class:`cminject.base.Action` (or instances of their subclasses).
 
     This class declares a few basic properties that we expect every particle to have:
-    - identifier (a unique integer id),
-    - lost (a flag storing whether the particle is considered lost)
-    - position (the particle's position)
-    - velocity (the particle's velocity)
-    - mass (the particle's mass)
-    - trajectory (a list describing points in the particle's path)
-    - detector_hits (a dict mapping detector identifiers to hit lists)
+
+      - identifier (a unique integer id),
+      - lost (a flag storing whether the particle is considered lost)
+      - position (the particle's position)
+      - velocity (the particle's velocity)
+      - mass (the particle's mass)
+      - trajectory (a list describing points in the particle's path)
+      - detector_hits (a dict mapping detector identifiers to hit lists)
     """
     def __init__(self, identifier: int, start_time: float, position: np.array, velocity: np.array, *args, **kwargs):
         """
@@ -279,7 +280,8 @@ class Detector(ZBounded, ABC):
 
 class Field(ZBounded, ABC):
     """
-    A Field interacting with Particle objects.
+    A virtual acceleration field. Interacts with particles by exerting an acceleration on them, based on some
+    collection of (local and current) properties of the particle and the field.
     """
     @abstractmethod
     def calculate_acceleration(self, particle: Particle, time: float) -> np.array:
@@ -324,11 +326,14 @@ class Action(ABC):
     @abstractmethod
     def __call__(self, particle: Particle, time: float) -> bool:
         """
-        Does some thing with a Particle instance. Must return True if the
+        Does some thing with a Particle instance. Must return True if the particle's ``phase_space_position`` is
+        changed, or if its ``position`` or ``velocity`` is changed (since these two properties are directly derived
+        from ``phase_space_position``). Note that a "change" entails overwriting the whole property as well as changing
+        only parts of it.
 
         :param particle: The Particle instance.
         :param time: The current time.
-        :return: True if the position of a particle was changed  TODO tracked
+        :return: True if the phase space position of a particle was changed in any way. False otherwise.
         """
         pass
 
