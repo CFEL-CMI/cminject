@@ -27,9 +27,10 @@ from typing import Optional, Callable, Any, List, Union, Sequence
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.collections import LineCollection
+from matplotlib.animation import Animation, FuncAnimation
 from mpl_toolkits.mplot3d import Axes3D
 
-from cminject.utils.args import parse_dimension_description
+from cminject.utils.args import parse_multiple_dimensions_description, DimensionDescription
 
 
 def _get_axis(ax: Optional[plt.Axes], dims: int):
@@ -81,7 +82,7 @@ def plot_trajectories_colored(trajectories: Sequence[np.array], ax: Optional[plt
     """
     Plots multiple trajectories, segments colored by the magnitude of the (approximate) velocities.
 
-    :param trajectories: An iterable of trajectories.
+    :param trajectories: A sequence of trajectories.
     :param ax: The axis to plot on; if None, a new figure and axis will be created.
     :param autoscale: If True, the axes will be scaled to fit the created LineCollection/Line3DCollection.
     :param line_collection_kwargs: Keyword arguments that will be passed directly to the Line[3D]Collection constructor.
@@ -136,32 +137,71 @@ def plot_trajectories_colored(trajectories: Sequence[np.array], ax: Optional[plt
     return lc
 
 
-def plot_detector(detector: np.array, dimension_description: Union[str, Callable[[np.array], Any]],
-                  ax: plt.Axes, **kwargs):
+def plot_trajectories_movie(trajectories: Sequence[np.array], dimension_description: DimensionDescription = "x,z",
+                            delay: int = 100, n_previous: int = 10) -> (Animation, plt.Figure):
+    """
+    Creates a trajectory movie via a :class:`matplotlib.animation.Animation`. Plots each trajectory as a curve
+    of the last :param:`n_previous` positions.
+
+    :param trajectories: A sequence of trajectories.
+    :param dimension_description: A dimension descriptionf of a pair or triple of dimensions.
+    :param delay: The delay between each animation frame.
+    :param n_previous: The number of previous positions to include in each curve. When equal to one, each curve
+    :return: A 2-tuple of (created Animation instance, created Figure instance).
+    """
+    extractor, n = parse_multiple_dimensions_description(dimension_description, n=(2, 3))\
+        if type(dimension_description) is str else dimension_description
+    positions = [extractor(traj) for traj in trajectories]
+    maxlen = max(len(traj) for traj in trajectories)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111) if n == 2 else fig.add_subplot(111, projection='3d')
+    initargs = ([], []) if n == 2 else ([], [], [])
+    lines = [plt.plot(*initargs)[0] for _ in range(len(trajectories))]
+
+    def init():
+        ax.set_xlim(min(np.min(pos[0]) for pos in positions), max(np.max(pos[0]) for pos in positions))
+        ax.set_ylim(min(np.min(pos[1]) for pos in positions), max(np.max(pos[1]) for pos in positions))
+        if n == 3:
+            ax.set_zlim(min(np.min(pos[2]) for pos in positions), max(np.max(pos[2]) for pos in positions))
+        return lines
+
+    def update(i):
+        for k, ln in enumerate(lines):
+            lower = max(0, i - n_previous - 1)
+            ln.set_data(positions[k][0][lower:i], positions[k][1][lower:i])
+            if n == 3:
+                ln.set_3d_properties(positions[k][2][lower:i])
+        return lines
+
+    ani = FuncAnimation(fig, update, frames=maxlen, init_func=init, interval=delay)
+    return ani, fig
+
+
+def plot_detector(detector: np.array, dimension_description: DimensionDescription, ax: plt.Axes, **kwargs):
     """
     Plots 1D/2D histograms of one or a pair of measured quantities at a single detector.
 
     :param detector: An np.ndarray representing all measurements (hits) made at the detector.
-    :param dimension_description: A string like :func:`cminject.utils.args.parse_dimension_description`
-      accepts or a Callable as :func:`cminject.utils.args.parse_dimension_description` returns.
+    :param dimension_description: A string like :func:`cminject.utils.args.parse_multiple_dimensions_description`
+      accepts or a Callable as :func:`cminject.utils.args.parse_multiple_dimensions_description` returns.
       If it represents a pair of dimensions, a 2D histogram will be plotted, otherwise a 1D histogram will be plotted.
     :param ax: The axis to plot on.
     :param kwargs: Keyword args that will be passed directly to the plt.hist/hist2d call.
     :return: The result of the plt.hist/hist2d call made to plot the 1D/2D histogram.
     """
-    extractor = parse_dimension_description(dimension_description) if type(dimension_description) is str\
-        else dimension_description
+    extractor, n = parse_multiple_dimensions_description(dimension_description, n=(1, 2))\
+        if type(dimension_description) is str else dimension_description
     result = extractor(detector)
 
-    if type(result) is tuple:
+    auto_bins = min(max(int(len(detector) / 100), 5), 250)
+    if n == 2:
         if 'bins' not in kwargs:
-            bins = int(len(detector) / 10)
-            kwargs.update({'bins': (bins, bins)})
+            kwargs.update({'bins': (auto_bins, auto_bins)})
         return ax.hist2d(result[0], result[1], **kwargs)
-    else:
+    else:  # n == 1
         if 'bins' not in kwargs:
-            bins = int(len(detector) / 10)
-            kwargs.update({'bins': bins})
+            kwargs.update({'bins': auto_bins})
         return ax.hist(result, **kwargs)
 
 
@@ -193,11 +233,9 @@ def plot_detectors(detectors: List[np.array], dimension_description: str,
         if type(axes) is plt.Axes:
             axes = repeat(axes)
 
-    extractor = parse_dimension_description(dimension_description)
-    results = []
-    for ax, detector in zip(axes, detectors):
-        results.append(plot_detector(detector, extractor, ax, **kwargs))
-    return results
+    extractor = parse_multiple_dimensions_description(dimension_description, n=(1, 2))
+    return [plot_detector(detector, extractor, ax, **kwargs) for ax, detector in zip(axes, detectors)]
+
 
 ### Local Variables:
 ### fill-column: 100

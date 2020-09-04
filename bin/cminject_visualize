@@ -19,9 +19,11 @@ import argparse
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 
 from cminject.result_storages.hdf5 import HDF5ResultStorage
-from cminject.utils.visualization import plot_trajectories, plot_trajectories_colored, plot_detectors
+from cminject.utils.visualization import plot_trajectories, plot_trajectories_colored, plot_detectors, \
+    plot_trajectories_movie
 
 program_description = """Visualizes a simulation result HDF5 file."""
 
@@ -29,37 +31,61 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='cminject_visualization', description=program_description,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('file', help='The result (HDF5) file to visualize.', type=str, metavar='filename')
+    parser.add_argument(
+        '-n', type=int, help='Only plot n randomly sampled trajectories. Useful for quick qualitative analysis of'
+                             ' large files. Applies to -T and -M; does not affect -H.')
 
     parser.add_argument('-T', help='Plot trajectories.', action='store_true')
-    parser.add_argument('-Tn', help='Only plot n randomly sampled trajectories. '
-                                    'Useful for quick qualitative analysis of large files.', type=int, metavar='n')
-    parser.add_argument('-Tc',
-                        help='Plot colored trajectories, as line segments encoding particle velocity. '
-                             'Shows more information, but is more computationally expensive to render.',
-                        action='store_true')
-    parser.add_argument('-H', help='Plot histograms (1D/2D) of named quantities at each detector. 2D histograms '
-                                   'will be plotted when a pair of quantity names is given separated by a comma,'
-                                   ' e.g. "x,y", otherwise a 1D histogram will be plotted.', nargs='*')
+    parser.add_argument(
+        '-Tc', action='store_true', help='Plot colored trajectories, as line segments encoding particle velocity. '
+                                         'Shows more information, but is more computationally expensive to render.')
+
+    parser.add_argument(
+        '-H', nargs='*', help='Plot histograms (1D/2D) of named quantities at each detector. 2D histograms will be '
+                              'plotted when a pair of quantity names is given separated by a comma, e.g. "x,y", '
+                              'otherwise a 1D histogram will be plotted.')
+
+    parser.add_argument(
+        '-M', action='store_true', help='Plot a trajectory movie, i.e., a live animation of the trajectories.')
+    parser.add_argument(
+        '-Md', type=float, help='The delay (in ms) between movie frames. 10 by default.', default=10)
+    parser.add_argument(
+        '-Mm', type=int, help='The number of previous positions to plot to draw each curve. 10 by default.', default=10)
+    parser.add_argument(
+        '-Mdims', type=str, default="x,y",
+        help='The pair or triple of dimensions to plot in the trajectory movie, separated by a comma (no spaces!). '
+             '"x,y" by default.')
+
     args = parser.parse_args()
 
     with HDF5ResultStorage(args.file) as f:
         # Plot detector histograms
         if args.H:
-            detectors = list(f.get_detectors().values())
+            detectors = f.get_detectors()
+            zs = [d['position'][0,-1] for d in detectors.values()]
+            print(zs)
+
+            detectors = list(detectors.values())
             for desc in args.H:
-                plot_detectors(detectors, desc)
+                plot_detectors(detectors, desc, cmin=1, norm=LogNorm())
+
+        if args.T or args.M:
+            trajectories = f.get_trajectories()
+            if args.n:
+                trajectories = np.random.choice(trajectories, args.n, replace=False)
 
         # Plot trajectories
         if args.T:
-            # Get trajectories, potentially taking a sample
-            trajectories = f.get_trajectories()
-            if args.Tn:
-                trajectories = np.random.choice(trajectories, args.Tn, replace=False)
-            # Plot trajectories
-            if args.Tc:
-                plot_trajectories_colored(trajectories)
-            else:
-                plot_trajectories(trajectories, color='k')
+            draw_fn = plot_trajectories_colored if args.Tc else plot_trajectories
+            draw_fn(trajectories)
+
+        # Show a trajectory movie
+        if args.M:
+            ani, _ = plot_trajectories_movie(trajectories, n_previous=args.Mm, delay=args.Md,
+                                             dimension_description=args.Mdims)
+            # FIXME not sure why this call seems to be necessary unless blit=True, and also must live here and not...
+            # FIXME ...inside the plotting function??
+            ani.event_source.start()
 
     plt.show()
 

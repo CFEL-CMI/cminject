@@ -22,7 +22,7 @@ import sys
 
 import numpy as np
 from cminject.result_storages.hdf5 import HDF5ResultStorage
-from cminject.utils.args import parse_single_dimension_description
+from cminject.utils.args import parse_dimension_description
 
 program_description = """
 Analyzes the asymmetry of the 2D distributions measured at each detector in a
@@ -103,8 +103,8 @@ def main():
         else:
             print()
 
-        x_extractor = parse_single_dimension_description(args.x)
-        y_extractor = parse_single_dimension_description(args.y)
+        x_extractor = parse_dimension_description(args.x)
+        y_extractor = parse_dimension_description(args.y)
         for detector_id, detector in detectors.items():
             mofi = moment_of_inertia(x_extractor(detector), y_extractor(detector))
             alpha = mofi['alpha']

@@ -22,9 +22,11 @@ Utility functions for handling commandline arguments.
 import argparse
 import re
 import warnings
-from typing import Callable, Any
+from typing import Union, Callable, Any, Iterable
 
 import numpy as np
+
+DimensionDescription = Union[str, Callable[[np.array], Any]]
 
 
 class SetupHelpFormatter(argparse.MetavarTypeHelpFormatter):
@@ -99,7 +101,7 @@ def natural_number(x):
     return x
 
 
-def parse_single_dimension_description(s: str) -> Callable[[np.array], Any]:
+def parse_dimension_description(s: str) -> DimensionDescription:
     """
     Parses dimension descriptions that can be of the following format:
 
@@ -142,22 +144,30 @@ def parse_single_dimension_description(s: str) -> Callable[[np.array], Any]:
         return lambda x: x[s]
 
 
-def parse_dimension_description(s: str):
+def parse_multiple_dimensions_description(s: str, n: Union[int, Iterable[int]] = None) -> (DimensionDescription, int):
     """
-    Parses a dimension description, which is either one name of a dimension like
-      :func:`parse_single_dimension_description` accepts, or a pair of such names separated by a single comma.
+    Parses a dimension description from a string, which is either one name of a dimension like
+      :func:`parse_dimension_description` accepts, or multiple of such names separated by commata.
 
     :param s: The string to parse as a dimension description.
-    :return: A Callable that will return the appropriate component(s) from a given np.array. If a pair of components was
-      given as 's', this callable will return a tuple of both components.
+    :param n: The number of expected/allowed components in the description.
+      Either an integer or an iterable of integers. If None, no checks are performed.
+    :return: A Callable that will return the appropriate component(s) from a given np.array. If multiple components were
+      given as 's', this callable will return a corresponding k-tuple of components.
     """
     if ',' in s:
-        left, right = s.split(',')
-        left = parse_single_dimension_description(left)
-        right = parse_single_dimension_description(right)
-        return lambda x: (left(x), right(x))
+        components = s.split(',')
+        if n is not None:
+            assert (len(components) == n if type(n) is int else len(components) in n),\
+                f"Dimension description of {n} components expected, reading {len(components)} components in '{s}'."
+
+        fns = list(map(parse_dimension_description, components))
+        # return a function that applies each function to the input, and returns a list of all of those applications
+        return (lambda x: list(map(lambda fn: fn(x), fns))), len(components)
     else:
-        return parse_single_dimension_description(s)
+        assert (n == 1 if type(n) is int else 1 in n),\
+            f"{n} components expected, but the dimension description '{s}' contains only one."
+        return parse_dimension_description(s), 1
 
 ### Local Variables:
 ### fill-column: 100

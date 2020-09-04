@@ -193,7 +193,7 @@ class HDF5ResultStorage(ResultStorage):
         f = self._require_handle()
         detectors = {}
         if 'detectors' in f:
-            for detector_id in f['detectors']:
+            for detector_id in sorted(f['detectors']):
                 hits = f['detectors'][detector_id][:].T
                 detectors[detector_id] = hits
         return detectors or None
