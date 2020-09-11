@@ -25,7 +25,7 @@ from cminject.devices.fluid_flow import FluidFlowDevice, FlowType
 from cminject.experiment import Experiment
 from cminject.particles import ThermallyConductiveSphericalParticle
 from cminject.sources import VariableDistributionSource
-from cminject.utils.args import dist_description, SetupArgumentParser
+from cminject.utils.args import distribution_description, SetupArgumentParser
 
 
 class OneFlowFieldSetup(Setup):
@@ -80,12 +80,12 @@ class OneFlowFieldSetup(Setup):
                             type=int, required=True)
         parser.add_argument('-p', '--position',
                             help='Distribution description for the position.',
-                            nargs='*', type=dist_description, required=True)
+                            nargs='*', type=distribution_description, required=True)
         parser.add_argument('-v', '--velocity',
                             help='Distribution description for the velocity.',
-                            nargs='*', type=dist_description, required=True)
+                            nargs='*', type=distribution_description, required=True)
         parser.add_argument('-r', '--radius', help='Distribution description for the radius.',
-                            type=dist_description, required=True)
+                            type=distribution_description, required=True)
         parser.add_argument('-rho', '--density', help='Density of the particles.',
                             type=float, required=True)
 

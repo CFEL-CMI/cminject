@@ -20,11 +20,16 @@ Utility functions for handling commandline arguments.
 """
 
 import argparse
+import logging
+
+import pyparsing
 import re
 import warnings
 from typing import Union, Callable, Any, Iterable
 
 import numpy as np
+
+from cminject.utils.distributions import Distribution, parse_distribution
 
 DimensionDescription = Union[str, Callable[[np.array], Any]]
 
@@ -52,40 +57,17 @@ class SetupArgumentParser(argparse.ArgumentParser):
         super().__init__(*args, **kwargs)
 
 
-def dist_description(x):
+def distribution_description(x):
     """
     Defines a custom argparse type for a distribution description.
     :param x: The string value to parse.
-    :return: A dictionary representing the parsed distribution description.
-    :raises: argparse.ArgumentTypeError
+    :return: A :class:`Distribution` instance.
     """
-    shorthand_mapping = {
-        'G': 'gaussian', 'RG': 'radial_gaussian',
-        'L': 'linear', 'RL': 'radial_linear',
-        'U': 'uniform', 'RU': 'radial_uniform'
-    }
-    values = x.split()
-    if len(values) == 1:
-        try:
-            return float(values[0])
-        except ValueError:
-            raise argparse.ArgumentTypeError("When passing only one value, it must be parsable as a float!")
-
-    kind = values[0]
-    if kind in ['G', 'RG']:
-        if len(values) != 3:
-            raise argparse.ArgumentTypeError("Need a mu and sigma for a gaussian distribution description!")
-        return {'kind': shorthand_mapping[kind],
-                'mu': float(values[1]),
-                'sigma': float(values[2])}
-    elif kind in ['L', 'RL', 'U', 'RU']:
-        if len(values) != 3:
-            raise argparse.ArgumentTypeError("Need a min and max for a uniform distribution description!")
-        return {'kind': shorthand_mapping[kind],
-                'min': float(values[1]),
-                'max': float(values[2])}
-    else:
-        raise argparse.ArgumentTypeError(f"Unknown distribution kind: {kind}!")
+    try:
+        return parse_distribution(x)
+    except pyparsing.ParseException as e:
+        logging.info("PARSER ERROR: " + str(e))
+        raise ValueError(f"{x} could not be parsed as a distribution! Enable --loglevel info to see the parser error.")
 
 
 def natural_number(x):

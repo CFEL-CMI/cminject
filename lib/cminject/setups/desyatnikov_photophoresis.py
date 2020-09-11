@@ -33,7 +33,7 @@ from cminject.experiment import Experiment
 from cminject.fields.function_based import FunctionField
 from cminject.particles import ThermallyConductiveSphericalParticle
 from cminject.sources.variable_distributions import VariableDistributionSource
-from cminject.utils.args import dist_description, SetupArgumentParser
+from cminject.utils.args import distribution_description, SetupArgumentParser
 
 
 class DesyatnikovPhotophoresisSetup(Setup):
@@ -73,7 +73,7 @@ class DesyatnikovPhotophoresisSetup(Setup):
         parser = SetupArgumentParser()
         add_arg = lambda *args, **kwargs: parser.add_argument(*args, **kwargs)  # Shorthand functions for readability
         add_float_arg = lambda *args, **kwargs: add_arg(*args, **kwargs, type=float)
-        add_dist_arg = lambda *args, **kwargs: add_arg(*args, **kwargs, type=dist_description)
+        add_dist_arg = lambda *args, **kwargs: add_arg(*args, **kwargs, type=distribution_description)
 
         add_float_arg('-d', '--detectors', help='The Z positions of the detectors', nargs='+', required=True)
         add_dist_arg('-p', '--position', help='Distribution description for the position.', nargs='*')
