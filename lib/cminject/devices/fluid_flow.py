@@ -24,7 +24,7 @@ from enum import Enum
 from cminject.actions.brownian_motion import MolecularFlowBrownianMotionStep, StokesBrownianMotionStep
 from cminject.actions.temperature import MolecularFlowUpdateTemperature
 from cminject.base import Device
-from cminject.boundaries.grid_field_based import GridFieldBasedBoundary
+from cminject.boundaries.field_based import GridFieldBasedBoundary
 from cminject.fields.fluid_flow import MolecularFlowDragForceField, StokesDragForceField
 
 

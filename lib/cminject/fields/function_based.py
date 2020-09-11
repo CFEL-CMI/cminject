@@ -31,15 +31,16 @@ class FunctionField(Field):
     The number of dimensions of this field is not validated, meaning the given function must be able to handle
     particles of the experiment dimensionality.
     """
-    def calculate_acceleration(self, particle: Particle, time: float) -> np.array:
-        return self.function(particle, time)
-
     def __init__(self, function: Callable[[Particle, float], np.array]):
         self.function = function
+
+    def calculate_acceleration(self, particle: Particle, time: float) -> np.array:
+        return self.function(particle, time)
 
     @property
     def z_boundary(self) -> Tuple[float, float]:
         return infinite_interval
+
 
 ### Local Variables:
 ### fill-column: 100

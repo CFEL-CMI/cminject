@@ -30,6 +30,7 @@ import argparse
 from cminject.experiment import Experiment
 from cminject.base import Setup
 from cminject.utils.args import SetupArgumentParser
+
 # Import some concrete class implementations to be able to define a simple setup:
 # * A source which can generate different distributions
 from cminject.sources import VariableDistributionSource
@@ -37,7 +38,7 @@ from cminject.sources import VariableDistributionSource
 from cminject.detectors import SimpleZDetector
 # * A device for fluid flow based on an HDF5 file, together with FlowType, an enumeration of the possible models to use
 #   (this setup only imports FlowType to access FlowType.STOKES, and doesn't allow picking by a user)
-from cminject.devices.fluid_flow_device import FluidFlowDevice, FlowType
+from cminject.devices.fluid_flow import FluidFlowDevice, FlowType
 
 
 class SimpleSetup(Setup):
@@ -66,7 +67,7 @@ class SimpleSetup(Setup):
     @staticmethod
     def get_parser() -> SetupArgumentParser:
         parser = SetupArgumentParser()
-        parser.add_argument('-f', '--filename', help='The filename of the flow field (HDF5).', type=str, required=True)
+        parser.add_argument('filename', help='The filename of the flow field (HDF5).', type=str, required=True)
         parser.add_argument('--rho', help='The density of the particle material [kg/m^3].', type=float, default=1050.0)
         return parser
 

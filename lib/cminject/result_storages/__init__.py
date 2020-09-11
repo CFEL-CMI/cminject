@@ -19,6 +19,8 @@
 Implementations of :class:`cminject.base.ResultStorage`.
 """
 
+from .hdf5 import HDF5ResultStorage
+
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t

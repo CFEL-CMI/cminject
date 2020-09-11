@@ -26,12 +26,12 @@ import argparse
 import numpy as np
 
 from cminject.base import Setup, Device
-from cminject.boundaries.simple import InfiniteBoundary
-from cminject.detectors.simple_z import SimpleZDetector
-from cminject.devices.desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice
+from cminject.boundaries import InfiniteBoundary
+from cminject.detectors import SimpleZDetector
+from cminject.devices.photophoresis import DesyatnikovPhotophoresisDevice
 from cminject.experiment import Experiment
 from cminject.fields.function_based import FunctionField
-from cminject.particles.spherical import ThermallyConductiveSphericalParticle
+from cminject.particles import ThermallyConductiveSphericalParticle
 from cminject.sources.variable_distributions import VariableDistributionSource
 from cminject.utils.args import dist_description, SetupArgumentParser
 
@@ -49,7 +49,7 @@ class DesyatnikovPhotophoresisSetup(Setup):
         experiment.add_source(VariableDistributionSource(
             main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius,
             density=args.rho, subclass=ThermallyConductiveSphericalParticle,
-            subclass_kwargs={'specific_heat': 0.0, 'temperature': 293.15,
+            particle_kwargs={'specific_heat': 0.0, 'temperature': 293.15,
                              'thermal_conductivity': args.gas_thermal_conductivity}
         ))
         experiment.add_device(DesyatnikovPhotophoresisDevice(

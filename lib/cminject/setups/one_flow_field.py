@@ -20,11 +20,11 @@
 import argparse
 
 from cminject.base import Setup
-from cminject.detectors.simple_z import SimpleZDetector
-from cminject.devices.fluid_flow_device import FluidFlowDevice, FlowType
+from cminject.detectors import SimpleZDetector
+from cminject.devices.fluid_flow import FluidFlowDevice, FlowType
 from cminject.experiment import Experiment
-from cminject.particles.spherical import ThermallyConductiveSphericalParticle
-from cminject.sources.variable_distributions import VariableDistributionSource
+from cminject.particles import ThermallyConductiveSphericalParticle
+from cminject.sources import VariableDistributionSource
 from cminject.utils.args import dist_description, SetupArgumentParser
 
 
@@ -50,8 +50,8 @@ class OneFlowFieldSetup(Setup):
         if args.flow_type == 'molecular_flow':
             # Need to set subclass and pass starting temperature when using molecular flow
             source_kwargs = {
-                **source_kwargs, 'subclass': ThermallyConductiveSphericalParticle,
-                'subclass_kwargs': {'temperature': args.particle_temperature, 'thermal_conductivity': None,
+                **source_kwargs, 'particle_class': ThermallyConductiveSphericalParticle,
+                'particle_kwargs': {'temperature': args.particle_temperature, 'thermal_conductivity': None,
                                     'specific_heat': args.particle_specific_heat}
             }
         else:

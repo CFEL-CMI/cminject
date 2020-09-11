@@ -19,9 +19,7 @@
 A collection of subclasses of :class:`cminject.base.Detector`.
 """
 
-__all__ = ['SimpleZDetector']
-
-from .simple_z import SimpleZDetector
+from .simple import *
 
 ### Local Variables:
 ### fill-column: 100

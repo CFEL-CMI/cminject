@@ -30,7 +30,7 @@ from scipy.integrate import ode
 from tqdm import tqdm
 
 from cminject.base import ZBounded, Device, Detector, Particle, Action, ResultStorage, Source
-from cminject.particles.particle_status import *
+from cminject.particles.status import *
 from cminject.utils import infinite_interval
 from cminject.utils.global_config import GlobalConfig, ConfigKey
 

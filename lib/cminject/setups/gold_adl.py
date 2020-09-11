@@ -21,13 +21,13 @@ from typing import Tuple
 import numpy as np
 
 from cminject.base import Device, Boundary, Setup
-from cminject.boundaries.grid_field_based import GridFieldBasedBoundary
-from cminject.detectors.simple_z import SimpleZDetector
-from cminject.devices.desyatnikov_photophoresis_device import DesyatnikovPhotophoresisDevice
+from cminject.boundaries.field_based import GridFieldBasedBoundary
+from cminject.detectors import SimpleZDetector
+from cminject.devices.photophoresis import DesyatnikovPhotophoresisDevice
 from cminject.fields.fluid_flow import StokesDragForceField
-from cminject.particles.spherical import ThermallyConductiveSphericalParticle
+from cminject.particles import ThermallyConductiveSphericalParticle
 from cminject.actions.brownian_motion import StokesBrownianMotionStep
-from cminject.sources.variable_distributions import VariableDistributionSource
+from cminject.sources import VariableDistributionSource
 from cminject.experiment import Experiment
 from cminject.utils.args import SetupArgumentParser
 
@@ -82,18 +82,13 @@ NITROGEN_PARAMS = {
 
 class SkimmersDevice(Device):
     def __init__(self, filename, inter_distance: float, skimmer_length: float, tube_length: float,
-                 skimmer_min_r: float, skimmer_max_r: float, skimmer_min_z: float):
+                 skimmer_min_radius: float, skimmer_max_radius: float, skimmer_min_z: float):
         field = StokesDragForceField(filename=filename, **NITROGEN_PARAMS)
         boundary = SkimmersBoundary(
-            first_skimmer_flow_field=field,
-            inter_distance=inter_distance,
-            skimmer_length=skimmer_length,
-            tube_length=tube_length,
-            skimmer_min_radius=skimmer_min_r,
-            skimmer_max_radius=skimmer_max_r,
-            skimmer_min_z=skimmer_min_z
+            first_skimmer_flow_field=field, tube_length=tube_length,
+            inter_distance=inter_distance, skimmer_length=skimmer_length, skimmer_min_radius=skimmer_min_radius,
+            skimmer_max_radius=skimmer_max_radius, skimmer_min_z=skimmer_min_z
         )
-
         super().__init__(fields=[field], boundary=boundary)
 
 
@@ -130,7 +125,7 @@ class GoldADLSetup(Setup):
             number_of_particles=main_args.nof_particles,
             density=19320.0,  # Assuming 50nm gold particles
             radius=50e-9,
-            subclass_kwargs={
+            particle_kwargs={
                 'thermal_conductivity': 315.0,  # [W / (m*K)], taken from Wikipedia. For PS it would be 0.030
                 'specific_heat': 0.0,
                 'temperature': 293.15
@@ -147,7 +142,7 @@ class GoldADLSetup(Setup):
         exp.add_device(SkimmersDevice(
             skimmer_flow_file, inter_distance=inter_distance,
             skimmer_length=skimmer_length, tube_length=skimmer_tube_length,
-            skimmer_min_r=skimmer_min_r, skimmer_max_r=skimmer_max_r, skimmer_min_z=skimmer_min_z
+            skimmer_min_radius=skimmer_min_r, skimmer_max_radius=skimmer_max_r, skimmer_min_z=skimmer_min_z
         ))
 
         adl_stack = ADLStackDevice(adl_flow_file, z_offset=adl_offset)

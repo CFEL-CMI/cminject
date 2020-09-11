@@ -24,10 +24,10 @@ import warnings
 from abc import ABC
 from typing import Tuple
 
-import h5py  # TODO should this file really be concerned with I/O?
+import h5py  # TODO should this code here really be concerned with I/O?
 import numpy as np
 
-from cminject.calc import fluid_flow, common
+from cminject.calc import fluid_flow, is_finite
 from cminject.particles.spherical import SphericalParticle, ThermallyConductiveSphericalParticle
 from .regular_grid_interpolation import RegularGridInterpolationField
 
@@ -131,7 +131,7 @@ class StokesDragForceField(DragForceInterpolationField):
         """
         pressure, relative_velocity = self.get_local_properties(particle.phase_space_position)
 
-        if pressure > 0 and common.is_finite(pressure):
+        if pressure > 0 and is_finite(pressure):
             Cc = self.calc_slip_correction(pressure, particle.radius)
             return fluid_flow.a_stokes(relative_velocity, self.dynamic_viscosity, particle.radius, particle.mass, Cc)
         else:

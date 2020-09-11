@@ -22,6 +22,8 @@ A collection of subclasses of :class:`cminject.base.Particle`, containing (at le
   * ...your own and more?
 """
 
+from .spherical import SphericalParticle, ThermallyConductiveSphericalParticle
+
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t

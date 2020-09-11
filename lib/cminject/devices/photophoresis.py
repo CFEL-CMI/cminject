@@ -24,7 +24,6 @@ from cminject.fields.fluid_flow import StokesDragForceField
 from cminject.fields.function_based import FunctionField
 from cminject.fields.photophoresis import DesyatnikovPhotophoreticLaserField
 
-
 class DesyatnikovPhotophoresisDevice(Device):
     """
     A Device for simulating photophoretic effects with the model described in: A. Desyatnikov, V. Shvedov, A. Rode,

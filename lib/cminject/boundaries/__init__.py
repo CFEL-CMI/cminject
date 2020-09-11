@@ -19,6 +19,8 @@
 Implementations of :class:`cminject.base.Boundary`.
 """
 
+from .simple import *
+
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t
