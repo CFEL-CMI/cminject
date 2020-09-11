@@ -44,6 +44,9 @@ if __name__ == '__main__':
         '-H', nargs='*', help='Plot histograms (1D/2D) of named quantities at each detector. 2D histograms will be '
                               'plotted when a pair of quantity names is given separated by a comma, e.g. "x,y", '
                               'otherwise a 1D histogram will be plotted.')
+    parser.add_argument(
+        '-Hb', type=int, help='The number of bins to use for the histograms. If this option is not given, the number '
+                              'will be automatically determined based on the data.')
 
     parser.add_argument(
         '-M', action='store_true', help='Plot a trajectory movie, i.e., a live animation of the trajectories.')
@@ -61,13 +64,12 @@ if __name__ == '__main__':
     with HDF5ResultStorage(args.file) as f:
         # Plot detector histograms
         if args.H:
-            detectors = f.get_detectors()
-            zs = [d['position'][0,-1] for d in detectors.values()]
-            print(zs)
-
-            detectors = list(detectors.values())
+            detectors = list(f.get_detectors().values())
+            plot_detectors_kwargs = {'cmin': 1, 'norm': LogNorm()}
+            if args.Hb is not None:
+                plot_detectors_kwargs.update(bins=args.Hb)
             for desc in args.H:
-                plot_detectors(detectors, desc, cmin=1, norm=LogNorm())
+                plot_detectors(detectors, desc, **plot_detectors_kwargs)
 
         if args.T or args.M:
             trajectories = f.get_trajectories()

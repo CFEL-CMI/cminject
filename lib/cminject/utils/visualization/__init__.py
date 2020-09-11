@@ -22,12 +22,12 @@ Code for visualization of virtual experiment results.
 import math
 import warnings
 from itertools import repeat
-from typing import Optional, Callable, Any, List, Union, Sequence
+from typing import Optional, List, Union, Sequence
 
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.collections import LineCollection
 from matplotlib.animation import Animation, FuncAnimation
+from matplotlib.collections import LineCollection
 from mpl_toolkits.mplot3d import Axes3D
 
 from cminject.utils.args import parse_multiple_dimensions_description, DimensionDescription
@@ -218,13 +218,16 @@ def plot_detectors(detectors: List[np.array], dimension_description: str,
     :param kwargs: Keyword args that will be passed directly to the plt.hist/hist2d calls.
     :return: A list of all return values of :func:`plot_detector`.
     """
+    n = len(detectors)
+    if n == 0:
+        return []
+
     if axes is None:
-        n = len(detectors)
         xdim, ydim = round(math.sqrt(n)), math.ceil(math.sqrt(n))
         fig, axes = plt.subplots(xdim, ydim)
         axes = axes.flatten() if isinstance(axes, np.ndarray) else repeat(axes)
         fig.suptitle(dimension_description)
-        if len(axes) > n:
+        if not isinstance(axes, repeat) and len(axes) > n:
             for ax in axes[n:]:
                 ax.remove()
     else:
