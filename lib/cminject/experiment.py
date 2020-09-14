@@ -145,7 +145,7 @@ def postprocess_particle(particle: Particle, integrator: ode, t_end: float) -> N
             reason = 'unknown reason'
 
         logging.debug(f"Last particle phase space position: {particle.phase_space_position}")
-        logging.info(f"\tDone simulating particle {particle.identifier}: {reason}.")
+        logging.info(f"\tDone simulating particle {particle.identifier} at t={particle.time}: {reason}.")
 
 
 def propagate_field_free(particle: Particle) -> None:
@@ -247,7 +247,8 @@ def simulate_particle(particle: Particle) -> Particle:
 
     # Construct integrals
     integral = ode(spatial_derivatives)
-    integral.set_integrator('lsoda', nsteps=3000)
+    ixpr = (logging.root.level <= logging.DEBUG)  # log method switches if loglevel is DEBUG or lower
+    integral.set_integrator('lsoda', nsteps=3000, ixpr=ixpr)
     integral.set_initial_value(particle.phase_space_position, TIME_START)
     integral.set_f_params(particle, DEVICES, NUMBER_OF_DIMENSIONS)
     logging.info(f"\tSimulating particle {particle.identifier}...")
