@@ -95,7 +95,9 @@ def a_brown_stokes(mu, T_f, r_p, rho_p, Cc, dt, n):
            nopython=True, error_model='numpy')
 def a_roth(p, delta_v, m_f, T_f, T_p, r_p, m_p):
     """
-    Acceleration for a microscopic force for aerosol transport due to Nils Roth, https://arxiv.org/abs/2006.10652.
+    Acceleration for a microscopic force for aerosol transport described in Roth2020_.
+
+    .. _Roth2020: https://arxiv.org/abs/2006.10652
 
     :param p: The pressure of the fluid.
     :param delta_v: The velocity difference (v_fluid - v_particle).
@@ -125,7 +127,7 @@ def a_roth(p, delta_v, m_f, T_f, T_p, r_p, m_p):
            nopython=True, error_model='numpy')
 def a_brown_roth(p, m_f, T_f, T_p, r_p, m_p, dt, n):
     """
-    Returns a random (Brownian) acceleration with a spectral intensity as described in https://arxiv.org/abs/2006.10652,
+    Returns a random (Brownian) acceleration with a spectral intensity as described in Roth2020_,
     depending on particle and fluid properties at a certain position.
 
     :param p: The pressure at the point.
