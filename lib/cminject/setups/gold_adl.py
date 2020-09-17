@@ -132,7 +132,7 @@ class GoldADLSetup(Setup):
             density=constant(19320.0),  # Assuming 50nm gold particles
             radius=constant(50e-9),
             position=[
-                NormOfDistributions([GaussianDistribution(0, 3e-3), GaussianDistribution(0, 3e-3)]),
+                NormOfDistributions(GaussianDistribution(0, 3e-3), GaussianDistribution(0, 3e-3)),
                 constant(skimmer_min_z+abs(skimmer_min_z*0.001))],
             velocity=[
                 GaussianDistribution(1e-3, 1e-5),

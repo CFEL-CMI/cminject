@@ -38,16 +38,23 @@ class Distribution(abc.ABC):
         pass
 
     def __add__(self, other: 'Distribution'):
+        assert isinstance(other, Distribution), "Right operand must be Distribution instance"
         return _ArithDist(left=self, right=other, op='+')
 
     def __mul__(self, other: 'Distribution'):
+        assert isinstance(other, Distribution), "Right operand must be Distribution instance"
         return _ArithDist(left=self, right=other, op='*')
 
     def __sub__(self, other: 'Distribution'):
+        assert isinstance(other, Distribution), "Right operand must be Distribution instance"
         return _ArithDist(left=self, right=other, op='-')
 
     def __truediv__(self, other: 'Distribution'):
+        assert isinstance(other, Distribution), "Right operand must be Distribution instance"
         return _ArithDist(left=self, right=other, op='/')
+
+    def __repr__(self):
+        return '<' + self.__str__() + '>'
 
 
 class _ArithDist(Distribution):
@@ -68,7 +75,7 @@ class _ArithDist(Distribution):
             return self.left.generate(n) / self.right.generate(n)
 
     def __str__(self):
-        return f'<{self.left.__str__()} {self.op} {self.right.__str__()}>'
+        return f'({self.left.__str__()} {self.op} {self.right.__str__()})'
 
 
 class GaussianDistribution(Distribution):
@@ -79,6 +86,9 @@ class GaussianDistribution(Distribution):
     def generate(self, n: int) -> np.array:
         return np.random.normal(self.mu, self.sigma, n)
 
+    def __str__(self):
+        return f'Gaussian(mu={self.mu},sigma={self.sigma})'
+
 
 class UniformDistribution(Distribution):
     """A uniform distribution between a minimum and a maximum value. See np.random.uniform."""
@@ -88,6 +98,9 @@ class UniformDistribution(Distribution):
     def generate(self, n: int) -> np.array:
         return np.random.uniform(self.min, self.max, n)
 
+    def __str__(self):
+        return f'Uniform(min={self.min},max={self.max})'
+
 
 class LinearDistribution(Distribution):
     """A linear "distribution" between a minimum and a maximum value, i.e. generates a np.linspace."""
@@ -96,6 +109,9 @@ class LinearDistribution(Distribution):
 
     def generate(self, n: int) -> np.array:
         return np.linspace(self.min, self.max, n)
+
+    def __str__(self):
+        return f'Linear(min={self.min},max={self.max})'
 
 
 class DiracDeltaDistribution(Distribution):
@@ -111,6 +127,9 @@ class DiracDeltaDistribution(Distribution):
     def generate(self, n: int) -> np.array:
         return np.full((n,), self.value)
 
+    def __str__(self):
+        return f'DiracDelta({self.value})'
+
 
 class NormOfDistributions(Distribution):
     """
@@ -119,7 +138,7 @@ class NormOfDistributions(Distribution):
 
     Akin to a generalised chi distribution that is not necessarily based on normally distributed variables.
     """
-    def __init__(self, distributions: List[Distribution], p: int = 2):
+    def __init__(self, *distributions: Distribution, p: int = 2):
         """
         :param distributions: The list of distributions to generate the norm distribution of.
           n (as used in the class docstring) is then equal to len(distributions).
@@ -131,6 +150,9 @@ class NormOfDistributions(Distribution):
     def generate(self, n):
         squared_values = [distribution.generate(n)**self.p for distribution in self.distributions]
         return np.sum(squared_values, axis=0)**(1/self.p)
+
+    def __str__(self):
+        return f'Norm_{self.p}({", ".join(str(d) for d in self.distributions)})'
 
 
 # String -> Distribution parsing
@@ -154,7 +176,7 @@ def _tokens_to_dirac(tokens):
 
 
 def _tokens_to_dist_norm(tokens):
-    return NormOfDistributions(tokens[0])
+    return NormOfDistributions(*tokens[0])
 
 
 def _tokens_to_float(tokens):
