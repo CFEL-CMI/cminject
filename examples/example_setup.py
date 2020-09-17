@@ -17,9 +17,8 @@
 
 """
 This file defines a simple example setup. It is, at its core, a reduced version of
-cminject.definitions.setups.OneFlowFieldSetup, and should only be used as an example to derive own setups from.
-
-See README.md in this directory for further information on how to run this setup.
+:class:`cminject.definitions.setups.OneFlowFieldSetup`, and should only be used as an example to derive own setups from.
+See the Developer Guide in the Sphinx documentation for additional explanations.
 """
 
 # We need argparse for parsing arguments from the command line
@@ -32,14 +31,14 @@ from cminject.base import Setup
 from cminject.utils.args import SetupArgumentParser, distribution_description
 
 # Import some concrete class implementations to be able to define a simple setup:
-from cminject.utils.distributions import constant, GaussianDistribution  # Types of distributions
+from cminject.utils.distributions import constant, GaussianDistribution  # Required types of distributions
 from cminject.sources import VariableDistributionSource  # Generates particles from property distributions
 from cminject.detectors import SimpleZDetector  # A detector which is positioned at some Z position
 # A device for fluid flow based on an HDF5 file, together with FlowType, an enumeration of the possible models to use
 from cminject.devices.fluid_flow import FluidFlowDevice, FlowType
 
 
-class SimpleSetup(Setup):
+class ExampleSetup(Setup):
     """
     A simple setup which will simulate a single flow field with particles starting from a fixed position and velocity
     distribution and radius. The only parameters available are the flow field filename and the density (density) of the
