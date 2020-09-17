@@ -28,6 +28,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.animation import Animation, FuncAnimation
 from matplotlib.collections import LineCollection
+from matplotlib.colors import LogNorm
 from mpl_toolkits.mplot3d import Axes3D
 
 from cminject.utils.args import parse_multiple_dimensions_description, DimensionDescription
@@ -141,7 +142,7 @@ def plot_trajectories_movie(trajectories: Sequence[np.array], dimension_descript
                             delay: int = 100, n_previous: int = 10) -> (Animation, plt.Figure):
     """
     Creates a trajectory movie via a :class:`matplotlib.animation.Animation`. Plots each trajectory as a curve
-    of the last :param:`n_previous` positions.
+    of the last ``n_previous`` positions.
 
     :param trajectories: A sequence of trajectories.
     :param dimension_description: A dimension descriptionf of a pair or triple of dimensions.
@@ -196,13 +197,11 @@ def plot_detector(detector: np.array, dimension_description: DimensionDescriptio
 
     auto_bins = min(max(int(len(detector) / 100), 5), 250)
     if n == 2:
-        if 'bins' not in kwargs:
-            kwargs.update({'bins': (auto_bins, auto_bins)})
-        return ax.hist2d(result[0], result[1], **kwargs)
+        kwargs2d = {'bins': auto_bins, 'cmin': 1, 'norm': LogNorm(), **kwargs}
+        return ax.hist2d(result[0], result[1], **kwargs2d)
     else:  # n == 1
-        if 'bins' not in kwargs:
-            kwargs.update({'bins': auto_bins})
-        return ax.hist(result, **kwargs)
+        kwargs1d = {'bins': auto_bins, **kwargs}
+        return ax.hist(result, **kwargs1d)
 
 
 def plot_detectors(detectors: List[np.array], dimension_description: str,
