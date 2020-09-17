@@ -59,8 +59,45 @@ virtual environments for whatever reason, simply skip the first two steps.
 ****************
 Running CMInject
 ****************
-``cminject`` is the program for running CMInject simulations. Let's look at an example call
-of it, split into lines for readability: ::
+
+A toy simulation with ExampleSetup
+----------------------------------
+
+A very simple simulation can be run by using the ``cminject`` program, running the setup
+:class:`cminject.setups.example.ExampleSetup`::
+
+    cminject \
+      -s cminject.setups.example.ExampleSetup   `# Use ExampleSetup`\
+      -f examples/2d_example_field.h5           `# Use the 2D example field`\
+      -n 100                                    `# Simulate 100 particles`\
+      -o example_output.h5                      `# Write the results to example_output.h5`\
+      -T                                        `# Track and store trajectories`
+
+The example field is provided in the examples/ subdirectory of CMInject. You can then try out the
+following:
+
+  * Adding the parameter ``--pos G[0,1e-4] 0``, which sets the x/z position distributions to
+
+     * x: A normal (Gaussian) distribution with µ=0.0, σ=10^-4  (narrower than default σ=10^-3)
+     * z: Constant 0
+
+  * Adding the parameter ``--loglevel info`` to get details about the start and end of each
+    particle's simulation, e.g., the ending time and reason.
+
+  * Adding the parameter ``-h`` to get informative help text about all available parameters; see
+    also :ref:`get-cminject-help`.
+
+  * Visualizing the output data with ``cminject_visualize -T example_output.h5``; see also
+    :ref:`cminject_visualize`.
+
+A more realistic simulation
+---------------------------
+
+The simulation using ``ExampleSetup`` is straightforward to understand, but not very flexible.
+For example, the starting velocities and detector positions are not exposed as parameters, and so
+are fixed.
+
+A more realistic, but more complex call of ``cminject`` could be ::
 
     cminject -n 100          `# Run the simulation for 100 particles.`\
       -D 3                   `# Use a spatial dimensionality of 3.`\
@@ -68,38 +105,49 @@ of it, split into lines for readability: ::
                               # since we specified -D 3.`\
       -rho 1050 -r 50e-9     `# Simulate particles with a density of 1050kg/m^3\
                               # and a radius of 50nm`\
-      -p "G 0.0 1e-3" 0 0    `# Randomly generate initial particle positions, the first dimension\
+      -p G[0,1e-3] 0 0       `# Randomly generate initial particle positions, the first dimension\
                               # (x) being normally (gaussian) distributed with mu = 0m and\
                               # sigma = 1mm, and the others (y, z) being fixed at 0m.`\
-      -v "G 0.0 1.0" 0 -10.0 `# Randomly generate initial particle velocities, the first dimension\
+      -v G[0,1] 0 -10.0      `# Randomly generate initial particle velocities, the first dimension\
                               # being normally (gaussian) distributed with mu = 0m/s and\
                               # sigma = 1m/s, the second (y) fixed at 0m/s, and the third (z)\
                               # fixed at -10.0m/s.`\
       -d 0 -0.01             `# Insert virtual detectors at 0m and -1cm`\
       -T                     `# Track and store trajectories`\
       -B                     `# Enable Brownian motion`\
-      -o output.h5           `# Write results to output.h5`\
+      -o output.h5           `# Write results to output.h5`
 
-You can also run different experiment setups. The call above is for the default of
-``-s 'cminject.setups.OneFlowFieldSetup'``, which simulates particles moving through
-exactly one flow field. This and other available setups are listed in :ref:`list-of-setups`.
-
-Different setups can have different sets of parameters. To look at the parameters for a different
-setup, you just need to provide the setup class with the `-s` parameter, along with the `-h` flag.
-Example: ``cminject -s cminject.setups.DesyatnikovPhotophoresisSetup -h``.
-
-More available parameters can be listed by running ``cminject -h``. The output file ``output.h5``
-can be viewed with ``cminject_visualize``. It can also be further analyzed, e.g., directly with
-``cminject_analyze-asymmetry``, or by manually working with the stored data. This data can be
-retrieved from the :class:`cminject.result_storages.HDF5ResultStorage` class.
-
-If you want more information about how particles progress through your simulation (e.g. when
-and where they get lost or leave the simulation), you can add the option ``--loglevel info``,
-or for even more verbose output, ``--loglevel debug``.
+We do not use ``ExampleSetup`` here. Since the setup is not provided explicitly, the default
+setup is used (see :class:`cminject.setups.one_flow_field.OneFlowFieldSetup`). All provided setups
+are listed in :ref:`list-of-setups`.
 
 .. note::
-  ``cminject`` only accepts an HDF5 file as a flow field (i.e., the ``-f`` argument).
-  See :ref:`txt_to_hdf5` for information on how to convert TXT files to such HDF5 files.
+  ``cminject``, for now, only accepts HDF5 files as flow fields (i.e., the ``-f`` argument).
+  See :ref:`cminject_txt-to-hdf5` for information on how to convert TXT files that define a grid
+  field to such HDF5 files.
+
+
+.. _get-cminject-help:
+
+Getting help
+------------
+
+If you want to find out all available parameters, you can add the ``-h`` option to any call of the
+``cminject`` program. If you've picked a specific setup with the ``-s`` option, the parameters
+available for this setup will also be listed and explained.
+
+Further steps
+-------------
+
+The output files of both simulations described above can be viewed with :ref:`cminject_visualize`.
+They can also be further analyzed, e.g., directly with :ref:`cminject_analyze-asymmetry`, or by
+manually working with the stored data. These tools are described in :ref:`utility-programs`.
+
+Result data can be retrieved from the :class:`cminject.result_storages.hdf5.HDF5ResultStorage`
+class, which can benstantiated with the filename of the result file, and offers a straightforward
+interface to retrieve each piece of stored result data.
+
+.. _utility-programs:
 
 ************************
 List of utility programs
@@ -108,7 +156,7 @@ There are other programs to prepare input data to, and process, analyze and visu
 data from ``cminject``. This section gives a list of all these programs contained in
 CMInject and describes each of them.
 
-.. _txt_to_hdf5:
+.. _cminject_txt-to-hdf5:
 
 cminject_txt-to-hdf5
 --------------------
@@ -130,6 +178,8 @@ was defined with.
   since they are, coordinate-wise, outside of the field. In this case, please use the ``-m`` option
   for ``cminject_txt-to-hdf5``, which mirrors the available data around the axis of symmetry and
   thus allows simulations to work as expected.
+
+.. _cminject_visualize:
 
 cminject_visualize
 ------------------
@@ -160,6 +210,8 @@ cminject_visualize
         cminject_visualize resultfile.h5 -H x,y  x,z  y,z  x,vx  y,vy
 
     .. image:: img/vishist_r-z_r-vr.png
+
+.. _cminject_analyze-asymmetry:
 
 cminject_analyze-asymmetry
 --------------------------

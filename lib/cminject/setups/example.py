@@ -63,7 +63,7 @@ class ExampleSetup(Setup):
     @staticmethod
     def get_parser() -> SetupArgumentParser:
         parser = SetupArgumentParser()
-        parser.add_argument('filename', help='The filename of the flow field (HDF5).', type=str)
+        parser.add_argument('-f', '--filename', help='The filename of the flow field (HDF5).', type=str)
         parser.add_argument('--rho', help='The density of the particle material [kg/m^3].', type=float, default=1050.0)
         parser.add_argument('--pos', help='The position distributions in x/z space [m]', type=distribution_description,
                             nargs=2, default=[GaussianDistribution(0, 1e-3), constant(0.0)])
