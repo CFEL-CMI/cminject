@@ -30,6 +30,7 @@ from cminject.actions.brownian_motion import StokesBrownianMotionStep
 from cminject.sources import VariableDistributionSource
 from cminject.experiment import Experiment
 from cminject.utils.args import SetupArgumentParser
+from cminject.utils.distributions import constant, NormOfDistributions, GaussianDistribution
 
 
 class SkimmersBoundary(Boundary):
@@ -121,19 +122,22 @@ class GoldADLSetup(Setup):
 
         exp = Experiment(number_of_dimensions=2, time_interval=(0.0, 1.0), time_step=1e-5)
         exp.add_source(VariableDistributionSource(
-            subclass=ThermallyConductiveSphericalParticle,
             number_of_particles=main_args.nof_particles,
-            density=19320.0,  # Assuming 50nm gold particles
-            radius=50e-9,
+            particle_class=ThermallyConductiveSphericalParticle,
             particle_kwargs={
                 'thermal_conductivity': 315.0,  # [W / (m*K)], taken from Wikipedia. For PS it would be 0.030
                 'specific_heat': 0.0,
                 'temperature': 293.15
             },
-            position=[{'kind': 'radial_gaussian', 'mu': 0.0, 'sigma': 3.0e-3},
-                      skimmer_min_z+abs(skimmer_min_z*0.001)],
-            velocity=[{'kind': 'gaussian', 'mu': 1e-3, 'sigma': 1e-5},
-                      {'kind': 'gaussian', 'mu': 0.155, 'sigma': 0.001}]
+            density=constant(19320.0),  # Assuming 50nm gold particles
+            radius=constant(50e-9),
+            position=[
+                NormOfDistributions([GaussianDistribution(0, 3e-3), GaussianDistribution(0, 3e-3)]),
+                constant(skimmer_min_z+abs(skimmer_min_z*0.001))],
+            velocity=[
+                GaussianDistribution(1e-3, 1e-5),
+                GaussianDistribution(0.155, 0.001)
+            ]
             # for ADL exit, approximated:
             # position=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 10e-6}, 0.6],
             # velocity=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.1}, {'kind': 'gaussian', 'mu': 39.0, 'sigma': 0.01}]

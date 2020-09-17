@@ -87,7 +87,7 @@ class OneFlowFieldSetup(Setup):
         parser.add_argument('-r', '--radius', help='Distribution description for the radius.',
                             type=distribution_description, required=True)
         parser.add_argument('-rho', '--density', help='Density of the particles.',
-                            type=float, required=True)
+                            type=distribution_description, required=True)
 
         parser.add_argument('-d', '--detectors', help='The Z positions of the detectors', nargs='*',
                             type=float, required=False)

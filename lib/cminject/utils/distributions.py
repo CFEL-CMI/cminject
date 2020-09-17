@@ -22,7 +22,7 @@
 
 import abc
 import pyparsing as pp
-from typing import List
+from typing import List, Union
 
 import numpy as np
 
@@ -37,13 +37,46 @@ class Distribution(abc.ABC):
         """Return n samples of this distribution as a NumPy array."""
         pass
 
+    def __add__(self, other: 'Distribution'):
+        return _ArithDist(left=self, right=other, op='+')
+
+    def __mul__(self, other: 'Distribution'):
+        return _ArithDist(left=self, right=other, op='*')
+
+    def __sub__(self, other: 'Distribution'):
+        return _ArithDist(left=self, right=other, op='-')
+
+    def __truediv__(self, other: 'Distribution'):
+        return _ArithDist(left=self, right=other, op='/')
+
+
+class _ArithDist(Distribution):
+    def __init__(self, left: 'Distribution', right: 'Distribution', op: str):
+        assert op in ['+', '*', '-', '/'], f"Unknown operation '{op}'"
+        self.left = left
+        self.right = right
+        self.op = op
+
+    def generate(self, n: int) -> np.array:
+        if self.op == '+':
+            return self.left.generate(n) + self.right.generate(n)
+        elif self.op == '*':
+            return self.left.generate(n) * self.right.generate(n)
+        elif self.op == '-':
+            return self.left.generate(n) - self.right.generate(n)
+        elif self.op == '/':
+            return self.left.generate(n) / self.right.generate(n)
+
+    def __str__(self):
+        return f'<{self.left.__str__()} {self.op} {self.right.__str__()}>'
+
 
 class GaussianDistribution(Distribution):
-    """A Gaussian distribution with a fixed mean (mu) and standard deviation (sigma). See np.random.normal"""
+    """A Gaussian distribution with a fixed mean (mu) and standard deviation (sigma). See np.random.normal."""
     def __init__(self, mu: float, sigma: float):
         self.mu, self.sigma = mu, sigma
 
-    def generate(self, n):
+    def generate(self, n: int) -> np.array:
         return np.random.normal(self.mu, self.sigma, n)
 
 
@@ -165,6 +198,10 @@ def parse_distribution(s: str) -> Distribution:
     """
     result = _dist.parseString(s, parseAll=True)[0]
     return result
+
+
+constant = DiracDeltaDistribution  # An intuitive and short alias
+
 
 ### Local Variables:
 ### fill-column: 100

@@ -21,7 +21,7 @@ import numpy as np
 
 from cminject.base import Source
 from cminject.particles.spherical import SphericalParticle
-from cminject.utils.distributions import Distribution
+from cminject.utils.distributions import Distribution, constant
 from cminject.utils.global_config import GlobalConfig, ConfigSubscriber, ConfigKey
 
 
@@ -35,7 +35,7 @@ class VariableDistributionSource(Source, ConfigSubscriber):
                  position: List[Distribution],
                  velocity: List[Distribution],
                  radius: Distribution,
-                 density: float,
+                 density: Distribution,
                  seed=None,
                  particle_class: Type[SphericalParticle] = SphericalParticle,
                  particle_kwargs: Dict[Any, Any] = None):
@@ -43,7 +43,7 @@ class VariableDistributionSource(Source, ConfigSubscriber):
         self.position = position
         self.velocity = velocity
         self.radius = radius
-        self.rho = density
+        self.density = density
         self.seed = seed
         self.particle_class = particle_class
         self.particle_kwargs = particle_kwargs or {}
@@ -67,6 +67,7 @@ class VariableDistributionSource(Source, ConfigSubscriber):
         position = np.array([pdist.generate(n) for pdist in self.position]).transpose()
         velocity = np.array([vdist.generate(n) for vdist in self.velocity]).transpose()
         r = self.radius.generate(n)
+        rho = self.density.generate(n)
 
         particles = [
             self.particle_class(
@@ -75,7 +76,7 @@ class VariableDistributionSource(Source, ConfigSubscriber):
                 velocity=velocity[i],
                 start_time=start_time,
                 radius=r[i],
-                rho=self.rho,
+                rho=rho[i],
                 **self.particle_kwargs
             )
             for i in range(n)

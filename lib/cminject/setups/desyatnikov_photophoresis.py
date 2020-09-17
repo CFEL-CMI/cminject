@@ -48,7 +48,7 @@ class DesyatnikovPhotophoresisSetup(Setup):
                                 random_seed=main_args.seed, number_of_dimensions=2)
         experiment.add_source(VariableDistributionSource(
             main_args.nof_particles, position=args.position, velocity=args.velocity, radius=args.radius,
-            density=args.rho, subclass=ThermallyConductiveSphericalParticle,
+            density=args.rho, particle_class=ThermallyConductiveSphericalParticle,
             particle_kwargs={'specific_heat': 0.0, 'temperature': 293.15,
                              'thermal_conductivity': args.gas_thermal_conductivity}
         ))
@@ -79,7 +79,7 @@ class DesyatnikovPhotophoresisSetup(Setup):
         add_dist_arg('-p', '--position', help='Distribution description for the position.', nargs='*')
         add_dist_arg('-v', '--velocity', help='Distribution description for the velocity.', nargs='*')
         add_dist_arg('-r', '--radius', help='Distribution description for the radius.')
-        add_float_arg('-rho', '--density', help='Density of the particles.')
+        add_dist_arg('-rho', '--density', help='Density of the particles.')
         add_float_arg('-mu', '--thermal-conductivity', help='Thermal conductivity of the particles.')
 
         add_float_arg('-bp', '--beam-power', help='Power of the laser beam in watts')

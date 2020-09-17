@@ -29,22 +29,20 @@ import argparse
 # and has arguments parsed by a SetupArgumentParser
 from cminject.experiment import Experiment
 from cminject.base import Setup
-from cminject.utils.args import SetupArgumentParser
+from cminject.utils.args import SetupArgumentParser, distribution_description
 
 # Import some concrete class implementations to be able to define a simple setup:
-# * A source which can generate different distributions
-from cminject.sources import VariableDistributionSource
-# * A detector which is positioned at some Z position
-from cminject.detectors import SimpleZDetector
-# * A device for fluid flow based on an HDF5 file, together with FlowType, an enumeration of the possible models to use
-#   (this setup only imports FlowType to access FlowType.STOKES, and doesn't allow picking by a user)
+from cminject.utils.distributions import constant, GaussianDistribution  # Types of distributions
+from cminject.sources import VariableDistributionSource  # Generates particles from property distributions
+from cminject.detectors import SimpleZDetector  # A detector which is positioned at some Z position
+# A device for fluid flow based on an HDF5 file, together with FlowType, an enumeration of the possible models to use
 from cminject.devices.fluid_flow import FluidFlowDevice, FlowType
 
 
 class SimpleSetup(Setup):
     """
     A simple setup which will simulate a single flow field with particles starting from a fixed position and velocity
-    distribution and radius. The only parameters available are the flow field filename and the density (rho) of the
+    distribution and radius. The only parameters available are the flow field filename and the density (density) of the
     particle material. The density is there just to show how additional arguments can be added.
     """
     @staticmethod
@@ -53,10 +51,9 @@ class SimpleSetup(Setup):
         experiment = Experiment(number_of_dimensions=2, time_step=dt, time_interval=(0, 1))
         experiment.add_source(VariableDistributionSource(
             number_of_particles=main_args.nof_particles,
-            position=[{'kind': 'radial_gaussian', 'mu': 0.0, 'sigma': 1e-3}, 0.0],
-            velocity=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 1e-3}, {'kind': 'gaussian', 'mu': 2.0, 'sigma': 0.5}],
-            radius=5e-9,
-            density=args.rho
+            position=args.pos,
+            velocity=[GaussianDistribution(mu=0.0, sigma=1e-3), GaussianDistribution(mu=2, sigma=0.5)],
+            radius=constant(5e-9), density=constant(args.rho)
         ))
         experiment.add_device(FluidFlowDevice(filename=args.filename, flow_type=FlowType.STOKES, brownian_motion=True))
         for i, z in enumerate([0.0, 0.01, 0.02]):
@@ -67,8 +64,10 @@ class SimpleSetup(Setup):
     @staticmethod
     def get_parser() -> SetupArgumentParser:
         parser = SetupArgumentParser()
-        parser.add_argument('filename', help='The filename of the flow field (HDF5).', type=str, required=True)
+        parser.add_argument('filename', help='The filename of the flow field (HDF5).', type=str)
         parser.add_argument('--rho', help='The density of the particle material [kg/m^3].', type=float, default=1050.0)
+        parser.add_argument('--pos', help='The position distributions in x/z space [m]', type=distribution_description,
+                            nargs=2, default=[GaussianDistribution(0, 1e-3), constant(0.0)])
         return parser
 
 
