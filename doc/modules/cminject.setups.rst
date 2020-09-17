@@ -35,3 +35,10 @@ cminject.setups.one\_flow\_field module
    :undoc-members:
    :show-inheritance:
 
+cminject.setups.example module
+------------------------------
+
+.. automodule:: cminject.setups.example
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -70,7 +70,7 @@ A very simple simulation can be run by using the ``cminject`` program, running t
       -s cminject.setups.example.ExampleSetup   `# Use ExampleSetup`\
       -f examples/2d_example_field.h5           `# Use the 2D example field`\
       -n 100                                    `# Simulate 100 particles`\
-      -o example_output.h5                      `# Write the results to example_output.h5`\
+      -o examples/example_output.h5             `# Write the results to example_output.h5`\
       -T                                        `# Track and store trajectories`
 
 The example field is provided in the examples/ subdirectory of CMInject. You can then try out the
@@ -87,7 +87,7 @@ following:
   * Adding the parameter ``-h`` to get informative help text about all available parameters; see
     also :ref:`get-cminject-help`.
 
-  * Visualizing the output data with ``cminject_visualize -T example_output.h5``; see also
+  * Visualizing the output data with ``cminject_visualize -T examples/example_output.h5``; see also
     :ref:`cminject_visualize`.
 
 A more realistic simulation

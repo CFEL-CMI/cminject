@@ -26,7 +26,7 @@ running your changed code.
 Starting points
 ---------------
 
-The full documentation of all modules is listed in ":ref:`apidoc`".
+You can find the full documentation of all modules in :ref:`the APIdoc<apidoc>`.
 
 New concrete object definitions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -45,8 +45,26 @@ new subclass and use it. The next typical thing to define is a new kind of exper
 based on the Setup subclass (see :ref:`list-of-setups`) and a combination of existing or newly
 implemented subclasses of Particle, Field, etc.
 
-You can also refer to the ``examples/`` folder at the root of this repository, where a minimal
-such setup is defined. :)
+Below, we've included verbatim the definition of :class:`cminject.setups.example.ExampleSetup`,
+which is fairly simple. It defines a setup with a very small set of exposed parameters (``-f``,
+``--rho`` and ``-pos``), consisting of only one ``Source``, one ``Device``, and three instances of
+``Detector``.
+
+This code is heavily annotated and should serve as a starting point for new setup definitions.
+You can define a new setup by copying over this code to a differently named class. Then you can,
+for example,
+
+   * expose more parameters or remove existing ones(defined in ``get_parser()``, used in
+     ``construct_experiment()``)
+   * add more devices (see :mod:`cminject.devices`)
+   * add more sources (see :mod:`cminject.sources`)
+   * add instances of new object definitions that you've defined yourself. This can, e.g., be a new
+     kind of ``Device``. Consider the relevant :ref:`base classes<base-classes>` and their abstract
+     interfaces, which you must implement in your subclasses.
+
+.. include:: ../../lib/cminject/setups/example.py
+   :literal:
+
 
 Performance considerations
 --------------------------
@@ -85,5 +103,5 @@ Contact
 -------
 
 Please direct any developer-centric questions to the authors,
-`Simon Welker <mailto:simon.welker@cfel.de>`_ or
+`Simon Welker <mailto:simon.welker@cfel.de>`_ and
 `Muhamed Amin <mailto:muhamed.amin@cfel.de>`_.
