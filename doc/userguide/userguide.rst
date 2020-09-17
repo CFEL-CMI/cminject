@@ -46,13 +46,15 @@ virtual environments for whatever reason, simply skip the first two steps.
 
   Switch (``cd``) to the directory where you downloaded/cloned CMInject. Then:
 
-  - If you plan on developing CMInject (see `setup.py develop`_)::
-
-      python setup.py develop
-
   - If you just want to use CMInject::
 
       python setup.py install
+
+  - If you also plan on developing CMInject (see `setup.py develop`_)::
+
+      python setup.py develop
+
+
 
 ****************
 Running CMInject
@@ -82,32 +84,34 @@ You can also run different experiment setups. The call above is for the default 
 ``-s 'cminject.setups.OneFlowFieldSetup'``, which simulates particles moving through
 exactly one flow field. This and other available setups are listed in :ref:`list-of-setups`.
 
+Different setups can have different sets of parameters. To look at the parameters for a different
+setup, you just need to provide the setup class with the `-s` parameter, along with the `-h` flag.
+Example: ``cminject -s cminject.setups.DesyatnikovPhotophoresisSetup -h``.
+
+More available parameters can be listed by running ``cminject -h``. The output file ``output.h5``
+can be viewed with ``cminject_visualize``. It can also be further analyzed, e.g., directly with
+``cminject_analyze-asymmetry``, or by manually working with the stored data. This data can be
+retrieved from the :class:`cminject.result_storages.HDF5ResultStorage` class.
+
+If you want more information about how particles progress through your simulation (e.g. when
+and where they get lost or leave the simulation), you can add the option ``--loglevel info``,
+or for even more verbose output, ``--loglevel debug``.
+
 .. note::
-  Different setups can have different sets of parameters. To look at the parameters for a different
-  setup, you can run, for example,
-  ``cminject -s cminject.setups.DesyatnikovPhotophoresisSetup -h``.
-
-Other options exist and can be listed by running ``cminject -h``. The output file ``output.h5`` can
-be viewed with ``cminject_visualize`` or further analyzed with ``cminject_analyze-asymmetry``, and
-more virtual detectors can be inserted into the results file after simulation with
-``cminject_reconstruct-detectors``.
-
-.. note::
-  If you want more information about how particles progress through your simulation, you can add the
-  option ``--loglevel info``, or for even more verbose output, ``--loglevel debug``.
-
-.. warning::
   ``cminject`` only accepts an HDF5 file as a flow field (i.e., the ``-f`` argument).
-  See `cminject_txt-to-hdf5` for information on how to convert TXT files to such HDF5 files.
+  See :ref:`txt_to_hdf5` for information on how to convert TXT files to such HDF5 files.
 
+************************
 List of utility programs
-------------------------
-There are other programs to further process, analyze and visualize simulation results stored
-by ``cminject``. This section gives a list of all these programs contained in CMInject and
-describes each of them.
+************************
+There are other programs to prepare input data to, and process, analyze and visualize output
+data from ``cminject``. This section gives a list of all these programs contained in
+CMInject and describes each of them.
+
+.. _txt_to_hdf5:
 
 cminject_txt-to-hdf5
-~~~~~~~~~~~~~~~~~~~~
+--------------------
 ``cminject_txt-to-hdf5`` was written to convert TXT files describing a field as a regular grid,
 like flow field files, to HDF5 files. For example, the COMSOL Multiphysics software writes
 out such TXT files. The reason this is useful is that large TXT files are very slow to read in in
@@ -127,14 +131,8 @@ was defined with.
   for ``cminject_txt-to-hdf5``, which mirrors the available data around the axis of symmetry and
   thus allows simulations to work as expected.
 
-  Note that after doing this and running a simulation, you might want to work only with the
-  absolute value of the simulated r positions, e.g.::
-
-      r = resulthdf5['particles/0']['trajectory'][0]
-      r = np.abs(r)
-
 cminject_visualize
-~~~~~~~~~~~~~~~~~~
+------------------
 ``cminject_visualize`` visualizes result files. After you've run a simulation with
 ``cminject [...] -o resultfile.h5``, you can visualize this result file by running
 ``cminject_visualize``. There are currently two options for visualizing results available:
@@ -163,29 +161,8 @@ cminject_visualize
 
     .. image:: img/vishist_r-z_r-vr.png
 
-cminject_reconstruct-detectors
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-``cminject_reconstruct-detectors`` adds detectors at arbitrary z positions to an existing result
-file. For this reconstruction to work, it's required that the given result file has stored the
-trajectories; otherwise, there is nothing to reconstruct detectors from.
-
-An example call is as follows::
-
-    cminject_reconstruct-detectors
-      resultfile.h5        # Reconstruct and add to resultfile.h5:
-      --zs 0.01 0.0 -0.01  # At the z positions {0.01, 0, -0.01},
-      --xis 1 2            # the properties stored in each trajectory
-                           # at indices 1 and 2 (likely x and y),
-      --zi 3               # assuming that z is stored at index 3.
-
-.. note::
-  The reconstructed detectors don't necessarily have the same shape as the detectors that were
-  defined during the original simulation, so they are not stored with them, but instead under the
-  key ``reconstructed_detectors``. Tools like ``cminject_visualize`` currently don't work with them,
-  so analyses of the reconstructed data must be conducted manually.
-
 cminject_analyze-asymmetry
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 ``cminject_analyze-asymmetry`` prints out information about the asymmetry of a 2D distribution at
 each stored detector. The output format can either be nicely formatted text to be human-readable, or
 CSV with the ``--csv`` parameter, for further data processing. An example call::

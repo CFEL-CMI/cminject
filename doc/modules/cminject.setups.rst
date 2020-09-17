@@ -1,3 +1,5 @@
+.. _list-of-setups:
+
 cminject.setups package
 =======================
 

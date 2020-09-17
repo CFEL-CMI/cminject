@@ -9,10 +9,10 @@ cminject.detectors package
 Submodules
 ----------
 
-cminject.detectors.simple\_z module
------------------------------------
+cminject.detectors.simple module
+--------------------------------
 
-.. automodule:: cminject.detectors.simple_z
+.. automodule:: cminject.detectors.simple
    :members:
    :undoc-members:
    :show-inheritance:

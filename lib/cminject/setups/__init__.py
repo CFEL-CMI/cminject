@@ -17,6 +17,7 @@
 
 """
 Contains a collection of useful subclasses of :class:`cminject.base.Setup`, to be
+
   * simply used in simulations, or
   * changed/extended/improved and possibly merged back into this repository via a pull request
 

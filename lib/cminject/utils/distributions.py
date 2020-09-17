@@ -30,7 +30,7 @@ import numpy as np
 class Distribution(abc.ABC):
     """
     An abstract random 1D distribution that can generate and return a number of samples.
-    Subclasses must implement the :method:`generate` method to be instantiable.
+    Subclasses must implement the :meth:`generate` method to be instantiable.
     """
     @abc.abstractmethod
     def generate(self, n: int) -> np.array:

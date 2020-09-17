@@ -9,10 +9,10 @@ cminject.boundaries package
 Submodules
 ----------
 
-cminject.boundaries.grid\_field\_based module
----------------------------------------------
+cminject.boundaries.field\_based module
+---------------------------------------
 
-.. automodule:: cminject.boundaries.grid_field_based
+.. automodule:: cminject.boundaries.field_based
    :members:
    :undoc-members:
    :show-inheritance:

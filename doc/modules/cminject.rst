@@ -1,3 +1,5 @@
+.. _apidoc:
+
 cminject package
 ================
 
@@ -25,6 +27,8 @@ Subpackages
 
 Submodules
 ----------
+
+.. _base-classes:
 
 cminject.base module
 --------------------

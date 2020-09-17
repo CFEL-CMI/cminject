@@ -9,18 +9,18 @@ cminject.particles package
 Submodules
 ----------
 
-cminject.particles.particle\_status module
-------------------------------------------
-
-.. automodule:: cminject.particles.particle_status
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 cminject.particles.spherical module
 -----------------------------------
 
 .. automodule:: cminject.particles.spherical
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+cminject.particles.status module
+--------------------------------
+
+.. automodule:: cminject.particles.status
    :members:
    :undoc-members:
    :show-inheritance:

@@ -9,18 +9,18 @@ cminject.devices package
 Submodules
 ----------
 
-cminject.devices.desyatnikov\_photophoresis\_device module
-----------------------------------------------------------
+cminject.devices.fluid\_flow module
+-----------------------------------
 
-.. automodule:: cminject.devices.desyatnikov_photophoresis_device
+.. automodule:: cminject.devices.fluid_flow
    :members:
    :undoc-members:
    :show-inheritance:
 
-cminject.devices.fluid\_flow\_device module
--------------------------------------------
+cminject.devices.photophoresis module
+-------------------------------------
 
-.. automodule:: cminject.devices.fluid_flow_device
+.. automodule:: cminject.devices.photophoresis
    :members:
    :undoc-members:
    :show-inheritance:

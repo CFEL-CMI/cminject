@@ -4,9 +4,8 @@ This folder contains a simple example experimental setup, `simple_setup.SimpleSe
 Setup definitions on. Other similarly simple setups can be added to this folder; "real" and more complex setups should  
 be put into lib/cminject/setups, committed and submitted via a pull request if they should be available to everyone.
 
-*Please read the README.md file in the root directory, and copy this directory to some place outside the
-source directory before proceeding, so you won't make any changes in your cloned version of
- CMInject.*
+*Please copy this directory to some place outside the source directory before proceeding, so you won't make any
+ changes in your cloned version of CMInject.*
 
 ### Running SimpleSetup
 First, change directory to the copy of this directory you created, and (temporarily) add it to the PYTHONPATH,
@@ -17,7 +16,7 @@ to make its Python import path, "`simple_setup.SimpleSetup`", available to `cmin
  
 Now let's just use the example 2D field provided to quickly run the setup with `cminject`, the main program:
 
-    cminject -s simple_setup.SimpleSetup -f 2d_example_field.h5 -n 100 -o example_output.h5  --loglevel info
+    cminject -s simple_setup.SimpleSetup -f 2d_example_field.h5 -n 100 -o example_output.h5 -T  --loglevel info
     
 We can then visualize the results:
 
@@ -51,7 +50,7 @@ Devices, Actions, etc.
 
 ## Converting flow fields to use
 To use other flow fields, it is likely necessary to convert them first.
-The `2d_example_field.h5` was created by converting `2d_example_field.txt` via:
+The file `2d_example_field.h5` was created by converting a file `2d_example_field.txt` via:
 
     cminject_txt-to-hdf5 -i 2d_example_field.txt -o 2d_example_field.h5 -d 2 -fG N -ft 293.15 -m
 
