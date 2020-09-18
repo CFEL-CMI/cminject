@@ -148,8 +148,8 @@ class NormOfDistributions(Distribution):
         self.p = p
 
     def generate(self, n):
-        squared_values = [distribution.generate(n)**self.p for distribution in self.distributions]
-        return np.sum(squared_values, axis=0)**(1/self.p)
+        dist_values = [np.abs(distribution.generate(n))**self.p for distribution in self.distributions]
+        return np.sum(dist_values, axis=0)**(1/self.p)
 
     def __str__(self):
         return f'Norm_{self.p}({", ".join(str(d) for d in self.distributions)})'
