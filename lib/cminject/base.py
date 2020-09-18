@@ -23,6 +23,7 @@ __all__ = ['ZBounded', 'Particle', 'Boundary', 'Detector', 'Device', 'Field', 'A
            'Setup', 'Source', 'ParticleDetectorHit']
 
 import argparse
+import logging
 from abc import ABC, abstractmethod
 from typing import Tuple, Optional, List, Any, Dict, Iterable, Union
 
@@ -89,7 +90,7 @@ class Particle(ABC):
         self.number_of_dimensions = len(position)
         self.phase_space_position: np.array = np.concatenate((position, velocity))  # this copies implicitly
         self.trajectory: List[np.array] = []
-        self.detector_hits: Dict[int, List['ParticleDetectorHit']] = {}
+        self.detector_hits: Dict[str, List['ParticleDetectorHit']] = {}
         self._initial_tracked_properties: np.array = self.as_array('tracked')
 
     @property
@@ -229,12 +230,15 @@ class Detector(ZBounded, ABC):
 
     Detector subclasses can - and should - freely choose how to internally do the calculation of the hit position.
     """
-    def __init__(self, identifier: int):
+    def __init__(self, identifier: str):
         """
         The constructor for Detector.
 
         :param identifier: A unique identifier for this detector. Used to find which hit occurred on which detector.
         """
+        if type(identifier) is not str:
+            logging.warning(f'The passed detector identifier "{identifier}" is not a string, autoconverting to one...')
+            identifier = str(identifier)
         self.identifier = identifier
         super().__init__()
 

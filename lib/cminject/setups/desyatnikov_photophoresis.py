@@ -62,8 +62,8 @@ class DesyatnikovPhotophoresisSetup(Setup):
             experiment.add_device(
                 Device(boundary=InfiniteBoundary(), fields=[FunctionField(lambda p, t: np.array([0, -9.81]))])
             )
-        for i, pos in enumerate(args.detectors):
-            experiment.add_detector(SimpleZDetector(identifier=i, z_position=pos))
+        for pos in (args.detectors or []):
+            experiment.add_detector(SimpleZDetector(z_position=pos))
 
         experiment.z_boundary = tuple(args.boundary[2:])
         return experiment

@@ -27,14 +27,19 @@ class SimpleZDetector(Detector, ConfigSubscriber):
     def _hit_position(self, phase_space_position: np.array) -> Optional[np.array]:
         raise Exception("This should never be called, the implementation should be swapped out by the constructor!")
 
-    def __init__(self, identifier: int, z_position: float):
+    def __init__(self, z_position: float, identifier: str = None):
+        """
+        Constructs a new SimpleZDetector.
+        :param z_position: The z position to put the detector at.
+        :param identifier: The identifier of the detector. If None, ("SimpleZ@" + str(z_position)) is used.
+        """
         self.z_position = z_position
         self._z_boundary = (z_position, z_position)
         self.particle_distances: Dict[Any, float] = {}
 
         self._hit_position = None
         self._number_of_dimensions = None
-        super().__init__(identifier=identifier)
+        super().__init__(identifier=identifier if identifier is not None else f'SimpleZ@{z_position}')
 
         GlobalConfig().subscribe(self, ConfigKey.NUMBER_OF_DIMENSIONS)
 

@@ -65,8 +65,8 @@ class OneFlowFieldSetup(Setup):
         experiment.add_source(VariableDistributionSource(**source_kwargs))
         experiment.add_device(FluidFlowDevice(**ff_kwargs))
         # Simple Z detectors at every given position
-        for i, pos in enumerate(args.detectors or []):
-            experiment.add_detector(SimpleZDetector(identifier=i, z_position=pos))
+        for pos in (args.detectors or []):
+            experiment.add_detector(SimpleZDetector(pos))
         return experiment
 
     @staticmethod

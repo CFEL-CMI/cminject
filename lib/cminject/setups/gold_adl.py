@@ -174,7 +174,7 @@ class GoldADLSetup(Setup):
             exp.add_action(StokesBrownianMotionStep(field=pp_device._fields[0]))
 
         for i in range(20):
-            exp.add_detector(SimpleZDetector(i, adl_exit_position + i*5e-4))
+            exp.add_detector(SimpleZDetector(adl_exit_position + i*5e-4))
 
         return exp
 

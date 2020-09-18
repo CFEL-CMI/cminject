@@ -55,8 +55,8 @@ class ExampleSetup(Setup):
             radius=constant(5e-9), density=constant(args.rho)
         ))
         experiment.add_device(FluidFlowDevice(filename=args.filename, flow_type=FlowType.STOKES, brownian_motion=True))
-        for i, z in enumerate([0.0, 0.01, 0.02]):
-            experiment.add_detector(SimpleZDetector(z, z))
+        for z in [0.0, 0.01, 0.02]:
+            experiment.add_detector(SimpleZDetector(z))
 
         return experiment
 
