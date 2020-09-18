@@ -22,7 +22,7 @@ Code for visualization of virtual experiment results.
 import math
 import warnings
 from itertools import repeat
-from typing import Optional, List, Union, Sequence
+from typing import Optional, List, Union, Sequence, Dict
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -139,7 +139,8 @@ def plot_trajectories_colored(trajectories: Sequence[np.array], ax: Optional[plt
 
 
 def plot_trajectories_movie(trajectories: Sequence[np.array], dimension_description: DimensionDescription = "x,z",
-                            delay: int = 100, n_previous: int = 10) -> (Animation, plt.Figure):
+                            delay: int = 100, n_previous: int = 10, ax: plt.Axes = None,
+                            animation_kwargs: Dict = None, plot_kwargs: Dict = None) -> (Animation, plt.Figure):
     """
     Creates a trajectory movie via a :class:`matplotlib.animation.Animation`. Plots each trajectory as a curve
     of the last ``n_previous`` positions.
@@ -148,6 +149,9 @@ def plot_trajectories_movie(trajectories: Sequence[np.array], dimension_descript
     :param dimension_description: A dimension descriptionf of a pair or triple of dimensions.
     :param delay: The delay between each animation frame.
     :param n_previous: The number of previous positions to include in each curve. When equal to one, each curve
+    :param ax: (optional) a specific Axes instance to plot on. If not passed, a new Figure and Axes are created.
+    :param animation_kwargs: (optional) arguments to pass to :class:`matplotlib.animation.FuncAnimation`
+    :param plot_kwargs: (optional) arguments to pass to the initial plt.plot() calls that draw each line
     :return: A 2-tuple of (created Animation instance, created Figure instance).
     """
     extractor, n = parse_multiple_dimensions_description(dimension_description, n=(2, 3))\
@@ -155,19 +159,25 @@ def plot_trajectories_movie(trajectories: Sequence[np.array], dimension_descript
     positions = [extractor(traj) for traj in trajectories]
     maxlen = max(len(traj) for traj in trajectories)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111) if n == 2 else fig.add_subplot(111, projection='3d')
-    initargs = ([], []) if n == 2 else ([], [], [])
-    lines = [plt.plot(*initargs)[0] for _ in range(len(trajectories))]
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111) if n == 2 else fig.add_subplot(111, projection='3d')
+    else:
+        fig = ax.get_figure()
 
-    def init():
-        ax.set_xlim(min(np.min(pos[0]) for pos in positions), max(np.max(pos[0]) for pos in positions))
-        ax.set_ylim(min(np.min(pos[1]) for pos in positions), max(np.max(pos[1]) for pos in positions))
-        if n == 3:
-            ax.set_zlim(min(np.min(pos[2]) for pos in positions), max(np.max(pos[2]) for pos in positions))
+    empty_plot_arg = [[]] * n
+    lines = [plt.plot(*empty_plot_arg, **(plot_kwargs or {}))[0] for _ in range(len(trajectories))]
+    labels = dimension_description.split(',')
+    for label_setter, label in zip(('set_xlabel', 'set_ylabel', 'set_zlabel'), labels):
+        getattr(ax, label_setter)(label)
+
+    def _init():
+        for lim_setter, idx in zip(('set_xlim', 'set_ylim', 'set_zlim'), range(n)):
+            getattr(ax, lim_setter)(min(np.min(pos[idx]) for pos in positions),
+                                    max(np.max(pos[idx]) for pos in positions))
         return lines
 
-    def update(i):
+    def _update(i):
         for k, ln in enumerate(lines):
             lower = max(0, i - n_previous - 1)
             ln.set_data(positions[k][0][lower:i], positions[k][1][lower:i])
@@ -175,7 +185,9 @@ def plot_trajectories_movie(trajectories: Sequence[np.array], dimension_descript
                 ln.set_3d_properties(positions[k][2][lower:i])
         return lines
 
-    ani = FuncAnimation(fig, update, frames=maxlen, init_func=init, interval=delay)
+    animation_kwargs = animation_kwargs or {}
+    animation_kwargs = {'frames': maxlen, 'interval': delay, 'repeat': True, **animation_kwargs}
+    ani = FuncAnimation(fig, _update, init_func=_init, **animation_kwargs)
     return ani, fig
 
 
