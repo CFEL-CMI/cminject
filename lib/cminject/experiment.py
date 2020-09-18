@@ -429,7 +429,7 @@ class Experiment:
         self.__z_boundary = (z_start, z_end)
 
     def run(self,
-            single_process: bool = False, chunksize: int = None, processes: int = os.cpu_count(),
+            single_process: bool = False, chunksize: int = None, processes: int = None,
             loglevel: str = "warning",
             progressbar: bool = False) -> List[Particle]:
         """
@@ -448,6 +448,12 @@ class Experiment:
         :return: A list of resulting Particle instances. Things like detector hits and trajectories should be stored on
             them and can be read off each Particle.
         """
+        if processes is None:
+            # Reasonable default: assume that we have cpu_count()//2 physical cores and the rest are just counted due
+            # to hyperthreading. Hyperthreading thwarts the performance for us -- see the CMInject publication -- so
+            # let's just use the physical cores.
+            processes = os.cpu_count() // 2
+
         self.loglevel = loglevel
 
         self._prepare()
