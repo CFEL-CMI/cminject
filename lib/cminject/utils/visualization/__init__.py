@@ -22,7 +22,7 @@ Code for visualization of virtual experiment results.
 import math
 import warnings
 from itertools import repeat
-from typing import Optional, List, Union, Sequence, Dict
+from typing import Optional, List, Union, Sequence, Dict, Callable
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -140,7 +140,9 @@ def plot_trajectories_colored(trajectories: Sequence[np.array], ax: Optional[plt
 
 def plot_trajectories_movie(trajectories: Sequence[np.array], dimension_description: DimensionDescription = "x,z",
                             delay: int = 100, n_previous: int = 10, ax: plt.Axes = None,
-                            animation_kwargs: Dict = None, plot_kwargs: Dict = None) -> (Animation, plt.Figure):
+                            animation_kwargs: Dict = None, plot_kwargs: Dict = None,
+                            update_fn: Callable[[int, List[plt.Artist]], List[plt.Artist]] = None)\
+        -> (Animation, plt.Figure, int):
     """
     Creates a trajectory movie via a :class:`matplotlib.animation.Animation`. Plots each trajectory as a curve
     of the last ``n_previous`` positions.
@@ -152,7 +154,10 @@ def plot_trajectories_movie(trajectories: Sequence[np.array], dimension_descript
     :param ax: (optional) a specific Axes instance to plot on. If not passed, a new Figure and Axes are created.
     :param animation_kwargs: (optional) arguments to pass to :class:`matplotlib.animation.FuncAnimation`
     :param plot_kwargs: (optional) arguments to pass to the initial plt.plot() calls that draw each line
-    :return: A 2-tuple of (created Animation instance, created Figure instance).
+    :param update_fn: (optional) An update function to be called as the last step in each animation iteration.
+      Receives the current iteration number and the list of artists that the default update function returns.
+      Must return a list of artists, just like animation update functions.
+    :return: A 3-tuple of (created Animation instance, created Figure instance, number of animation frames).
     """
     extractor, n = parse_multiple_dimensions_description(dimension_description, n=(2, 3))\
         if type(dimension_description) is str else dimension_description
@@ -171,6 +176,8 @@ def plot_trajectories_movie(trajectories: Sequence[np.array], dimension_descript
     for label_setter, label in zip(('set_xlabel', 'set_ylabel', 'set_zlabel'), labels):
         getattr(ax, label_setter)(label)
 
+    update_fn = update_fn or (lambda _, artists: artists)  # if update_fn is not supplied: just return artists
+
     def _init():
         for lim_setter, idx in zip(('set_xlim', 'set_ylim', 'set_zlim'), range(n)):
             getattr(ax, lim_setter)(min(np.min(pos[idx]) for pos in positions),
@@ -183,12 +190,12 @@ def plot_trajectories_movie(trajectories: Sequence[np.array], dimension_descript
             ln.set_data(positions[k][0][lower:i], positions[k][1][lower:i])
             if n == 3:
                 ln.set_3d_properties(positions[k][2][lower:i])
-        return lines
+        return update_fn(i, lines)
 
     animation_kwargs = animation_kwargs or {}
     animation_kwargs = {'frames': maxlen, 'interval': delay, 'repeat': True, **animation_kwargs}
     ani = FuncAnimation(fig, _update, init_func=_init, **animation_kwargs)
-    return ani, fig
+    return ani, fig, maxlen
 
 
 def plot_detector(detector: np.array, dimension_description: DimensionDescription, ax: plt.Axes, **kwargs):

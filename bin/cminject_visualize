@@ -80,8 +80,8 @@ if __name__ == '__main__':
 
         # Show a trajectory movie
         if args.M:
-            ani, _ = plot_trajectories_movie(trajectories, n_previous=args.Mm, delay=args.Md,
-                                             dimension_description=args.Mdims)
+            ani, *_ = plot_trajectories_movie(trajectories, n_previous=args.Mm, delay=args.Md,
+                                              dimension_description=args.Mdims)
             # FIXME not sure why this call seems to be necessary unless blit=True, and also must live here and not...
             # FIXME ...inside the plotting function??
             ani.event_source.start()
