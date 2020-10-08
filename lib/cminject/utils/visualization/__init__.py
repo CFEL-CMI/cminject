@@ -223,7 +223,7 @@ def plot_detector(detector: np.array, dimension_description: DimensionDescriptio
         return ax.hist(result, **kwargs1d)
 
 
-def plot_detectors(detectors: List[np.array], dimension_description: str,
+def plot_detectors(detectors: Dict[str, np.array], dimension_description: str,
                    axes: Union[None, plt.Axes, List[plt.Axes]] = None, **kwargs):
     """
     Plots 1D/2D histograms of one or a pair of measured quantities at multiple detectors.
@@ -242,7 +242,7 @@ def plot_detectors(detectors: List[np.array], dimension_description: str,
 
     if axes is None:
         xdim, ydim = round(math.sqrt(n)), math.ceil(math.sqrt(n))
-        fig, axes = plt.subplots(xdim, ydim)
+        fig, axes = plt.subplots(xdim, ydim, sharex=True, sharey=True)
         axes = axes.flatten() if isinstance(axes, np.ndarray) else repeat(axes)
         fig.suptitle(dimension_description)
         if not isinstance(axes, repeat) and len(axes) > n:
@@ -255,7 +255,12 @@ def plot_detectors(detectors: List[np.array], dimension_description: str,
             axes = repeat(axes)
 
     extractor = parse_multiple_dimensions_description(dimension_description, n=(1, 2))
-    return [plot_detector(detector, extractor, ax, **kwargs) for ax, detector in zip(axes, detectors)]
+    plots = [plot_detector(detectors[d_id], extractor, ax, **kwargs) for ax, d_id in zip(axes, detectors.keys())]
+    for ax, d_id in zip(axes, detectors.keys()):
+        ax.text(0.9, 0.87, d_id, transform=ax.transAxes, fontdict={'size': 8})
+        ax.ticklabel_format(scilimits=(-2, 2))
+
+    return plots
 
 
 ### Local Variables:

@@ -63,7 +63,7 @@ if __name__ == '__main__':
     with HDF5ResultStorage(args.file) as f:
         # Plot detector histograms
         if args.H:
-            detectors = list(f.get_detectors().values())
+            detectors = f.get_detectors()
             plot_detectors_kwargs = {'bins': args.Hb} if args.Hb is not None else {}
             for desc in args.H:
                 plot_detectors(detectors, desc, **plot_detectors_kwargs)
