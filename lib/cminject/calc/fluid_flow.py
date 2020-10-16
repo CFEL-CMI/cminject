@@ -27,7 +27,7 @@ from scipy.constants import Boltzmann
 from cminject.calc import erf_vec_1d
 
 
-@numba.jit("float64(float64, float64, float64, float64)", nopython=True, error_model='numpy')
+@numba.jit(nopython=True, error_model='numpy')
 def slip_correction_4k(p, r_p, T, ss):
     # The Sutherland constant for helium is 79.4 at reference temperature of 273.0 K.
     # I took a reference pressure of 1 Pascal, in which the mean free path of helium is 0.01754.
@@ -37,7 +37,7 @@ def slip_correction_4k(p, r_p, T, ss):
     return s * ss
 
 
-@numba.jit("float64(float64, float64, float64, float64, float64, float64)", nopython=True, error_model='numpy')
+@numba.jit(nopython=True, error_model='numpy')
 def slip_correction_hutchins(mu, p, r_p, T_f, m_f, ss):
     """
     Slip correction for a spherical particle in a fluid according to:
@@ -57,7 +57,7 @@ def slip_correction_hutchins(mu, p, r_p, T_f, m_f, ss):
     return s * ss
 
 
-@numba.jit("float64[::1](float64[::1], float64, float64, float64, float64)", nopython=True, error_model='numpy')
+@numba.jit(nopython=True, error_model='numpy')
 def a_stokes(delta_v, mu, r_p, m_p, Cc):
     """
     Acceleration for a Stokes flow at a single point, 6*pi*mu*r_p*delta_v / (m_p * Cc).
@@ -72,8 +72,7 @@ def a_stokes(delta_v, mu, r_p, m_p, Cc):
     return 6*pi * mu * r_p * delta_v / (m_p * Cc)
 
 
-@numba.jit("float64[::1](float64, float64, float64, float64, float64, float64, int32)",
-           nopython=True, error_model='numpy')
+@numba.jit(nopython=True, error_model='numpy')
 def a_brown_stokes(mu, T_f, r_p, rho_p, Cc, dt, n):
     """
     Acceleration for Brownian motion in a Stokes flow, according to Li and Ahmadi.
@@ -91,8 +90,7 @@ def a_brown_stokes(mu, T_f, r_p, rho_p, Cc, dt, n):
     return np.random.normal(0.0, 1.0, n) * np.sqrt(pi * s0 / dt)
 
 
-@numba.jit("float64[::1](float64, float64[::1], float64, float64, float64, float64, float64)",
-           nopython=True, error_model='numpy')
+@numba.jit(nopython=True, error_model='numpy')
 def a_roth(p, delta_v, m_f, T_f, T_p, r_p, m_p):
     """
     Acceleration for a microscopic force for aerosol transport described in Roth2020_.
@@ -123,8 +121,7 @@ def a_roth(p, delta_v, m_f, T_f, T_p, r_p, m_p):
     return (f_spec + 1.8/3 * p * pi**(3/2) * h_f/np.sqrt(h_p) * r_p**2 * delta_v) / m_p
 
 
-@numba.jit("float64[::1](float64, float64, float64, float64, float64, float64, float64, int32)",
-           nopython=True, error_model='numpy')
+@numba.jit(nopython=True, error_model='numpy')
 def a_brown_roth(p, m_f, T_f, T_p, r_p, m_p, dt, n):
     """
     Returns a random (Brownian) acceleration with a spectral intensity as described in Roth2020_,
