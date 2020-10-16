@@ -22,6 +22,8 @@ import os
 import importlib
 from typing import Type
 
+from scipy.integrate._ode import IntegratorBase
+
 from cminject.base import Setup
 from cminject.actions import TrackTrajectory
 from cminject.result_storages.hdf5 import HDF5ResultStorage
@@ -120,6 +122,8 @@ def main():
                         help='# of processes to use for parallel processing. Equal to # of CPU cores by default.',
                         type=int)
     parser.add_argument('--loglevel', choices={'debug', 'info', 'warning', 'error', 'critical'}, type=str)
+    parser.add_argument('--solver', choices=[cls.__name__ for cls in IntegratorBase.integrator_classes], type=str,
+                        help='The ODE integrator to use (see scipy.integrate.ode docs).', default='lsoda')
 
     parser.set_defaults(
         setup=default_setup,
@@ -146,6 +150,7 @@ def main():
     # If that was successful, let's set up the experiment and run it
     logging.info("Setting up experiment...")
     experiment = setup_cls.construct_experiment(args, setup_args)
+    experiment.set_integrator(args.solver)
 
     # Let's use HDF5ResultStorage if there was no ResultStorage set by the setup's construct_experiment method
     if not experiment.result_storage:

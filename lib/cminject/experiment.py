@@ -23,9 +23,11 @@ and parallelization via the ``multiprocessing`` module.
 import logging
 import multiprocessing
 import os
-from typing import List, Tuple, Optional
+from functools import partial
+from typing import List, Tuple, Optional, Dict
 
 import numpy as np
+import scipy
 from scipy.integrate import ode
 from tqdm import tqdm
 
@@ -117,7 +119,7 @@ def postprocess_particle(particle: Particle, integrator: ode, t_end: float) -> N
       - running all actions
       - running all detectors
       - logging (for logging.INFO and more verbose loglevels) information about how the simulation ended
-    
+
     :param particle: The fully simulated particle to postprocess.
     :param integrator: The integrator (scipy.integrate.ode) instance.
     :param t_end: The maximum time this particle could have been simulated for. Used only for logging.
@@ -151,6 +153,7 @@ def postprocess_particle(particle: Particle, integrator: ode, t_end: float) -> N
 def propagate_field_free(particle: Particle) -> None:
     """
     Propagates a particle assuming it is in a field-free region, up until the next valid point in Z direction.
+
       - "Z direction" is always the last dimension, assumed to be the main propagation axis.
       - "the next valid point" is calculated from the z_boundary properties of all devices and detectors.
       - Propagation is done according to a simple rule-of-three calculation.
@@ -209,7 +212,7 @@ def spatial_derivatives(time: float, phase_space_position: np.array,
     return np.concatenate((phase_space_position[number_of_dimensions:], total_acceleration))
 
 
-def simulate_particle(particle: Particle) -> Particle:
+def simulate_particle(particle: Particle, integrator: str = 'lsoda', integrator_params: Dict = {}) -> Particle:
     """
     Simulates the flight path of a single particle -- the "meat" of the trajectory simulations.
 
@@ -217,6 +220,10 @@ def simulate_particle(particle: Particle) -> Particle:
     for efficiency reasons when using ``multiprocessing``. See the note in this docstring for further information.
 
     :param particle: The particle instance.
+    :param integrator: The integrator to use. Passed directly to :func:`scipy.integrate.ode.set_integrator` as the
+      ``name`` parameter.
+    :param integrator_params: Additional parameters to pass on to :func:`scipy.integrate.ode.set_integrator` as the
+      ``integrator_params`` parameter.
     :return: A modified version of the particle instance after the simulation has ended.
 
     .. note::
@@ -243,47 +250,53 @@ def simulate_particle(particle: Particle) -> Particle:
         - BASE_SEED: The "base seed", i.e. the random seed the experiment was defined with, to derive a local
           random seed from.
     """
-    np.random.seed(BASE_SEED + particle.identifier)  # reseed RandomState from the base seed and particle ID
+    try:
+        np.random.seed(BASE_SEED + particle.identifier)  # reseed RandomState from the base seed and particle ID
 
-    # Construct integrals
-    integral = ode(spatial_derivatives)
-    ixpr = (logging.root.level <= logging.DEBUG)  # log method switches if loglevel is DEBUG or lower
-    integral.set_integrator('lsoda', nsteps=3000, ixpr=ixpr)
-    integral.set_initial_value(particle.phase_space_position, TIME_START)
-    integral.set_f_params(particle, DEVICES, NUMBER_OF_DIMENSIONS)
-    logging.info(f"\tSimulating particle {particle.identifier}...")
+        # Construct integrals
+        integral = ode(spatial_derivatives)
+        if integrator == 'lsoda':
+            ixpr = (logging.root.level <= logging.DEBUG)  # log method switches if loglevel is DEBUG or lower
+            integrator_params = {'ixpr': ixpr, **integrator_params}  # use this ixpr setting as default, allow override
+        integral.set_integrator(integrator, **integrator_params)
 
-    # TODO:
-    # when loop was broken due to the integration not being successful, we need to somehow continue to simulate
-    # the particle another way, e.g. with another integrator (how? which?)
-    while integral.successful() and integral.t < TIME_END and not particle.lost:
-        # Store the position and velocity calculated by the integrator on the particle
-        integral_result = integral.y
-        particle.phase_space_position = integral_result
-        particle.time = integral.t
-        postprocess_integration_step(particle, integral, position_mismatch=False, time_mismatch=False)
+        integral.set_initial_value(particle.phase_space_position, TIME_START)
+        integral.set_f_params(particle, DEVICES, NUMBER_OF_DIMENSIONS)
+        logging.info(f"\tSimulating particle {particle.identifier}...")
 
-        # Check what 'simulation state' the particle is in wrt. the devices, experiment Z boundary, and integrator time
-        simulation_state = get_particle_simulation_state(particle.position, integral.t, Z_BOUNDARY, DEVICES)
-        if simulation_state in PARTICLE_STATES_CONSIDERED_AS_LOST:
-            # Store that particle is lost and exit the loop
-            particle.lost = True
-            break
-        elif simulation_state is PARTICLE_STATUS_BETWEEN_DEVICES:
-            try:
-                propagate_field_free(particle)
-                # Since we just "simulated" an integration step, we have to run the postprocessing again
-                postprocess_integration_step(particle, integral, position_mismatch=True, time_mismatch=True)
-            except ImpossiblePropagationException as e:
-                logging.error(f"Impossible propagation for particle {particle.identifier}: {e}")
+        # TODO:
+        # when loop was broken due to the integration not being successful, we need to somehow continue to simulate
+        # the particle another way, e.g. with another integrator (how? which?)
+        while integral.successful() and integral.t < TIME_END and not particle.lost:
+            # Store the position and velocity calculated by the integrator on the particle
+            integral_result = integral.y
+            particle.phase_space_position = integral_result
+            particle.time = integral.t
+            postprocess_integration_step(particle, integral, position_mismatch=False, time_mismatch=False)
+
+            # Check what 'simulation state' the particle is in wrt. devices, experiment Z boundary, and integrator time
+            simulation_state = get_particle_simulation_state(particle.position, integral.t, Z_BOUNDARY, DEVICES)
+            if simulation_state in PARTICLE_STATES_CONSIDERED_AS_LOST:
+                # Store that particle is lost and exit the loop
                 particle.lost = True
                 break
+            elif simulation_state is PARTICLE_STATUS_BETWEEN_DEVICES:
+                try:
+                    propagate_field_free(particle)
+                    # Since we just "simulated" an integration step, we have to run the postprocessing again
+                    postprocess_integration_step(particle, integral, position_mismatch=True, time_mismatch=True)
+                except ImpossiblePropagationException as e:
+                    logging.error(f"Impossible propagation for particle {particle.identifier}: {e}")
+                    particle.lost = True
+                    break
 
-        # Propagate by integrating until the next time step
-        integral.integrate(integral.t + TIME_STEP)
+            # Propagate by integrating until the next time step
+            integral.integrate(integral.t + TIME_STEP)
 
-    postprocess_particle(particle, integral, TIME_END)
-    return particle
+        postprocess_particle(particle, integral, TIME_END)
+        return particle
+    except KeyboardInterrupt:
+        return particle
 
 
 class Experiment:
@@ -337,10 +350,31 @@ class Experiment:
         self.z_boundary = z_boundary
         self.loglevel = 'warning'
 
+        self._integrator_name = 'lsoda'
+        self._integrator_params = {}
+        self._simulate_particle = simulate_particle
+
         # TODO do we need to subscribe?
         self.number_of_dimensions = number_of_dimensions
         GlobalConfig().set(ConfigKey.NUMBER_OF_DIMENSIONS, number_of_dimensions)
         GlobalConfig().set(ConfigKey.TIME_STEP, time_step)
+
+    def set_integrator(self, integrator: str, **integrator_params) -> None:
+        """
+        Sets the integrator to use for this Experiment. Refer to SciPy's :class:`scipy.integrate.ode` for
+        documentation on the available integrators and their options.
+
+        :param integrator: The integrator to use (identified by a string).
+        :param integrator_params: Additional parameters to pass onto :func:`scipy.integrate.ode.set_integrator`.
+        """
+        self._integrator_name = integrator
+        self._integrator_params = integrator_params
+        # Construct a 'test instance' of the integrator, so erroneous input will fail directly
+        scipy.integrate.ode(lambda x: 0).set_integrator(integrator, **integrator_params)
+        self._simulate_particle = partial(
+            simulate_particle,
+            integrator=self._integrator_name, integrator_params=self._integrator_params
+        )
 
     def add_device(self, device: Device):
         """
@@ -459,7 +493,7 @@ class Experiment:
         self._prepare()
         if single_process:
             logging.info("Running in a single process.")
-            iterator = map(simulate_particle, self.particles)
+            iterator = map(self._simulate_particle, self.particles)
             if progressbar:
                 iterator = tqdm(iterator, total=len(self.particles))
             particles = list(iterator)
@@ -467,10 +501,14 @@ class Experiment:
             logging.info(f"Running in parallel using {processes} processes with chunksize {chunksize}.")
             pool = multiprocessing.Pool(processes=processes, initializer=self._prepare_process, initargs=())
             try:
-                iterator = pool.imap_unordered(simulate_particle, self.particles, chunksize=chunksize)
+                iterator = pool.imap_unordered(self._simulate_particle, self.particles, chunksize=chunksize)
                 if progressbar:
                     iterator = tqdm(iterator, total=len(self.particles))
                 particles = list(iterator)
+            except KeyboardInterrupt:
+                pool.terminate()
+                print("[!] CMInject simulation cancelled due to KeyboardInterrupt.")
+                exit(1)
             finally:
                 pool.close()
                 pool.join()
