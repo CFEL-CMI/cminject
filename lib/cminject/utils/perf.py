@@ -18,10 +18,66 @@
 """
 Utility functions for improving performance.
 """
-
+from _thread import RLock
 from functools import wraps, lru_cache
 
 import numpy as np
+
+
+_NOT_FOUND = object()
+
+
+class cached_property:
+    """
+    Copied verbatim from the Python 3.8 source code. See the documentation for functools.cached_property there.
+    The reason it lives here is that this is the only part in CMInject currently requiring Python >3.6, and by copying
+    over this self-contained implementation, we can keep the version requirement at >3.6.
+    """
+    def __init__(self, func):
+        self.func = func
+        self.attrname = None
+        self.__doc__ = func.__doc__
+        self.lock = RLock()
+
+    def __set_name__(self, owner, name):
+        if self.attrname is None:
+            self.attrname = name
+        elif name != self.attrname:
+            raise TypeError(
+                "Cannot assign the same cached_property to two different names "
+                f"({self.attrname!r} and {name!r})."
+            )
+
+    def __get__(self, instance, owner=None):
+        if instance is None:
+            return self
+        if self.attrname is None:
+            raise TypeError(
+                "Cannot use cached_property instance without calling __set_name__ on it.")
+        try:
+            cache = instance.__dict__
+        except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
+            msg = (
+                f"No '__dict__' attribute on {type(instance).__name__!r} "
+                f"instance to cache {self.attrname!r} property."
+            )
+            raise TypeError(msg) from None
+        val = cache.get(self.attrname, _NOT_FOUND)
+        if val is _NOT_FOUND:
+            with self.lock:
+                # check if another thread filled cache while we awaited lock
+                val = cache.get(self.attrname, _NOT_FOUND)
+                if val is _NOT_FOUND:
+                    val = self.func(instance)
+                    try:
+                        cache[self.attrname] = val
+                    except TypeError:
+                        msg = (
+                            f"The '__dict__' attribute on {type(instance).__name__!r} instance "
+                            f"does not support item assignment for caching {self.attrname!r} property."
+                        )
+                        raise TypeError(msg) from None
+        return val
 
 
 def numpy_method_cache(*args, **kwargs):
@@ -36,14 +92,14 @@ def numpy_method_cache(*args, **kwargs):
 
     def decorator(function):
         @wraps(function)
-        def wrapper(_self, np_array, *args, **kwargs):
+        def wrapper(_self, np_array, *wrapped_args, **wrapped_kwargs):
             hashable_array = tuple(np_array)
-            return cached_wrapper(_self, hashable_array, *args, **kwargs)
+            return cached_wrapper(_self, hashable_array, *wrapped_args, **wrapped_kwargs)
 
         @lru_cache(*args, **kwargs)
-        def cached_wrapper(_self, hashable_array, *args, **kwargs):
+        def cached_wrapper(_self, hashable_array, *wrapped_args, **wrapped_kwargs):
             array = np.array(hashable_array)
-            return function(_self, array, *args, **kwargs)
+            return function(_self, array, *wrapped_args, **wrapped_kwargs)
 
         # copy refs for lru_cache attributes over
         wrapper.cache_info = cached_wrapper.cache_info

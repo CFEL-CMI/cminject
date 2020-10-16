@@ -19,14 +19,14 @@
 # You should have received a copy of the GNU General Public License along with this program. If not,
 # see <http://www.gnu.org/licenses/>.
 
+import sys
+from setuptools import setup, find_packages, Extension
+
 name = 'cminject'
 version = '1.0.dev0'
 release = version
 copyright = 'Muhamed Amin, Simon Welker, and the CFEL Controlled Molecule Imaging group'
 
-import sys
-
-from setuptools import setup, find_packages, Extension
 try:
     from Cython.Build import cythonize
 except ImportError:
@@ -40,7 +40,6 @@ except ImportError:
           "Please install the 'numpy' package in your Python environment to proceed.", file=sys.stderr)
     sys.exit(1)
 
-
 long_description = """CMI Injector -- Simulating particles' trajectories in different forcefields
 
 Developed by Muhamed Amin, Simon Welker, and the Controlled Molecule Imaging group at the Center for
@@ -52,7 +51,7 @@ Current maintainer: Simon Welker <simon.welker@cfel.de> and the Controlled Molec
 """
 
 if sys.version_info < (3, 6):
-    sys.exit('Sorry, Python < 3.6 is not supported')
+    sys.exit('Sorry, Python < 3.8 is not supported')
 
 package_dir = {'': 'lib'}
 packages = find_packages(where='lib')
@@ -61,7 +60,6 @@ scripts = [
     'bin/cminject',
     'bin/cminject_txt-to-hdf5',
     'bin/cminject_visualize',
-    'bin/cminject_reconstruct-detectors',
     'bin/cminject_analyze-asymmetry'
 ]
 
@@ -71,9 +69,9 @@ install_requires = [
     'numba>=0.44.0',
     'pandas>=0.24.0',
     'matplotlib>=3.1.0',
-    'h5py>=2.9.0',
-    'h5sparse>=0.1.0',
+    'h5py>=2.10.0',
     'sphinx>=2.1.2',
+    'docutils<0.16', # see e.g. https://github.com/matplotlib/matplotlib/pull/16358
     'sphinx_rtd_theme~=0.4.3',
     'tqdm>=4.41.1'
 ]
@@ -111,24 +109,22 @@ build_sphinx_options = {
     'copyright': ('setup.py', copyright)
 }
 
-
-
 setup(name=name,
-      version = release,
-      description = 'A framework for particle injection trajectory simulations in different force fields',
+      version=release,
+      description='A framework for particle injection trajectory simulations in different force fields',
       long_description=long_description,
-      author = 'Simon Welker, Muhamed Amin, and the CFEL Controlled Molecule Imaging group',
-      author_email = 'simon.welker@cfel.de',
-      maintainer = 'CFEL Controlled Molecule Imaging group',
-      maintainer_email = 'cminject@desy.de',  # need to set up an email list with that name ;-)
-      url = 'https://stash.desy.de/projects/CMIFLY/repos/cmi-injector/browse', # put on github and adjust
-      package_dir = package_dir,
-      packages = packages,
-      scripts = scripts,
-      python_requires = '>=3.7',
-      install_requires = install_requires,
-      setup_requires = ['Cython>=0.29.10', 'numpy>=1.16.0'], # do we really need this? seem to recall it is deprecated
-      ext_modules = cythonize(extensions),
-      command_options = {'build_sphinx': build_sphinx_options,},
-      classifiers = classifiers,
+      author='Simon Welker, Muhamed Amin, and the CFEL Controlled Molecule Imaging group',
+      author_email='simon.welker@cfel.de',
+      maintainer='CFEL Controlled Molecule Imaging group',
+      maintainer_email='cminject@desy.de',  # need to set up an email list with that name ;-)
+      url='https://stash.desy.de/projects/CMIFLY/repos/cmi-injector/browse',  # put on github and adjust
+      package_dir=package_dir,
+      packages=packages,
+      scripts=scripts,
+      python_requires='>=3.7',
+      install_requires=install_requires,
+      setup_requires=['Cython>=0.29.10', 'numpy>=1.16.0'],  # do we really need this? seem to recall it is deprecated
+      ext_modules=cythonize(extensions),
+      command_options={'build_sphinx': build_sphinx_options, },
+      classifiers=classifiers
 )

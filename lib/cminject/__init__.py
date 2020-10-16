@@ -19,8 +19,6 @@
 All the library code for CMInject lives in this module.
 """
 
-__all__ = ['definitions', 'tools', 'utils', 'experiment']
-
 ### Local Variables:
 ### fill-column: 100
 ### truncate-lines: t

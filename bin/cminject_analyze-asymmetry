@@ -21,7 +21,8 @@ import logging
 import sys
 
 import numpy as np
-from cminject.definitions.result_storages.hdf5 import HDF5ResultStorage
+from cminject.result_storages.hdf5 import HDF5ResultStorage
+from cminject.utils.args import parse_dimension_description
 
 program_description = """
 Analyzes the asymmetry of the 2D distributions measured at each detector in a
@@ -38,13 +39,24 @@ The printed values are:
 """
 
 
-def moment_of_inertia(detector, xy_idxs=(0, 1)):
-    ix, iy = xy_idxs
+def moment_of_inertia(x, y):
+    """
+    Receives a 2D distribution and calculates measurements made by diagonalization of the 2x2 inertia tensor, assuming
+    constant mass.
 
+    :param x: The points' first coordinates. (n,)-shaped.
+    :param y: The points' second coordinates. (n,)-shaped.
+    :return: A dictionary containing
+      - 'evecs', A 2-tuple of the eigenvectors
+      - 'evals', A 2-tuple of the eigenvalues
+      - 'thetas', A 2-tuple of the angles of the eigenvectors to the x-axis
+      - 'alpha', a float measuring of the asymmetry of the distribution, defined as: (eval1 - eval0) / (eval1 + eval0)
+      - 'center', an np.array defining the center of mass (the mean in both dimensions)
+    """
     # Get x and y positions, shift them to move the mean to (0,0)
-    center = np.mean(detector, axis=1)[[ix, iy]]
-    x = detector[ix] - center[0]
-    y = detector[iy] - center[1]
+    center = np.mean([x, y], axis=1)
+    x = x - center[0]
+    y = y - center[1]
 
     # Calculate the inertia tensor (moment of inertia) in 2D
     topleft = np.sum(y**2)
@@ -65,8 +77,8 @@ def moment_of_inertia(detector, xy_idxs=(0, 1)):
     # Get alpha (a measure of the asymmetry of the problem)
     alpha = (eval1 - eval0) / (eval1 + eval0)
 
-    return {'detector': detector, 'evecs': (evec0, evec1), 'evals': (eval0, eval1),
-            'thetas': [theta0, theta1], 'alpha': alpha, 'center': center}
+    return {'evecs': (evec0, evec1), 'evals': (eval0, eval1),
+            'thetas': (theta0, theta1), 'alpha': alpha, 'center': center}
 
 
 def main():
@@ -74,39 +86,43 @@ def main():
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('file', help='The HDF5 to read and analyze measured asymmetries from.',
                         type=str, metavar='infile')
-    parser.add_argument('--x', help='The index of the detector data to take as x. 0 by default.', default=0, type=int)
-    parser.add_argument('--y', help='The index of the detector data to take as y. 1 by default.', default=1, type=int)
-    parser.add_argument('--csv', help='Output a machine-readable CSV file instead of output optimized for readability.',
+    parser.add_argument('--x', help='The first detector component. "x" by default.', default='x', type=str)
+    parser.add_argument('--y', help='The second detector component. "y" by default.', default='y', type=str)
+    parser.add_argument('--csv', help='Output a machine-readable CSV file instead of more readable output.',
                         action='store_true')
     args = parser.parse_args()
 
     logging.basicConfig(format='%(levelname)s:[%(filename)s/%(funcName)s] %(message)s', level=logging.INFO)
 
-    detectors = HDF5ResultStorage(args.file, 'r').get_detectors()
-
-    if args.csv:
-        w = csv.writer(sys.stdout)
-        w.writerow(['ID', 'alpha', 'e0', 'e1', 'theta0', 'theta1', 'mux', 'muy'])
-    else:
-        print()
-
-    for detector_id, detector in detectors:
-        mofi = moment_of_inertia(detector, (args.x, args.y))
-        alpha = mofi['alpha']
-        mu0, mu1 = mofi['center']
-        eval0, eval1 = mofi['evals']
-        theta0, theta1 = mofi['thetas']
+    with HDF5ResultStorage(args.file, 'r') as f:
+        detectors = f.get_detectors()
 
         if args.csv:
-            w = w or csv.writer(sys.stdout)
-            w.writerow([detector_id, alpha, eval0, eval1, theta0, theta1, mu0, mu1])
+            w = csv.writer(sys.stdout)
+            w.writerow(['ID', 'alpha', 'e0', 'e1', 'theta0', 'theta1', 'mux', 'muy'])
         else:
-            print(f"-------------------- Detector {detector_id} --------------------")
-            print(f"α: {alpha:1.3f}")
-            print(f"e₀ = {eval0:.3e}\t e₁ = {eval1:.3e}")
-            print(f"θ₀ = {theta0/np.pi:1.3f}π\t θ₁ = {theta1/np.pi:1.3f}π")
-            print(f"μx = {mu0:.3e}\t μy = {mu1:.3e}")
             print()
+
+        x_extractor = parse_dimension_description(args.x)
+        y_extractor = parse_dimension_description(args.y)
+        for detector_id, detector in detectors.items():
+            mofi = moment_of_inertia(x_extractor(detector), y_extractor(detector))
+            alpha = mofi['alpha']
+            mu0, mu1 = mofi['center']
+            eval0, eval1 = mofi['evals']
+            theta0, theta1 = mofi['thetas']
+
+            if args.csv:
+                w = w or csv.writer(sys.stdout)
+                w.writerow([detector_id, alpha, eval0, eval1, theta0, theta1, mu0, mu1])
+            else:
+                print(f"-------------------- Detector {detector_id} --------------------")
+                print(f"α: {alpha:1.3f}")
+                print()
+                print(f"e₀ = {eval0:.3e}\t e₁ = {eval1:.3e}")
+                print(f"θ₀ = {theta0/np.pi:1.3f}π\t θ₁ = {theta1/np.pi:1.3f}π")
+                print(f"μx = {mu0:.3e}\t μy = {mu1:.3e}")
+                print()
 
 
 if __name__ == '__main__':

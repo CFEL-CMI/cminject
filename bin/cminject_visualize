@@ -16,63 +16,78 @@
 # <http://www.gnu.org/licenses/>.
 
 import argparse
-import logging
 
 import matplotlib.pyplot as plt
+import numpy as np
 
-from cminject.tools.visualization.visualizers import DetectorHistogramVisualizer, TrajectoryVisualizer
+from cminject.result_storages.hdf5 import HDF5ResultStorage
+from cminject.utils.visualization import plot_trajectories, plot_trajectories_colored, plot_detectors, \
+    plot_trajectories_movie
 
-program_description = """
-Visualizes a simulation result HDF5 file in one or multiple ways.
-"""
+program_description = """Visualizes a simulation result HDF5 file."""
 
 if __name__ == '__main__':
-    def comma_tuple(x):
-        a, b = x.split(',')
-        return (a, b)
-
     parser = argparse.ArgumentParser(prog='cminject_visualization', description=program_description,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('file', help='The result (HDF5) file to visualize.', type=str, metavar='filename')
-    parser.add_argument('-T', help='Plot the trajectories.', action='store_true')
-    parser.add_argument('-Tn', help='(Only used when -t is given) Only plot n randomly sampled trajectories. '
-                                    'Useful for quick qualitative analysis of large files.', type=int, metavar='n')
-    parser.add_argument('-Ts', help='Show scatter plots at each detector.', action='store_true')
-    parser.add_argument('-Tc',
-                        help='Plot colored trajectories, as line segments encoding particle velocity. '
-                             'Shows more information, but is more computationally expensive to render.',
-                        action='store_true')
-    parser.add_argument('-Txabs',
-                        help='Take the modulus of x (dimension 0) coordinates. Useful for radially symmetrical '
-                             'simulations where "x" is r and negative r were used during the simulation.',
-                        action='store_true')
+    parser.add_argument(
+        '-n', type=int, help='Only plot n randomly sampled trajectories. Useful for quick qualitative analysis of'
+                             ' large files. Applies to -T and -M; does not affect -H.')
 
-    parser.add_argument('-H', help='Plot histograms based on a list of dimension pairs to plot against each other.',
-                        nargs='+', default=[], type=comma_tuple, metavar='x,y')
+    parser.add_argument('-T', help='Plot trajectories.', action='store_true')
+    parser.add_argument(
+        '-Tc', action='store_true', help='Plot colored trajectories, as line segments encoding particle velocity. '
+                                         'Shows more information, but is more computationally expensive to render.')
+
+    parser.add_argument(
+        '-H', nargs='*', help='Plot histograms (1D/2D) of named quantities at each detector. 2D histograms will be '
+                              'plotted when a pair of quantity names is given separated by a comma, e.g. "x,y", '
+                              'otherwise a 1D histogram will be plotted.')
+    parser.add_argument(
+        '-Hb', type=int, help='The number of bins to use for the histograms. If this option is not given, the number '
+                              'will be automatically determined based on the data.')
+
+    parser.add_argument(
+        '-M', action='store_true', help='Plot a trajectory movie, i.e., a live animation of the trajectories.')
+    parser.add_argument(
+        '-Md', type=float, help='The delay (in ms) between movie frames. 10 by default.', default=10)
+    parser.add_argument(
+        '-Mm', type=int, help='The number of previous positions to plot to draw each curve. 10 by default.', default=10)
+    parser.add_argument(
+        '-Mdims', type=str, default="x,y",
+        help='The pair or triple of dimensions to plot in the trajectory movie, separated by a comma (no spaces!). '
+             '"x,y" by default.')
+
     args = parser.parse_args()
 
-    if args.H:
-        visualizer = DetectorHistogramVisualizer(
-            filename=args.file, dimension_pairs=args.H, use_tex=True,
-        )
-        fig, axes = visualizer.visualize()
-        fig.show()
+    with HDF5ResultStorage(args.file) as f:
+        # Plot detector histograms
+        if args.H:
+            detectors = f.get_detectors()
+            plot_detectors_kwargs = {'bins': args.Hb} if args.Hb is not None else {}
+            for desc in args.H:
+                plot_detectors(detectors, desc, **plot_detectors_kwargs)
 
-    if args.T:
-        visualizer = TrajectoryVisualizer(
-            filename=args.file, n_samples=args.Tn,
-            colored=args.Tc, make_x_absolute=args.Txabs,
-            scatter=args.Ts, scatter_kwargs={'alpha': 0.3},
-            traj_kwargs={'marker': '.'}
-        )
-        fig, axes = visualizer.visualize()
-        fig.show()
+        if args.T or args.M:
+            trajectories = f.get_trajectories()
+            if args.n:
+                trajectories = np.random.choice(trajectories, args.n, replace=False)
+
+        # Plot trajectories
+        if args.T:
+            draw_fn = plot_trajectories_colored if args.Tc else plot_trajectories
+            draw_fn(trajectories)
+
+        # Show a trajectory movie
+        if args.M:
+            ani, *_ = plot_trajectories_movie(trajectories, n_previous=args.Mm, delay=args.Md,
+                                              dimension_description=args.Mdims)
+            # FIXME not sure why this call seems to be necessary unless blit=True, and also must live here and not...
+            # FIXME ...inside the plotting function??
+            ani.event_source.start()
 
     plt.show()
 
-    if not any([args.H, args.T]):
-        logging.error("Missing plot type, please refer to -h.")
-        exit(1)
 
 ### Local Variables:
 ### fill-column: 100

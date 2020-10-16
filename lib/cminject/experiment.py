@@ -15,53 +15,40 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
+"""
+Code for defining and running a virtual :class:`Experiment`, by using numerical integration,
+and parallelization via the ``multiprocessing`` module.
+"""
+
 import logging
 import multiprocessing
 import os
-import random
-import warnings
-from typing import List, Tuple, Optional
+from functools import partial
+from typing import List, Tuple, Optional, Dict
 
 import numpy as np
+import scipy
 from scipy.integrate import ode
-
-from cminject.definitions.base import ZBounded
-from cminject.definitions.devices.base import Device
-from cminject.definitions.detectors.base import Detector
-from cminject.definitions.particles.base import Particle
-from cminject.definitions.property_updaters.base import PropertyUpdater
-from cminject.definitions.result_storages.base import ResultStorage
-from cminject.definitions.sources.base import Source
-from cminject.definitions.particle_status import *
-
-from cminject.definitions.util import infinite_interval
-from cminject.utils.args import auto_time_step
 from tqdm import tqdm
+
+from cminject.base import ZBounded, Device, Detector, Particle, Action, ResultStorage, Source
+from cminject.particles.status import *
+from cminject.utils import infinite_interval
+from cminject.utils.global_config import GlobalConfig, ConfigKey
+
+PARTICLE_STATES_CONSIDERED_AS_LOST = [PARTICLE_STATUS_LOST, PARTICLE_STATUS_OUTSIDE_EXPERIMENT]
+
+DEVICES, DETECTORS, ACTIONS, Z_BOUNDARY, NUMBER_OF_DIMENSIONS, BASE_SEED = [None] * 6
+TIME_START, TIME_END, TIME_STEP = [None] * 3
+Z_LOWER, Z_UPPER = None, None
 
 
 class ImpossiblePropagationException(Exception):
+    """
+    Can occur when a Particle could not be propagated due to a logical error, e.g. when trying to propagate a
+    particle with a velocity of exactly 0 in all directions.
+    """
     pass
-
-
-def spatial_derivatives(time: float, position_and_velocity: np.array,
-                        particle: Particle, devices: List[Device], number_of_dimensions: int) -> np.array:
-    """
-    Calculates the derivatives of position and velocity, which will then be integrated over.
-    "n" as used below is the number of the simulation's spatial dimensions.
-
-    :param time: The current simulation time in seconds
-    :param position_and_velocity: A (2n,) numpy array containing spatial position and velocity of the particle.
-    :param particle: The Particle instance.
-    :param devices: The list of devices that (might) affect this particle.
-    :param number_of_dimensions: The number of dimensions of the space the particle moves in.
-    :return: A (2n,) numpy array containing velocity and acceleration of the particle.
-    """
-    particle.position = position_and_velocity
-    total_acceleration = np.zeros(number_of_dimensions, dtype=float)
-    for device in devices:
-        if device.is_particle_inside(position_and_velocity[:number_of_dimensions], time):
-            total_acceleration += device.calculate_acceleration(particle, time)
-    return np.concatenate((position_and_velocity[number_of_dimensions:], total_acceleration))
 
 
 def get_particle_simulation_state(particle_position: np.array, time: float,
@@ -88,69 +75,85 @@ def get_particle_simulation_state(particle_position: np.array, time: float,
                 return PARTICLE_STATUS_OK
             if not is_inside and device_z_boundary[0] <= particle_z_pos <= device_z_boundary[1]:
                 # Particles that are outside devices *but* within their Z boundary are considered lost
-                return PARTICLE_STATUS_LOST
+                return PARTICLE_STATUS_LOST  # FIXME need to change this. what about two 'parallel' devices with same Z?
         # Particles that are not inside any device but also not within any device's Z boundary are not considered
         # lost (as long as they are within the experiment's total Z boundary, see beginning of function)
         return PARTICLE_STATUS_BETWEEN_DEVICES
 
 
-DEVICES, DETECTORS, PROPERTY_UPDATERS, TIME_INTERVAL, Z_BOUNDARY, NUMBER_OF_DIMENSIONS, BASE_SEED = [None] * 7
-Z_LOWER, Z_UPPER = None, None
-PARTICLE_STATES_CONSIDERED_AS_LOST = [PARTICLE_STATUS_LOST, PARTICLE_STATUS_OUTSIDE_EXPERIMENT]
-
-
-def postprocess_integration_step(particle: Particle, integral: ode, position_changed: bool) -> None:
+def postprocess_integration_step(particle: Particle, integrator: ode,
+                                 position_mismatch: bool, time_mismatch: bool) -> None:
     """
     Does post-processing after an integration step, which consists of:
-      - running all property updaters, possibly re-instantiating the integrator when they change the particle position
-      - running all detectors, asking them to try and detect the particle
+      - running all actions
+      - running all detectors
+      - IF particle position was changed or ``new_time`` was passed: resetting the integrator
 
     :param particle: The particle which experienced an integration step
-    :param integral: The integral (scipy.integrate.ode) instance.
-    :param position_changed:
-        Whether the position of the particle had been changed relative to the integral result,
-        _before_ this function was called.
+    :param integrator: The integrator (scipy.integrate.ode) instance.
+    :param position_mismatch: True if the position of the particle has been changed relative to the integrator result
+      before this function was called. False if it has not.
+    :param time_mismatch: True if the time of the particle has been changed relative to the integrator's time before
+      this function was called. False if it has not.
     """
-    # - Run all property updaters for the particle with the current integral time
-    for property_updater in PROPERTY_UPDATERS:
-        position_changed |= property_updater.update(particle, integral.t)
-    # - If some property updater changed the position, reset the integrator's initial value
-    #   NOTE: doing this is slow and should be reserved for cases where motion cannot be modeled differently
-    if position_changed:
-        integral.set_initial_value(particle.position, integral.t)
+    time = particle.time if time_mismatch else integrator.t
 
-    # - Have each detector try to detect the particle
+    # Run all actions for the particle with the current integrator time
+    for device in DEVICES:
+        position_mismatch |= device.run_actions(particle, time)
+    for action in ACTIONS:
+        position_mismatch |= action(particle, time)
+    # If particle time/position are not consistent with the integrator, (re)set the integrator's initial value.
+    # NOTE: this is (somewhat) slow and should be reserved for cases where the action cannot be modeled differently
+    if position_mismatch or time_mismatch:
+        integrator.set_initial_value(particle.phase_space_position, particle.time)
+
+    # Have each detector try to detect the particle
     for detector in DETECTORS:
         detector.try_to_detect(particle)
 
 
-def postprocess_integration(particle: Particle, integral: ode, t_end: float) -> None:
-    # Run the updaters and detectors one last time after simulation completed
-    for property_updater in PROPERTY_UPDATERS:
-        property_updater.update(particle, integral.t)
+def postprocess_particle(particle: Particle, integrator: ode, t_end: float) -> None:
+    """
+    Does post-processing after a full simulation of a single particle's trajectory, by:
+      - running all actions
+      - running all detectors
+      - logging (for logging.INFO and more verbose loglevels) information about how the simulation ended
+
+    :param particle: The fully simulated particle to postprocess.
+    :param integrator: The integrator (scipy.integrate.ode) instance.
+    :param t_end: The maximum time this particle could have been simulated for. Used only for logging.
+    """
+
+    # Run the actions and detectors one last time after simulation completed
+    for device in DEVICES:
+        device.run_actions(particle, integrator.t)
+    for action in ACTIONS:
+        action(particle, integrator.t)
     for detector in DETECTORS:
         detector.try_to_detect(particle)
 
     # Log some additional info if loglevel is low enough
     if logging.root.level <= logging.INFO:
         if particle.lost:
-            z_position = particle.spatial_position[NUMBER_OF_DIMENSIONS - 1]
+            z_position = particle.position[-1]
             if Z_BOUNDARY[0] <= z_position <= Z_BOUNDARY[1]:
                 reason = 'hit boundary within the experiment'
             else:
                 reason = f'left experiment Z boundary (at {z_position:.2g})'
-        elif integral.t >= t_end:
+        elif integrator.t >= t_end:
             reason = 'whole timespan simulated'
         else:
             reason = 'unknown reason'
 
-        logging.debug(f"Last particle position: {particle.position}")
-        logging.info(f"\tDone simulating particle {particle.identifier}: {reason}.")
+        logging.debug(f"Last particle phase space position: {particle.phase_space_position}")
+        logging.info(f"\tDone simulating particle {particle.identifier} at t={particle.time}: {reason}.")
 
 
 def propagate_field_free(particle: Particle) -> None:
     """
     Propagates a particle assuming it is in a field-free region, up until the next valid point in Z direction.
+
       - "Z direction" is always the last dimension, assumed to be the main propagation axis.
       - "the next valid point" is calculated from the z_boundary properties of all devices and detectors.
       - Propagation is done according to a simple rule-of-three calculation.
@@ -159,41 +162,68 @@ def propagate_field_free(particle: Particle) -> None:
     :raises ImpossiblePropagationException: if asked to propagate the particle in an impossible way, e.g.
         propagating until the next point in positive Z when the particle's v_Z is negative.
     """
-    z, vz = particle.spatial_position[NUMBER_OF_DIMENSIONS - 1], particle.velocity[NUMBER_OF_DIMENSIONS - 1]
+    z, vz = particle.position[-1], particle.velocity[-1]
     if vz > 0:
-        if z <= Z_LOWER[0]:
+        if np.sign(z) == np.sign(Z_LOWER[0]) and abs(z) >= abs(Z_LOWER[0]):
             raise ImpossiblePropagationException(
-                f"Cannot propagate field-free from {z} until {Z_LOWER[0]} with positive v_z."
+                f"Cannot propagate field-free from {z} until {Z_LOWER[0]} with v_z > 0."
             )
         idx = np.searchsorted(Z_LOWER, z, side='right')
         next_z = Z_LOWER[idx]
     elif vz < 0:
-        if z >= Z_UPPER[-1]:
+        if np.sign(z) == np.sign(Z_UPPER[-1]) and abs(z) >= abs(Z_UPPER[-1]):
             raise ImpossiblePropagationException(
-                f"Cannot propagate field-free from {z} until {Z_UPPER[-1]} with negative v_z."
+                f"Cannot propagate field-free from {z} until {Z_UPPER[-1]} with v_z < 0."
             )
         idx = len(Z_UPPER)-1 - np.searchsorted(-Z_UPPER[::-1], -z, side='right')  # TODO hmm... maybe preprocess
         next_z = Z_UPPER[idx]
     else:  # vz == 0
-        raise ImpossiblePropagationException("Cannot propagate field-free with v=0.")
+        raise ImpossiblePropagationException("Cannot propagate field-free with v_z = 0.")
 
-    prevpos = np.copy(particle.position)
+    prev_pos = np.copy(particle.position)
     delta_t = abs(next_z - z) / abs(vz)
-    particle.position = np.concatenate([
-        particle.spatial_position + delta_t * particle.velocity,
+    particle.phase_space_position = np.concatenate([
+        particle.position + delta_t * particle.velocity,
         particle.velocity
     ])
+    particle.time += delta_t
     logging.info(f"Field-free propagation from {z} until {next_z} with velocities={particle.velocity} and "
-                 f"delta_t={delta_t}.\nBefore: {prevpos}. After: {particle.position}.")
+                 f"delta_t={delta_t}.\nBefore: {prev_pos}. After: {particle.position}.")
 
 
-def simulate_particle(particle: Particle) -> Particle:
+def spatial_derivatives(time: float, phase_space_position: np.array,
+                        particle: Particle, devices: List[Device], number_of_dimensions: int) -> np.array:
     """
-    Simulates the flight path of a single particle, with a list of devices that can affect the particle,
-    a list of detectors that can detect the particle, a list of property updaters that can store additional results
-    on the particle, a time interval to simulate the particle for, and a Z boundary to simulate the particle within.
+    Calculates the derivatives of position and velocity, which will then be integrated over.
+    "n" as used below is the number of the simulation's spatial dimensions.
+
+    :param time: The current simulation time in seconds
+    :param phase_space_position: A (2n,) numpy array containing the phase space position..
+    :param particle: The Particle instance.
+    :param devices: The list of devices that (might) affect this particle.
+    :param number_of_dimensions: The number of dimensions of the space the particle moves in.
+    :return: A (2n,) numpy array containing velocity and acceleration of the particle.
+    """
+    particle.phase_space_position = phase_space_position
+    total_acceleration = np.zeros(number_of_dimensions, dtype=float)
+    for device in devices:
+        if device.is_particle_inside(phase_space_position[:number_of_dimensions], time):
+            total_acceleration += device.calculate_acceleration(particle, time)
+    return np.concatenate((phase_space_position[number_of_dimensions:], total_acceleration))
+
+
+def simulate_particle(particle: Particle, integrator: str = 'lsoda', integrator_params: Dict = {}) -> Particle:
+    """
+    Simulates the flight path of a single particle -- the "meat" of the trajectory simulations.
+
+    The description of the experiment is given implicitly, by global variables instead of as parameters. This is done
+    for efficiency reasons when using ``multiprocessing``. See the note in this docstring for further information.
 
     :param particle: The particle instance.
+    :param integrator: The integrator to use. Passed directly to :func:`scipy.integrate.ode.set_integrator` as the
+      ``name`` parameter.
+    :param integrator_params: Additional parameters to pass on to :func:`scipy.integrate.ode.set_integrator` as the
+      ``integrator_params`` parameter.
     :return: A modified version of the particle instance after the simulation has ended.
 
     .. note::
@@ -213,165 +243,235 @@ def simulate_particle(particle: Particle) -> Particle:
 
         - DEVICES: The list of devices.
         - DETECTORS: The list of detectors.
-        - PROPERTY_UPDATERS: The list of property_updaters.
+        - ACTIONS: The list of actions.
         - TIME_INTERVAL: The time interval of the simulation.
         - Z_BOUNDARY: The Z boundary of the simulation.
         - NUMBER_OF_DIMENSIONS: The number of dimensions of the space the particle moves in.
         - BASE_SEED: The "base seed", i.e. the random seed the experiment was defined with, to derive a local
           random seed from.
     """
-    t_start, t_end, dt = TIME_INTERVAL
-    np.random.seed(BASE_SEED + int(particle.identifier))  # reseed RandomState from the base seed and particle ID
+    try:
+        np.random.seed(BASE_SEED + particle.identifier)  # reseed RandomState from the base seed and particle ID
 
-    # Construct integrals
-    integral = ode(spatial_derivatives)
-    integral.set_integrator('lsoda', nsteps=3000)
-    integral.set_initial_value(particle.position, t_start)
-    integral.set_f_params(particle, DEVICES, NUMBER_OF_DIMENSIONS)
-    logging.info(f"\tSimulating particle {particle.identifier}...")
+        # Construct integrals
+        integral = ode(spatial_derivatives)
+        if integrator == 'lsoda':
+            ixpr = (logging.root.level <= logging.DEBUG)  # log method switches if loglevel is DEBUG or lower
+            integrator_params = {'ixpr': ixpr, **integrator_params}  # use this ixpr setting as default, allow override
+        integral.set_integrator(integrator, **integrator_params)
 
-    # TODO:
-    # when loop was broken due to the integration not being successful, we need to somehow continue to simulate
-    # the particle another way, e.g. with another integrator (how? which?)
-    while integral.successful() and integral.t < t_end and not particle.lost:
-        # Store the position and velocity calculated by the integrator on the particle
-        integral_result = integral.y
-        particle.position = integral_result
-        particle.time_of_flight = integral.t
-        postprocess_integration_step(particle, integral, position_changed=False)
+        integral.set_initial_value(particle.phase_space_position, TIME_START)
+        integral.set_f_params(particle, DEVICES, NUMBER_OF_DIMENSIONS)
+        logging.info(f"\tSimulating particle {particle.identifier}...")
 
-        # Check what 'simulation state' the particle is in wrt. the devices, experiment Z boundary, and integral time
-        simulation_state = get_particle_simulation_state(
-            particle.position[:NUMBER_OF_DIMENSIONS], integral.t, Z_BOUNDARY, DEVICES
-        )
+        # TODO:
+        # when loop was broken due to the integration not being successful, we need to somehow continue to simulate
+        # the particle another way, e.g. with another integrator (how? which?)
+        while integral.successful() and integral.t < TIME_END and not particle.lost:
+            # Store the position and velocity calculated by the integrator on the particle
+            integral_result = integral.y
+            particle.phase_space_position = integral_result
+            particle.time = integral.t
+            postprocess_integration_step(particle, integral, position_mismatch=False, time_mismatch=False)
 
-        if simulation_state in PARTICLE_STATES_CONSIDERED_AS_LOST:
-            # Store that particle is lost and exit the loop
-            particle.lost = True
-            break
-        elif simulation_state is PARTICLE_STATUS_BETWEEN_DEVICES:
-            try:
-                propagate_field_free(particle)
-            except ImpossiblePropagationException as e:
-                logging.error(f"Impossible propagation for particle {particle.identifier}: {e}")
+            # Check what 'simulation state' the particle is in wrt. devices, experiment Z boundary, and integrator time
+            simulation_state = get_particle_simulation_state(particle.position, integral.t, Z_BOUNDARY, DEVICES)
+            if simulation_state in PARTICLE_STATES_CONSIDERED_AS_LOST:
+                # Store that particle is lost and exit the loop
                 particle.lost = True
                 break
-            # Since we just "simulated" an integration step, we have to run the postprocessing again
-            postprocess_integration_step(particle, integral, position_changed=True)
+            elif simulation_state is PARTICLE_STATUS_BETWEEN_DEVICES:
+                try:
+                    propagate_field_free(particle)
+                    # Since we just "simulated" an integration step, we have to run the postprocessing again
+                    postprocess_integration_step(particle, integral, position_mismatch=True, time_mismatch=True)
+                except ImpossiblePropagationException as e:
+                    logging.error(f"Impossible propagation for particle {particle.identifier}: {e}")
+                    particle.lost = True
+                    break
 
-        # Propagate by integrating until the next time step
-        integral.integrate(integral.t + dt)
+            # Propagate by integrating until the next time step
+            integral.integrate(integral.t + TIME_STEP)
 
-    postprocess_integration(particle, integral, t_end)
-    return particle
+        postprocess_particle(particle, integral, TIME_END)
+        return particle
+    except KeyboardInterrupt:
+        return particle
 
 
 class Experiment:
-    def __init__(self, devices: List[Device], sources: List[Source], detectors: List[Detector],
-                 number_of_dimensions: int,
-                 property_updaters: List[PropertyUpdater] = None, result_storage: ResultStorage = None,
-                 time_interval: Tuple[float, float] = (0.0, 1.8), time_step: float = None,
-                 z_boundary: Optional[Tuple[float, float]] = None, delta_z_end: float = 0.0, seed=None):
-        """
-        Construct an Experiment to run.
+    """
+    A description of a virtual experiment that can be simulated. Consists of:
 
-        :param devices: The list of Devices in the experimental setup.
-        :param sources: The list of Sources that generate particles. Note that for both simulation and storage reasons,
-            having different sources generate different types of particles for one Experiment is not allowed.
-        :param detectors: The list of Detectors in the experimental setup.
-        :param property_updaters: The list of PropertyUpdaters used to update different properties on the particles
-            in each step.
-        :param result_storage: The ResultStorage to use for the experiment's results. Can be None, in which case
-            the results will not be stored and only returned.
+      * :class:`cminject.base.Source` s, generating :class:`cminject.base.Particle` s
+      * :class:`cminject.base.Device` s affecting particles via acceleration by their
+        :class:`cminject.base.Field` s, decisions made about whether to keep simulating particles by each Device's
+        :class:`cminject.base.Boundary`, and generic effects occurring after each time step by their
+        :class:`cminject.base.Action` s.
+      * :class:`cminject.base.Detector` s detecting particles
+      * :class:`cminject.base.Action` s that are indiscriminately run for every particle after every integration step
+      * Constants relevant to the simulation logic, like the time-interval and time-step, seed to use for random
+        generation, the boundary in Z direction, ...
+      * A :class:`cminject.base.ResultStorage` that will store the simulation results.
+
+    All of the above are optional, but of course running an "empty" experiment will return an empty result,
+    and an experiment containing particles but no :class:`cminject.base.Device` s, :class:`cminject.base.Action` s etc.
+    will return 'boring' results.
+    """
+    def __init__(self, number_of_dimensions: int, time_interval: Tuple[float, float], time_step: float = 1e-5,
+                 z_boundary: Optional[Tuple[float, float]] = None, random_seed=None,
+                 result_storage: Optional[ResultStorage] = None):
+        """
+        Construct an Experiment to run. Sources, Devices, Detectors and Actions should be added after this
+        construction, via the appropriate add_ methods, e.g. add_device(), on the constructed instance.
+
+        :param number_of_dimensions: The number of spatial dimensions of this experiment. The phase space will
+           accordingly have 2*number_of_dimensions dimensions.
         :param time_interval: The time interval to run the experiment in, as a 2-tuple of (`t_start`, `t_end`).
         :param time_step: The time step to use. If None is passed, a time step is picked based on the initial particle
             velocities.
         :param z_boundary: (Optional) If passed, the Z boundary of the entire experimental setup. Particles will not
-            be simulated outside of this boundary. If not passed, the minimal interval enclosing all Devices and
-            Detectors along the Z axis will be calculated and used as the Z boundary.
-        :param delta_z_end: An additional amount to add on both ends of the Z boundary. Mostly sensible to use when
-            not passing an explicit `z_boundary`, and when you expect the automatically generated minimal boundary to be
-            too small, e.g. if some Source will generate particles that lie slightly outside the automatically generated
-            Z boundary.
+            be simulated outside of this boundary. If this argument is not passed, the minimal interval enclosing all
+            Devices and Detectors along the Z axis will be calculated and used as the Z boundary.
+        :param random_seed: The random seed to use for random value generation, affecting things like initial positions
+            and brownian motion steps. Note that when running with multiple processes, every process will start from its
+            own random seed (this random_seed plus an integer offset).
+        :param result_storage: The ResultStorage to use for the experiment's results. Can be None, in which case
+            the results will not be stored and only returned.
         """
-        # Store references
-        self.devices = devices
-        self.sources = sources
-        self.detectors = detectors
-        self.property_updaters = property_updaters or []
+        self.devices = []
+        self.sources = []
+        self.detectors = []
+        self.actions = []
         self.result_storage = result_storage
-        self.loglevel = logging.WARNING
+        self.random_seed = random_seed
+        self.time_interval = time_interval
+        self.time_step = time_step
+        self.z_boundary = z_boundary
+        self.loglevel = 'warning'
 
-        # Store the number of dimensions and set it on all relevant objects
+        self._integrator_name = 'lsoda'
+        self._integrator_params = {}
+        self._simulate_particle = simulate_particle
+
+        # TODO do we need to subscribe?
         self.number_of_dimensions = number_of_dimensions
-        for dimensional_object in (self.devices + self.sources + self.detectors + self.property_updaters):
-            dimensional_object.set_number_of_dimensions(self.number_of_dimensions)
+        GlobalConfig().set(ConfigKey.NUMBER_OF_DIMENSIONS, number_of_dimensions)
+        GlobalConfig().set(ConfigKey.TIME_STEP, time_step)
 
-        # Use the seed value to seed numpy's RandomState
-        if seed is None:
-            seed = np.random.randint(2 ** 31)
-        self.seed = seed
-        np.random.seed(self.seed)
+    def set_integrator(self, integrator: str, **integrator_params) -> None:
+        """
+        Sets the integrator to use for this Experiment. Refer to SciPy's :class:`scipy.integrate.ode` for
+        documentation on the available integrators and their options.
 
-        # Initialise list of particles from all sources
-        particle_types = set()  # Remember a set of particle types to raise an error if there are multiple
-        self.particles = []
-        for source in self.sources:
-            source_particles = source.generate_particles(time_interval[0])  # initialize with t_0
-            if source_particles:
-                # FIXME this is assuming a source only generates one particle type --> is this an issue?
-                particle_types.add(type(source_particles[0]))
+        :param integrator: The integrator to use (identified by a string).
+        :param integrator_params: Additional parameters to pass onto :func:`scipy.integrate.ode.set_integrator`.
+        """
+        self._integrator_name = integrator
+        self._integrator_params = integrator_params
+        # Construct a 'test instance' of the integrator, so erroneous input will fail directly
+        scipy.integrate.ode(lambda x: 0).set_integrator(integrator, **integrator_params)
+        self._simulate_particle = partial(
+            simulate_particle,
+            integrator=self._integrator_name, integrator_params=self._integrator_params
+        )
 
-            # Set the number of dimensions for each particle.
-            for source_particle in source_particles:
-                source_particle.set_number_of_dimensions(number_of_dimensions)
+    def add_device(self, device: Device):
+        """
+        Adds a Device to this experiment.
 
-            self.particles += source_particles
-        if len(particle_types) > 1:
-            raise TypeError("Cannot simulate particles of multiple types at the same time!")
+        :param device: The Device instance to add.
+        """
+        self.devices.append(device)
+        return self
 
-        # Shuffle the particles list to avoid particles that take long to simulate neighbouring each other in the list
-        random.shuffle(self.particles)
+    def add_source(self, source: Source):
+        """
+        Adds a Source to this experiment.
 
-        # Store the time interval with the time step, determining an appropriate time step if none was passed explicitly
-        if time_step is None:
-            # This is a crude empirical approximation, better to pass a time step explicitly
-            time_step = auto_time_step(np.mean([np.linalg.norm(p.velocity) for p in self.particles]))
-            warnings.warn(f"Determining time step automatically, set to {time_step}. This might be inappropriate "
-                          f"for your experiment conditions, it's better to set one explicitly.")
-        self.time_interval = time_interval[0], time_interval[1], time_step
+        :param source: The Source instance to add.
+        """
+        self.sources.append(source)
+        return self
 
-        # Initialise the min/max Z values amongst all detectors, and amongst all devices
-        self.detectors_z_boundary = self._gather_z_boundary(self.detectors)
-        self.devices_z_boundary = self._gather_z_boundary(self.devices)
-        self.z_lower, self.z_upper = self._gather_z_lower_upper([
-            x.z_boundary for x in self.detectors + self.devices
-        ])
+    def add_detector(self, detector: Detector):
+        """
+        Adds a Detector to this experiment.
 
-        # Initialise the min/max Z boundary of the whole experiment
-        if z_boundary is not None:
-            # If a z_boundary was passed, use it
-            self.z_boundary = z_boundary
-        else:
-            # Otherwise, use the global min/max from all devices and detectors, -/+ the end Z delta
-            self.z_boundary = min(self.detectors_z_boundary[0], self.devices_z_boundary[0]) - delta_z_end, \
-                              max(self.detectors_z_boundary[1], self.devices_z_boundary[1]) + delta_z_end
+        :param detector: The Detector instance to add.
+        """
+        self.detectors.append(detector)
+        return self
 
-        if self.z_boundary[0] > self.z_boundary[1]:
-            exit(f"ERROR: The Z boundary {self.z_boundary} of the experiment is not sensible! The 'left' boundary "
-                 f"has to be smaller than the 'right' boundary.")
+    def add_action(self, action: Action):
+        """
+        Adds a Action to this experiment.
+
+        :param action: The Action instance to add.
+        """
+        self.actions.append(action)
+        return self
+
+    @property
+    def time_interval(self):
+        """The time interval this experiment will be run within (for every particle)"""
+        return self.__time_interval
+
+    @time_interval.setter
+    def time_interval(self, val):
+        try:
+            val = tuple(val)
+        except TypeError:
+            raise ValueError("time_interval must be convertable to a tuple!")
+        if not len(val) == 2:
+            raise ValueError("time_interval must be a 2-tuple of (t_begin, t_end), or convertable to such!")
+
+        time_begin, time_end = val
+        if time_begin >= time_end:
+            errmsg = f"time_begin must be less than time_end, but time_begin={time_begin}, time_end={time_end}!"
+            raise ValueError(errmsg)
+        self.__time_interval = (time_begin, time_end)
+
+    @property
+    def time_step(self):
+        """The time step to use for numerical simulation (in seconds)."""
+        return self.__time_step
+
+    @time_step.setter
+    def time_step(self, val):
+        if val <= 0:
+            raise ValueError(f"time_step must be > 0, but {val} was given!")
+        self.__time_step = val
+
+    @property
+    def z_boundary(self):
+        """The full boundary in the Z dimension of this experiment"""
+        return self.__z_boundary
+
+    @z_boundary.setter
+    def z_boundary(self, val):
+        if val is None:
+            self.__z_boundary = None
+            return
+
+        if not isinstance(val, tuple) or not len(val) == 2:
+            raise ValueError("z_boundary must be a tuple of two floats (z_start, z_end)!")
+        z_start, z_end = val
+        if z_start >= z_end:
+            errmsg = f"z_start must be less than z_end, but z_start={z_start}, z_end={z_end}!"
+            raise ValueError(errmsg)
+        self.__z_boundary = (z_start, z_end)
 
     def run(self,
-            single_threaded: bool = False, chunksize: int = None, processes: int = os.cpu_count(),
+            single_process: bool = False, chunksize: int = None, processes: int = None,
             loglevel: str = "warning",
             progressbar: bool = False) -> List[Particle]:
         """
         Run the Experiment. A list of resulting Particle instances is returned.
 
-        :param single_threaded: Whether to run this experiment on a single thread, i.e. without parallelization. False
+        :param single_process: Whether to run this experiment on a single process, i.e. without parallelization. False
             by default: It's mostly only useful to pass True for developers, as many debuggers, profilers, etc. are not
-            able to deal well with different processes/threads. To run the experiment and get results quickly, leave
-            this on False.
+            able to deal well with different processes. To run the experiment and get results quickly, leave this False.
         :param chunksize: The chunk size for pool.imap_unordered. None by default, which equates to 1. This parameter
             has no effect if single_threaded is True.
         :param processes: The number of processes to use for multiprocessing. Handed directly to multiprocessing.Pool(),
@@ -382,28 +482,107 @@ class Experiment:
         :return: A list of resulting Particle instances. Things like detector hits and trajectories should be stored on
             them and can be read off each Particle.
         """
+        if processes is None:
+            # Reasonable default: assume that we have cpu_count()//2 physical cores and the rest are just counted due
+            # to hyperthreading. Hyperthreading thwarts the performance for us -- see the CMInject publication -- so
+            # let's just use the physical cores.
+            processes = os.cpu_count() // 2
+
         self.loglevel = loglevel
 
-        self._initialize()
-        if single_threaded:
-            logging.info("Running single-threaded.")
-            particles = list(map(simulate_particle, self.particles))
+        self._prepare()
+        if single_process:
+            logging.info("Running in a single process.")
+            iterator = map(self._simulate_particle, self.particles)
+            if progressbar:
+                iterator = tqdm(iterator, total=len(self.particles))
+            particles = list(iterator)
         else:
             logging.info(f"Running in parallel using {processes} processes with chunksize {chunksize}.")
-            pool = multiprocessing.Pool(processes=processes, initializer=self._initialize, initargs=())
+            pool = multiprocessing.Pool(processes=processes, initializer=self._prepare_process, initargs=())
             try:
-                iterator = pool.imap_unordered(simulate_particle, self.particles, chunksize=chunksize)
+                iterator = pool.imap_unordered(self._simulate_particle, self.particles, chunksize=chunksize)
                 if progressbar:
                     iterator = tqdm(iterator, total=len(self.particles))
                 particles = list(iterator)
+            except KeyboardInterrupt:
+                pool.terminate()
+                print("[!] CMInject simulation cancelled due to KeyboardInterrupt.")
+                exit(1)
             finally:
                 pool.close()
                 pool.join()
 
         if self.result_storage is not None:
-            self.result_storage.store_results(particles)
+            with self.result_storage as s:
+                s.store_results(particles)
 
         return particles
+
+    def _prepare(self):
+        # Set values on global config, thereby cascading them throughout the setup to all subscribed objects
+        conf = GlobalConfig()
+        conf.set(ConfigKey.NUMBER_OF_DIMENSIONS, self.number_of_dimensions)
+        conf.set(ConfigKey.TIME_STEP, self.time_step)
+
+        # Initialise list of particles from all sources
+        particle_types = set()  # Remember a set of particle types to raise an error if there are multiple types
+        self.particles = []
+        for source in self.sources:
+            source_particles = source.generate_particles(self.time_interval[0])  # initialize with t_0
+            if source_particles:
+                particle_types.add(type(source_particles[0]))
+            self.particles += source_particles
+        if len(particle_types) > 1:
+            raise TypeError("Cannot simulate particles of multiple types at the same time!")
+
+        # Initialize random state
+        if self.random_seed is None:
+            seed = np.random.randint(2 ** 31)
+            self.random_seed = seed
+        np.random.seed(self.random_seed)
+
+        # Initialise the min/max Z values amongst all detectors and all devices
+        self.detectors_z_boundary = self._gather_z_boundary(self.detectors)
+        self.devices_z_boundary = self._gather_z_boundary(self.devices)
+        self.z_lower, self.z_upper = self._gather_z_lower_upper([
+            x.z_boundary for x in self.detectors + self.devices
+        ])
+
+        # Initialise the min/max Z boundary of the whole experiment
+        if self.z_boundary is None:
+            # Use the global min/max from all devices and detectors, -/+ the end Z delta
+            self.z_boundary = min(self.detectors_z_boundary[0], self.devices_z_boundary[0]), \
+                              max(self.detectors_z_boundary[1], self.devices_z_boundary[1])
+
+        self._prepare_process()
+
+    def _prepare_process(self):
+        self._set_globals()
+
+        current_process = multiprocessing.current_process()
+        if isinstance(current_process, (multiprocessing.context.ForkProcess, multiprocessing.context.SpawnProcess)):
+            mp_id = current_process.name
+            log_format = '%(levelname)s:[%(filename)s/%(funcName)s@' + mp_id + '] %(message)s'
+        else:
+            log_format = '%(levelname)s:[%(filename)s/%(funcName)s] %(message)s'
+
+        # we do the logging initialization in this function so it is done in each runner process as well
+        logging.basicConfig(format=log_format, level=getattr(logging, self.loglevel.upper()))
+
+    def _set_globals(self):
+        global DEVICES, DETECTORS, ACTIONS, NUMBER_OF_DIMENSIONS, BASE_SEED
+        global TIME_START, TIME_END, TIME_STEP
+        global Z_BOUNDARY, Z_LOWER, Z_UPPER
+        DEVICES = self.devices
+        DETECTORS = self.detectors
+        ACTIONS = self.actions
+        TIME_START, TIME_END = self.time_interval
+        TIME_STEP = self.time_step
+        Z_BOUNDARY = self.z_boundary
+        Z_LOWER, Z_UPPER = self.z_lower, self.z_upper
+        NUMBER_OF_DIMENSIONS = self.number_of_dimensions
+        BASE_SEED = self.random_seed
 
     @staticmethod
     def _gather_z_boundary(z_bounded_objects: List[ZBounded]) -> Tuple[float, float]:
@@ -422,37 +601,19 @@ class Experiment:
 
     @staticmethod
     def _gather_z_lower_upper(z_boundaries):
+        """
+        An internal method to gather the lower and upper bounds of all intervals, grouped into an array
+        of lower bounds and another array of upper bounds.
+
+        :param z_boundaries: A list of Z bounded objects.
+        :return: A 2-tuple of (min_z, max_z).
+        """
         arr = np.array(z_boundaries)
         lower = np.array(list(sorted(arr[:, 0])))
         upper = np.array(list(sorted(arr[:, 1], reverse=True)))
         logging.debug(f"Lower Z boundaries: {lower}")
         logging.debug(f"Upper Z boundaries: {upper}")
         return lower, upper
-
-    def _initialize(self):
-        self._initialize_globals()
-
-        curproc = multiprocessing.current_process()
-        if isinstance(curproc, (multiprocessing.context.ForkProcess, multiprocessing.context.SpawnProcess)):
-            mp_id = '/'.join(map(str, multiprocessing.current_process()._identity))
-            logformat = '%(levelname)s:[%(filename)s/%(funcName)s@' + mp_id + '] %(message)s'
-        else:
-            logformat = '%(levelname)s:[%(filename)s/%(funcName)s] %(message)s'
-
-        # we do the logging initialization in this function so it is done in each runner thread as well
-        logging.basicConfig(format=logformat, level=getattr(logging, self.loglevel.upper()))
-
-    def _initialize_globals(self):
-        global DEVICES, DETECTORS, PROPERTY_UPDATERS, TIME_INTERVAL, NUMBER_OF_DIMENSIONS, BASE_SEED
-        global Z_BOUNDARY, Z_LOWER, Z_UPPER
-        DEVICES = self.devices
-        DETECTORS = self.detectors
-        PROPERTY_UPDATERS = self.property_updaters
-        TIME_INTERVAL = self.time_interval
-        Z_BOUNDARY = self.z_boundary
-        Z_LOWER, Z_UPPER = self.z_lower, self.z_upper
-        NUMBER_OF_DIMENSIONS = self.number_of_dimensions
-        BASE_SEED = self.seed
 
 ### Local Variables:
 ### fill-column: 100

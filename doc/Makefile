@@ -11,6 +11,12 @@ BUILDDIR      = _build
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
+# Generate Apidoc from lib/cminject/, output to doc/modules/, do not generate toctree file
+apidoc:
+	pushd ../lib/ >/dev/null;\
+	sphinx-apidoc -M -T -o ../doc/modules/ cminject/;\
+	popd >/dev/null
+
 .PHONY: help Makefile
 
 # Catch-all target: route all unknown targets to Sphinx using the new

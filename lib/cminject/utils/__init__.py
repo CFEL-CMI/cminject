@@ -15,7 +15,13 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-__all__ = ['args', 'interpolation', 'cython_interpolation', 'perf']
+"""
+A generic utility module. Contains code for parsing arguments, data visualization and analysis, high-performance
+interpolation, performance utilities, global configuration pub-sub, ...
+"""
+
+empty_interval = (float('inf'), float('-inf'))
+infinite_interval = (float('-inf'), float('inf'))
 
 ### Local Variables:
 ### fill-column: 100
