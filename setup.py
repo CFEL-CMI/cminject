@@ -5,25 +5,23 @@
 #
 # Copyright (C) 2018,2020 CFEL Controlled Molecule Imaging group
 #
-# This program is free software: you can redistribute it and/or modify it under the terms of the GNU
-# General Public License as published by the Free Software Foundation, either version 3 of the
-# License, or (at your option) any later version.
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public 
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any 
+# later version. 
 #
-# If you use this program for scientific work, you should correctly reference it; see the LICENSE.md
-# file for details.
+# If you use this program for scientific work, you should correctly reference it; see the LICENSE.md file for details. 
 #
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
-# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-# General Public License for more details.
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied 
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. 
 #
-# You should have received a copy of the GNU General Public License along with this program. If not,
-# see <http://www.gnu.org/licenses/>.
+# You should have received a copy of the GNU General Public License along with this program. If not, see
+# <http://www.gnu.org/licenses/>.
 
 import sys
 from setuptools import setup, find_packages, Extension
 
 name = 'cminject'
-version = '1.0.dev0'
+version = '1.0.0'
 release = version
 copyright = 'Muhamed Amin, Simon Welker, and the CFEL Controlled Molecule Imaging group'
 
@@ -71,7 +69,7 @@ install_requires = [
     'matplotlib>=3.1.0',
     'h5py>=2.10.0',
     'sphinx>=2.1.2',
-    'docutils<0.16', # see e.g. https://github.com/matplotlib/matplotlib/pull/16358
+    'docutils<0.16',  # see e.g. https://github.com/matplotlib/matplotlib/pull/16358
     'sphinx_rtd_theme~=0.4.3',
     'tqdm>=4.41.1'
 ]
@@ -128,3 +126,6 @@ setup(name=name,
       command_options={'build_sphinx': build_sphinx_options, },
       classifiers=classifiers
 )
+
+
+

@@ -1,6 +1,0 @@
-<?xml version="1.0"?>
-<VTKFile type="Collection" version="0.1" byte_order="LittleEndian">
-<Collection>
-<DataSet timestep="2732" group="" part=" 0" file="data/particles_iT0002732iC00000.vtu"/>
-</Collection>
-</VTKFile>
