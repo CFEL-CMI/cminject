@@ -489,35 +489,44 @@ class Experiment:
             processes = os.cpu_count() // 2
 
         self.loglevel = loglevel
-
         self._prepare()
+
+        # Prepare according iterator for single process or for process pool
         if single_process:
             logging.info("Running in a single process.")
+            pool = None
             iterator = map(self._simulate_particle, self.particles)
-            if progressbar:
-                iterator = tqdm(iterator, total=len(self.particles))
-            particles = list(iterator)
         else:
             logging.info(f"Running in parallel using {processes} processes with chunksize {chunksize}.")
             pool = multiprocessing.Pool(processes=processes, initializer=self._prepare_process, initargs=())
-            try:
-                iterator = pool.imap_unordered(self._simulate_particle, self.particles, chunksize=chunksize)
-                if progressbar:
-                    iterator = tqdm(iterator, total=len(self.particles))
-                particles = list(iterator)
-            except KeyboardInterrupt:
+            iterator = pool.imap_unordered(self._simulate_particle, self.particles, chunksize=chunksize)
+
+        # Add progress bar if that was wished for
+        if progressbar:
+            iterator = tqdm(iterator, total=len(self.particles), dynamic_ncols=True)
+
+        # Run in try-catch-finally-block
+        try:
+            # Run the simulation by forcing evaluation of the iterator into a list
+            particles = list(iterator)
+
+            # Store the results when done, and if there is a result storage instance present
+            if self.result_storage is not None:
+                with self.result_storage as s:
+                    s.store_results(particles)
+
+            # Return the simulated particle list to the caller
+            return particles
+        # Handle keyboard interrupts gracefully, and by closing the pool if we are using one
+        except KeyboardInterrupt as e:
+            if pool is not None:
                 pool.terminate()
-                print("[!] CMInject simulation cancelled due to KeyboardInterrupt.")
-                exit(1)
-            finally:
+            print("[!] Experiment simulation cancelled due to KeyboardInterrupt.")
+            raise e
+        finally:
+            if pool is not None:
                 pool.close()
                 pool.join()
-
-        if self.result_storage is not None:
-            with self.result_storage as s:
-                s.store_results(particles)
-
-        return particles
 
     def _prepare(self):
         # Set values on global config, thereby cascading them throughout the setup to all subscribed objects
