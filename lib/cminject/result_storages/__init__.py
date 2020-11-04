@@ -21,4 +21,6 @@
 Implementations of :class:`cminject.base.ResultStorage`.
 """
 
+__all__ = ['HDF5ResultStorage']
+
 from .hdf5 import HDF5ResultStorage

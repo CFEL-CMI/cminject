@@ -15,7 +15,7 @@ Installation
 ------------
 
 To develop for CMInject, you should first install it as described in :ref:`user-guide`, making
-sure to use ``python3 setup.py develop``instead of ``python3 setup.py install``. This ensures
+sure to use ``python3 setup.py develop`` instead of ``python3 setup.py install``. This ensures
 you don't have to reinstall after every code change you make to see an effect when importing or
 running your changed code.
 
