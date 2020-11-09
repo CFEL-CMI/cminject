@@ -38,7 +38,8 @@ except ImportError:
           "Please install the 'numpy' package in your Python environment to proceed.", file=sys.stderr)
     sys.exit(1)
 
-long_description = """CMI Injector -- Simulating particles' trajectories in different forcefields
+long_description = """
+CMInject -- A Python framework for defining and executing particle trajectory simulations for sample injection. 
 
 Developed by Muhamed Amin, Simon Welker, and the Controlled Molecule Imaging group at the Center for
 Free-Electron Laser Science, Deutsches Elektronen-Synchrotron DESY and Universität Hamburg, Hamburg,
@@ -48,8 +49,8 @@ Original author:    Muhamed Amin <muhamed.amin@cfel.de> and the CMI COMOTION tea
 Current maintainer: Simon Welker <simon.welker@cfel.de> and the Controlled Molecule Imaging group
 """
 
-if sys.version_info < (3, 6):
-    sys.exit('Sorry, Python < 3.8 is not supported')
+if sys.version_info < (3, 7):
+    sys.exit('Sorry, Python < 3.7 is not supported')
 
 package_dir = {'': 'lib'}
 packages = find_packages(where='lib')
@@ -109,20 +110,20 @@ build_sphinx_options = {
 
 setup(name=name,
       version=release,
-      description='A framework for particle injection trajectory simulations in different force fields',
+      description='A Python framework for defining and executing particle trajectory simulations '
+                  'for sample injection.',
       long_description=long_description,
       author='Simon Welker, Muhamed Amin, and the CFEL Controlled Molecule Imaging group',
       author_email='simon.welker@cfel.de',
       maintainer='CFEL Controlled Molecule Imaging group',
       maintainer_email='cminject@desy.de',  # need to set up an email list with that name ;-)
-      url='https://stash.desy.de/projects/CMIFLY/repos/cmi-injector/browse',  # put on github and adjust
+      url='https://github.com/CFEL-CMI/cminject',  # put on github and adjust
       package_dir=package_dir,
       packages=packages,
       scripts=scripts,
       python_requires='>=3.7',
       install_requires=install_requires,
-      setup_requires=['Cython>=0.29.10', 'numpy>=1.16.0'],  # do we really need this? seem to recall it is deprecated
       ext_modules=cythonize(extensions),
-      command_options={'build_sphinx': build_sphinx_options, },
+      command_options={'build_sphinx': build_sphinx_options,},
       classifiers=classifiers
 )
