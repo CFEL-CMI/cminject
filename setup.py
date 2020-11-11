@@ -49,8 +49,8 @@ Original author:    Muhamed Amin <muhamed.amin@cfel.de> and the CMI COMOTION tea
 Current maintainer: Simon Welker <simon.welker@cfel.de> and the Controlled Molecule Imaging group
 """
 
-if sys.version_info < (3, 7):
-    sys.exit('Sorry, Python < 3.7 is not supported')
+if sys.version_info < (3, 6):
+    sys.exit('Sorry, Python < 3.6 is not supported')
 
 package_dir = {'': 'lib'}
 packages = find_packages(where='lib')
@@ -94,6 +94,7 @@ classifiers = [
     'Operating System :: OS Independent',
     'Programming Language :: Python',
     'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
     'Topic :: Scientific/Engineering',
@@ -121,7 +122,7 @@ setup(name=name,
       package_dir=package_dir,
       packages=packages,
       scripts=scripts,
-      python_requires='>=3.7',
+      python_requires='>=3.6',
       install_requires=install_requires,
       ext_modules=cythonize(extensions),
       command_options={'build_sphinx': build_sphinx_options,},
