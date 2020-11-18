@@ -9,30 +9,24 @@ easily maintaining the repository.
 """
 
 __HEADER__ = '''#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8; fill-column: 100; truncate-lines: t -*-
 #
 # This file is part of CMInject
 #
-# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
-# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
-# version.
+# Copyright (C) 2018,2020 CFEL Controlled Molecule Imaging group
 #
-# If you use this program for scientific work, you should correctly reference it; see LICENSE file for details.
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# If you use this program for scientific work, you should correctly reference it; see the LICENSE.md file for details.
 #
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
-
 '''
-
-__FOOTER__ = '''
-
-### Local Variables:
-### fill-column: 100
-### truncate-lines: t
-### End:'''
 
 if __name__ == '__main__':
     import glob
@@ -42,65 +36,59 @@ if __name__ == '__main__':
 
     os.chdir(os.path.join(os.path.dirname(__file__), '../'))
 
-    wrongheader = set()
-    wrongfooter = set()
-    idk = set()
+    wrong = set()
     for filename in glob.glob('**/*.py', recursive=True) + glob.glob('bin/cminject*'):
         with open(filename, 'r+') as file:
-            header_changed, footer_changed = False, False
-            contents = file.read().strip()
+            changes_made = False
+            contents = file.read()
             oc = copy.copy(contents)
 
             if contents.startswith("#!/usr/bin/env python") and not contents.startswith("#!/usr/bin/env python3"):
                 contents = contents.replace("#!/usr/bin/env python", "#!/usr/bin/env python3")
-                header_changed = True
+                changes_made = True
 
             if not contents.startswith(__HEADER__):
                 if re.match(r"\A" + re.escape(__HEADER__.strip()), contents):
-                    header_changed = True
                     contents = contents.replace(__HEADER__.strip(), __HEADER__[:-1], 1)
                 elif contents.startswith('#'):
-                    idk.add(filename)
-                    continue
+                    lines = contents.split('\n')
+                    try:
+                        first_nonheader_idx = next(i for i, line in enumerate(lines) if not line.startswith('#'))
+                        contents = __HEADER__ + '\n'.join(lines[first_nonheader_idx:])
+                    except StopIteration:
+                        contents = __HEADER__
                 else:
-                    header_changed = True
                     contents = __HEADER__ + contents
 
-                if header_changed:
-                    wrongheader.add(filename)
-            if not contents.endswith(__FOOTER__):
-                if re.match(re.escape(__FOOTER__.strip()) + r"\Z", contents):
-                    footer_changed = True
-                    contents = contents.replace(__FOOTER__.strip(), __FOOTER__[1:], 1)
-                elif contents.split('\n')[-1].startswith('#'):
-                    idk.add(filename)
-                    continue
-                else:
-                    footer_changed = True
-                    contents = contents + __FOOTER__
-
-                if footer_changed:
-                    wrongfooter.add(filename)
-
-            if header_changed or footer_changed:
                 contents = re.sub(r"(\r?\n)*" + re.escape(__HEADER__) + r"(\r?\n)*",
                                   __HEADER__.strip() + '\n\n',
                                   contents)
-                contents = re.sub(r"(\r?\n)*" + re.escape(__FOOTER__) + r"(\r?\n)*",
-                                  '\n\n' + __FOOTER__.strip() + '\n', # newline at end of file
-                                  contents)
+                changes_made = True
 
+            if not contents.endswith('\n'):
+                contents = contents + '\n'  # newline at end of file
+                changes_made = True
+            else:
+                lines = contents.split('\n')
+                try:
+                    last_empty_line_idx = next(i for i, line in enumerate(lines[::-1]) if not line.strip() == '')
+                    if last_empty_line_idx != 1:
+                        contents = '\n'.join(lines[:-last_empty_line_idx]) + '\n'
+                        changes_made = True
+                except StopIteration:
+                    pass
+
+            if changes_made:
+                wrong.add(filename)
                 print(f"Auto-fixing {filename}...")
                 file.seek(0)
                 file.write(contents)
+                file.truncate()
 
-    if not (wrongfooter or wrongheader or idk):
+    if not wrong:
         print("All good, nothing to do automatically or manually!")
     else:
         print()
-        print(f"Files with wrong header: {len(wrongheader)}")
-        print(f"Files with wrong footer: {len(wrongfooter)}")
-        print(f"Files with both wrong: {len(wrongheader.intersection(wrongfooter))}")
-        print(f"Files that could not be automatically fixed: {len(idk)}")
-        for idk_file in idk:
-            print('\t' + idk_file)
+        print(f"Files with wrong header or ending: {len(wrong)}")
+        for file in wrong:
+            print('\t' + file)

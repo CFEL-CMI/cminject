@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8; fill-column: 100; truncate-lines: t -*-
 #
 # This file is part of CMInject
 #
-# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
-# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
-# version.
+# Copyright (C) 2018,2020 CFEL Controlled Molecule Imaging group
 #
-# If you use this program for scientific work, you should correctly reference it; see LICENSE file for details.
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# If you use this program for scientific work, you should correctly reference it; see the LICENSE.md file for details.
 #
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
@@ -31,38 +33,41 @@ from cminject.base import Particle, ResultStorage, ParticleDetectorHit
 
 class HDF5ResultStorage(ResultStorage):
     """
-    Stores Experiment output in an HDF5 file.
-
-    Let n be the number of stored particles, d_p be the number of dimensions in the particles' `position` property,
-    d_t be the number of dimensions in a point along a trajectory, and d_d the number of dimensions stored on each
-    `ParticleDetectorHit`. All d_* variables depend on the concrete implementations used for a simulation.
-
-    The following groups and datasets will be stored:
-
-    # FIXME out of date
-    - particles:
-
-      - initial_positions: The initial phase space positions of all particles, as one (n, d_p) array.
-      - final_position: The final phase space positions of all particles, as one (n, d_p) array.
-      - trajectories: A jagged array of (n, d_t, X) entries, where X can be variable (jagged)..
-        This dataset is not stored if no nonempty trajectories were tracked.
-
-    - detectors/{id}: All hits on the detector with identifier <id>, as one (h_i, d_d) array. h_i is the number of hits
-      on the i-th detector. Each entry is one hit, one particle can incur multiple hits, and what is stored at each
-      hit is the concatenation of (position, properties) of the detected particle.
+    Stores and reads :class:`cminject.experiment.Experiment` output data into and from an HDF5 file.
 
     .. note::
-      Particle trajectories are stored as one `awkward.JaggedArray` (see https://github.com/scikit-hep/awkward-array),
-      meaning that when reading from such a result file, you either need to use this class to read out the results,
-      or handle this stored format yourself.
+        Let n be the number of stored particles. The following groups and datasets will be stored:
 
-    Further attributes can be stored on the root node by passing a dictionary as the "metadata" argument to the
-    constructor.
+        - particles (**Group**): Stores the constant and tracked properties of all particles.
 
-    .. note::
+          - properties (**Dataset**, shape (n,)): The fixed (non-tracked) properties of all particles, see
+            :meth:`cminject.base.Particle.constant_properties`
+
+          - tracked (**Group**): Collections storing how the tracked properties,
+            see :meth:`cminject.base.Particle.tracked_properties`, changed during the simulation. The data type of all
+            datasets in here is the same, as returned by the associated Particle subclass's
+            :meth:`cminject.base.Particle.as_dtype` when called with the string 'tracked'.
+
+            - initial (**Dataset**, shape (n,)): The initial set of tracked properties
+            - final (**Dataset**, shape (n,)): The final set of tracked properties
+            - trajectories (**Dataset**, shape (n,)): The trajectories of all particles, stored as one
+              variable-length array, since the lengths of the trajectories do not necessarily match. *Might contain
+              only empty trajectories if trajectories were not tracked during the simulation!*
+
+        - detectors (**Group**): Stores detector hits of all detectors, one Dataset for each Detector, stored by each
+          Detector's identifier, *id*.
+
+          - *id* (**Dataset**): All hits on the detector with identifier *id*. Each entry is one hit, storing all
+            properties of the hit's Particle using the Particle's 'all' dtype (see
+            :meth:`cminject.base.Particle.as_dtype`, called with the string 'all').  Note that one particle can incur
+            multiple hits.
+
+        Further attributes can be stored on the root node by passing a dictionary as the "metadata" argument to the
+        constructor.
+
+    .. warning::
       For efficient and predictable storage, it's assumed that all detector hits on each detector return
-      exactly the same shape of data, and the same property description. This should probably be the case in any
-      a typical implementation of a detector.
+      exactly the same shape and dtype. This should probably be the case in any a typical implementation of a detector.
     """
     def __init__(self, filename: str, mode: str = 'r', force_writable: bool = False, metadata: Dict[str, Any] = None):
         self.filename = filename
@@ -200,8 +205,3 @@ class HDF5ResultStorage(ResultStorage):
 
     # TODO store description as metadata!!
     # TODO maybe add function to return a pandas.DataFrame (?)
-
-### Local Variables:
-### fill-column: 100
-### truncate-lines: t
-### End:

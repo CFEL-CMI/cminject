@@ -147,6 +147,45 @@ Result data can be retrieved from the :class:`cminject.result_storages.hdf5.HDF5
 class, which can benstantiated with the filename of the result file, and offers a straightforward
 interface to retrieve each piece of stored result data.
 
+.. _output-format:
+
+******************
+Result data access
+******************
+
+CMInject simulations write HDF5 result files to disk, using the class
+:class:`cminject.result_storages.HDF5ResultStorage`. You can read back and use this data through a
+convenient Python interface, or by using HDF5 itself as a low-level interface, from any other
+software that handles HDF5 files.
+
+Convenient interface
+--------------------
+
+The easiest way to retrieve and use this result data for your further analyses is to use that
+same class :class:`cminject.result_storages.HDF5ResultStorage`,
+since it offers methods for data retrieval like
+:meth:`cminject.result_storages.HDF5ResultStorage.get_detectors` or
+:meth:`cminject.result_storages.HDF5ResultStorage.get_trajectories`.
+
+As an example, we can retrieve the detectors (as a dictionary) by calling ``get_detectors()`` on a
+HDF5ResultStorage instance constructed with our result file's name, ``output.h5``::
+
+    from cminject.result_storages import HDF5ResultStorage
+    with HDF5ResultStorage('output.h5') as rs:
+      detectors = rs.get_detectors()
+      # ... do something with detectors, e.g., plot the x distribution of one detector at z=0:
+      plt.figure(); plt.hist(detectors['SimpleZ@0']['position'][:, 0])
+
+See the class documentation here: :class:`cminject.result_storages.HDF5ResultStorage`, for a full
+list of available data retrieval methods. Their names all start with ``get_``.
+
+Low-level interface
+-------------------
+
+The low-level interface is just the HDF5 file format itself, used with a specific structure for
+our result outputs. We have documented this output structure in the docstring of the
+:class:`cminject.result_storages.HDF5ResultStorage` class.
+
 .. _utility-programs:
 
 ************************

@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8; fill-column: 100; truncate-lines: t -*-
 #
 # This file is part of CMInject
 #
-# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
-# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later
-# version.
+# Copyright (C) 2018,2020 CFEL Controlled Molecule Imaging group
 #
-# If you use this program for scientific work, you should correctly reference it; see LICENSE file for details.
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# If you use this program for scientific work, you should correctly reference it; see the LICENSE.md file for details.
 #
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
@@ -489,35 +491,44 @@ class Experiment:
             processes = os.cpu_count() // 2
 
         self.loglevel = loglevel
-
         self._prepare()
+
+        # Prepare according iterator for single process or for process pool
         if single_process:
             logging.info("Running in a single process.")
+            pool = None
             iterator = map(self._simulate_particle, self.particles)
-            if progressbar:
-                iterator = tqdm(iterator, total=len(self.particles))
-            particles = list(iterator)
         else:
             logging.info(f"Running in parallel using {processes} processes with chunksize {chunksize}.")
             pool = multiprocessing.Pool(processes=processes, initializer=self._prepare_process, initargs=())
-            try:
-                iterator = pool.imap_unordered(self._simulate_particle, self.particles, chunksize=chunksize)
-                if progressbar:
-                    iterator = tqdm(iterator, total=len(self.particles))
-                particles = list(iterator)
-            except KeyboardInterrupt:
+            iterator = pool.imap_unordered(self._simulate_particle, self.particles, chunksize=chunksize)
+
+        # Add progress bar if that was wished for
+        if progressbar:
+            iterator = tqdm(iterator, total=len(self.particles), dynamic_ncols=True)
+
+        # Run in try-catch-finally-block
+        try:
+            # Run the simulation by forcing evaluation of the iterator into a list
+            particles = list(iterator)
+
+            # Store the results when done, and if there is a result storage instance present
+            if self.result_storage is not None:
+                with self.result_storage as s:
+                    s.store_results(particles)
+
+            # Return the simulated particle list to the caller
+            return particles
+        # Handle keyboard interrupts gracefully, and by closing the pool if we are using one
+        except KeyboardInterrupt as e:
+            if pool is not None:
                 pool.terminate()
-                print("[!] CMInject simulation cancelled due to KeyboardInterrupt.")
-                exit(1)
-            finally:
+            print("[!] Experiment simulation cancelled due to KeyboardInterrupt.")
+            raise e
+        finally:
+            if pool is not None:
                 pool.close()
                 pool.join()
-
-        if self.result_storage is not None:
-            with self.result_storage as s:
-                s.store_results(particles)
-
-        return particles
 
     def _prepare(self):
         # Set values on global config, thereby cascading them throughout the setup to all subscribed objects
@@ -614,8 +625,3 @@ class Experiment:
         logging.debug(f"Lower Z boundaries: {lower}")
         logging.debug(f"Upper Z boundaries: {upper}")
         return lower, upper
-
-### Local Variables:
-### fill-column: 100
-### truncate-lines: t
-### End:
