@@ -33,6 +33,9 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../lib/'))
 
+import importlib
+print(importlib.util.find_spec('cminject.utils.cython_interpolation'))
+import cminject.utils.cython_interpolation
 
 # -- Project information -----------------------------------------------------
 
