@@ -18,28 +18,20 @@
 # <http://www.gnu.org/licenses/>.
 
 import sys
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, find_packages, Extension, dist
+
+# https://luminousmen.com/post/resolve-cython-and-numpy-dependencies
+dist.Distribution().fetch_build_eggs(['Cython>=0.29.15', 'numpy>=1.16.0'])
+from Cython.Build import cythonize
+import numpy
 
 name = 'cminject'
-version = '1.0.0'
+version = '1.0.0-rc2'
 release = version
 copyright = 'Muhamed Amin, Simon Welker, and the CFEL Controlled Molecule Imaging group'
 
-try:
-    from Cython.Build import cythonize
-except ImportError:
-    print("FATAL: CMInject setup requires Cython to be installed, since it has Cython extensions defined.\n"
-          "Please install the 'Cython' package in your Python environment to proceed.", file=sys.stderr)
-    sys.exit(1)
-try:
-    import numpy
-except ImportError:
-    print("FATAL: CMInject setup requires numpy to be installed, since its Cython extensions depend on it.\n"
-          "Please install the 'numpy' package in your Python environment to proceed.", file=sys.stderr)
-    sys.exit(1)
-
 long_description = """
-CMInject -- A Python framework for defining and executing particle trajectory simulations for sample injection. 
+CMInject -- A Python framework for defining and executing particle trajectory simulations for sample injection.
 
 Developed by Muhamed Amin, Simon Welker, and the Controlled Molecule Imaging group at the Center for
 Free-Electron Laser Science, Deutsches Elektronen-Synchrotron DESY and Universität Hamburg, Hamburg,
@@ -65,13 +57,13 @@ scripts = [
 install_requires = [
     'scipy>=1.3.0',
     'numpy>=1.16.0',
-    'numba>=0.44.0',
+    'numba~=0.50.1',
     'pandas>=0.24.0',
     'matplotlib>=3.1.0',
     'h5py>=2.10.0',
-    'sphinx>=2.1.2',
+    'sphinx>=2.4.4',
     'docutils<0.16',  # see e.g. https://github.com/matplotlib/matplotlib/pull/16358
-    'sphinx_rtd_theme~=0.4.3',
+    'sphinx_rtd_theme~=0.5.0',
     'tqdm>=4.41.1'
 ]
 
@@ -128,3 +120,6 @@ setup(name=name,
       command_options={'build_sphinx': build_sphinx_options,},
       classifiers=classifiers
 )
+
+
+

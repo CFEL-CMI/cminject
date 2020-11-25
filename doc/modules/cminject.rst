@@ -1,7 +1,7 @@
 .. _apidoc:
 
-cminject package
-================
+APIdocs: cminject package
+=========================
 
 .. automodule:: cminject
    :members:

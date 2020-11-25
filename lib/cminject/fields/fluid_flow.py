@@ -31,7 +31,7 @@ import numpy as np
 
 from cminject.calc import fluid_flow, is_finite
 from cminject.particles.spherical import SphericalParticle, ThermallyConductiveSphericalParticle
-from .regular_grid_interpolation import RegularGridInterpolationField
+from cminject.fields.regular_grid_interpolation import RegularGridInterpolationField
 
 
 class DragForceInterpolationField(RegularGridInterpolationField, ABC):
