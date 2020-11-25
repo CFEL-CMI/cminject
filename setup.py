@@ -26,7 +26,7 @@ from Cython.Build import cythonize
 import numpy
 
 name = 'cminject'
-version = '1.0.0'
+version = '1.0.0-rc2'
 release = version
 copyright = 'Muhamed Amin, Simon Welker, and the CFEL Controlled Molecule Imaging group'
 
