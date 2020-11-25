@@ -5,23 +5,23 @@
 #
 # Copyright (C) 2018,2020 CFEL Controlled Molecule Imaging group
 #
-# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public 
-# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any 
-# later version. 
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
 #
-# If you use this program for scientific work, you should correctly reference it; see the LICENSE.md file for details. 
+# If you use this program for scientific work, you should correctly reference it; see the LICENSE.md file for details.
 #
-# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied 
-# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. 
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
 """
 A collection of subclasses of :class:`cminject.base.Particle`, containing (at least)
+
   * a simple spherical particle model, with a radius and density determining mass
   * an extension of this model, with particles having temperature and other properties relevant to heat exchange
-  * ...your own and more?
 """
 
 from .spherical import SphericalParticle, ThermallyConductiveSphericalParticle
