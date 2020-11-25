@@ -18,25 +18,17 @@
 # <http://www.gnu.org/licenses/>.
 
 import sys
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, find_packages, Extension, dist
+
+# https://luminousmen.com/post/resolve-cython-and-numpy-dependencies
+dist.Distribution().fetch_build_eggs(['Cython>=0.29.15', 'numpy>=1.16.0'])
+from Cython.Build import cythonize
+import numpy
 
 name = 'cminject'
 version = '1.0.0'
 release = version
 copyright = 'Muhamed Amin, Simon Welker, and the CFEL Controlled Molecule Imaging group'
-
-try:
-    from Cython.Build import cythonize
-except ImportError:
-    print("FATAL: CMInject setup requires Cython to be installed, since it has Cython extensions defined.\n"
-          "Please install the 'Cython' package in your Python environment to proceed.", file=sys.stderr)
-    sys.exit(1)
-try:
-    import numpy
-except ImportError:
-    print("FATAL: CMInject setup requires numpy to be installed, since its Cython extensions depend on it.\n"
-          "Please install the 'numpy' package in your Python environment to proceed.", file=sys.stderr)
-    sys.exit(1)
 
 long_description = """CMI Injector -- Simulating particles' trajectories in different forcefields
 

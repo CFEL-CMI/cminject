@@ -18,13 +18,12 @@
 # <http://www.gnu.org/licenses/>.
 
 """
-States that the particle can be in wrt. integration steps to take, like
-- lost
+Mutually exclusive states that the particle can be in wrt. integration steps to take, like
+
+- lost (stop simulating)
 - ok (definitely keep simulating)
 - outside (potentially keep simulating)
-- between (propagate through extrapolation, free-field)
-
-These states are mutually exclusive.
+- between (propagate through extrapolation, field-free)
 """
 
 PARTICLE_STATUS_LOST = 0

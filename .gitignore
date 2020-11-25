@@ -12,3 +12,4 @@ doc/.build
 *.h5
 *.hdf5
 /out
+/.eggs
