@@ -56,7 +56,7 @@ scripts = [
 install_requires = [
     'scipy>=1.3.0',
     'numpy>=1.16.0',
-    'numba>=0.44.0',
+    'numba~=0.50.1',
     'pandas>=0.24.0',
     'matplotlib>=3.1.0',
     'h5py>=2.10.0',
@@ -113,7 +113,6 @@ setup(name=name,
       scripts=scripts,
       python_requires='>=3.7',
       install_requires=install_requires,
-      setup_requires=['Cython>=0.29.10', 'numpy>=1.16.0'],  # do we really need this? seem to recall it is deprecated
       ext_modules=cythonize(extensions),
       command_options={'build_sphinx': build_sphinx_options, },
       classifiers=classifiers
