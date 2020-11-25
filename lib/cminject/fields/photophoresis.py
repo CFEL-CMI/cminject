@@ -32,7 +32,7 @@ from scipy.integrate import dblquad
 from cminject.base import Field
 from cminject.utils import empty_interval
 from cminject.particles.spherical import ThermallyConductiveSphericalParticle
-from .fluid_flow import DragForceInterpolationField
+from cminject.fields.fluid_flow import DragForceInterpolationField
 
 
 class VortexBeamPhotophoreticForceField(Field, ABC):
