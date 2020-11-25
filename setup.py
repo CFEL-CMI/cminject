@@ -61,9 +61,9 @@ install_requires = [
     'pandas>=0.24.0',
     'matplotlib>=3.1.0',
     'h5py>=2.10.0',
-    'sphinx>=2.1.2',
+    'sphinx>=2.4.4',
     'docutils<0.16',  # see e.g. https://github.com/matplotlib/matplotlib/pull/16358
-    'sphinx_rtd_theme~=0.4.3',
+    'sphinx_rtd_theme~=0.5.0',
     'tqdm>=4.41.1'
 ]
 
