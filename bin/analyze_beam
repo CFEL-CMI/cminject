@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8; fill-column: 100; truncate-lines: t -*-
+#
+# This file is part of CMInject
+#
+# Copyright (C) 2018,2020 CFEL Controlled Molecule Imaging group
+#
+# This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# If you use this program for scientific work, you should correctly reference it; see the LICENSE.md file for details.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along with this program. If not, see
+# <http://www.gnu.org/licenses/>.
+
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+
+from cminject.result_storages import HDF5ResultStorage
+
+
+def get_nparticles(h5f):
+    """Gets the number of simulated particles from the HDF5ResultStorage object."""
+    return len(h5f.get_tracked_initial())
+
+
+def get_throughput(det):
+    """
+    Gets the 'throughput', i.e. the number of particle hits this detector encountered.
+
+    The hits are counted only once per particle, so if a particle interacts with a detector multiple times,
+    it is still counted as only one. This is done so that the throughput is always between [0, nparticles].
+
+    :param det: A detector as retrieved from `meth`:cminject.result_storages.HDF5ResultStorage.get_detectors`.
+    :return: The throughput of the given detector.
+    """
+    return len(np.unique(det['identifier']))
+
+
+def get_z(det):
+    """
+    Gets the Z position of a detector **assuming that** all particle hits are at the same Z position and the
+    detector is positioned at exactly and only this Z position.
+
+    :param det: A detector as retrieved from `meth`:cminject.result_storages.HDF5ResultStorage.get_detectors`.
+    :return: The (assumed) Z position of the given detector.
+    """
+    return det['position'][0, -1]
+
+
+def get_focus_size(det, percentile):
+    """
+    Gets the focus size of this detector, i.e., the percentile below which all particles lie in r space.
+
+    **Assumes that**:
+
+       * 3D hit positions are [x,y,z] and so r = sqrt(x**2 + y**2)
+       * 2D hit positions are [r,z], or at least can be treated as such equivalently
+
+    :param det: A detector as retrieved from `meth`:cminject.result_storages.HDF5ResultStorage.get_detectors`.
+    :param percentile: The percentile to use (0-100)
+    :return: The focus size of the given detector.
+    """
+    ndim = det['position'].shape[1]
+    if ndim == 2:
+        r = det['position'][:, 0]
+    elif ndim == 3:
+        r = np.sqrt(det['position'][:, 0] ** 2 + det['position'][:, 1] ** 2)
+
+    return np.percentile(r, percentile)
+
+
+def get_beam_overview(h5f, percentile=70):
+    """
+    Gets a 'beam overview' dict containing the keys:
+
+      * zs: The Z positions of the detectors
+      * throughputs: The throughput values of the detectors (see :func:`get_throughput`)
+      * focus_sizes: The focus size values of the detectors (see :func:`get_focus_size`)
+
+    from an HDF5 result file containing one or more detectors.
+
+    :param h5f: The HDF5 result file.
+    :param percentile: The percentile to use for the focus sizes (70 by default).
+    :return: The beam overview dict as described above.
+    """
+    # Get detectors, names, and Z positions
+    dets = list(h5f.get_detectors().values())
+    detnames = list(h5f.get_detectors().keys())
+    zs = np.array([get_z(det) for det in dets])
+
+    # Sort all three arrays by ascending Z position
+    sorted_idxs = np.argsort(zs)
+    zs = zs[sorted_idxs]
+    dets = [dets[i] for i in sorted_idxs]
+    detnames = [detnames[i] for i in sorted_idxs]
+
+    # Calculate (relative) throughputs and focus sizes
+    nparticles = len(h5f.get_tracked_initial())
+    tps = [get_throughput(det) / nparticles for det in dets]
+    fss = [get_focus_size(det, percentile) for det in dets]
+
+    result = {'zs': zs, 'throughputs': tps, 'focus_sizes': fss}
+
+    if h5f.file_handle.attrs['flow_field'] is not None:
+        from cminject.utils.structured_txt_hdf5 import hdf5_to_data_grid
+        coords, dat = hdf5_to_data_grid(h5f.file_handle.attrs['flow_field'])
+        dims = len(coords)
+        imshow_args = {
+            'extent': [np.min(coords[-1]), np.max(coords[-1]), 0, 1],
+            'aspect': 'auto',
+            'zorder': -100,
+            'alpha': 0.3
+        }
+        if dims in [2, 3]:
+            imshow_args['X'] = dat[..., -1] if dims == 2 else dat[dat.shape[1]//2, :, :, -1]
+            result['imshow_args'] = imshow_args
+
+    return result
+
+
+def plot_beam_overview(beam_overview, ax=None):
+    """
+    Plots a figure that visualizes the 'beam overview' as returned by :func:`get_beam_overview`.
+
+    :param beam_overview: A dict as returned by :func:`get_beam_overview`.
+    :param ax: A plt.Axes to plot on, or None if a figure and axes should be created by this function.
+    :return: A tuple of (ax, fig), where fig is either None if the ax parameter was given, or the newly created figure
+      if it was not given.
+    """
+    fig = None
+    if ax is None:
+        fig = plt.figure(figsize=(8, 4))
+        ax = fig.gca()
+    zs, tps, fss = beam_overview['zs'], beam_overview['throughputs'], beam_overview['focus_sizes']
+
+    tpax = ax
+    fsax = plt.twinx()
+    tpax.plot(zs, tps, '-o')
+    fsax.plot(zs, fss, '-o', color='C1')
+    ax.set_ylim(ax.get_ylim()[0], min(1.01, ax.get_ylim()[1]))  # between >=0 and ~=1
+
+    ax.set_xlabel('z')
+    tpax.set_ylabel('Throughput')
+    fsax.set_ylabel('Focus size')
+
+    if 'imshow_args' in beam_overview:
+        ax.autoscale(False)
+        beam_overview['imshow_args']['extent'][2] = ax.get_ylim()[0]
+        beam_overview['imshow_args']['extent'][3] = ax.get_ylim()[1]
+        ax.imshow(**beam_overview['imshow_args'])
+
+    if fig is not None:
+        fig.tight_layout()
+
+    return ax, fig
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('file', help='A result HDF5 file to analyze.', type=str)
+    args = parser.parse_args()
+
+    with HDF5ResultStorage(args.file) as h5f:
+        plot_beam_overview(get_beam_overview(h5f))
+    plt.show()
+        
+
+if __name__ == '__main__':
+    main()
