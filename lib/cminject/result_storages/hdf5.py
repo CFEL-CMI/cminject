@@ -121,7 +121,10 @@ class HDF5ResultStorage(ResultStorage):
         # because metadata could not be stored.
         for k, v in self.metadata.items():
             try:
-                f.attrs[k] = v
+                if k == 'flow_field':  # TODO better checks?
+                    f.attrs[k] = os.path.abspath(str(v))
+                else:
+                    f.attrs[k] = v
             except TypeError:
                 try:
                     f.attrs[k] = str(v)
