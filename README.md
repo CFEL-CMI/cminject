@@ -18,16 +18,10 @@ CMInject is free software, see the [licensing conditions](LICENSE.md) for detail
 ## Installation
 
 This section contains a short quickstart-style installation guide.
- 
-For detailed installation instructions and more, please generate the documentation (see section
-_Generating docs_ below), and there, read the _Installation_ section in the _User Guide_.
+For detailed installation instructions and more, please have a look at the
+[User Guide of the official documentation](
+https://cminject.readthedocs.io/en/latest/userguide/userguide.html#installation).
 
-### Prerequisites
-
-CMInject requires the following packages before installation:
-
-- Cython >= 0.29.10
-- numpy >= 1.16.0
 
 ### Installing CMInject:
 
@@ -37,20 +31,20 @@ run
 python setup.py install
 ```
 
-A user (non-admin) installation can be preformed through
+A user (non-admin) installation can be performed through
 ```
 python setup.py install --user
 ```
 
 If you plan on developing CMInject you should use
 ```
-python setup.py develop --user
+python setup.py develop [--user]
 ```
 
 ## Documentation
 
-The documentation is available on [readthedocs](add link). It can also be generated from this code
-through running
+The documentation is available [on readthedocs](https://cminject.readthedocs.io).
+It can also be generated from this repository by running
 ```
 python setup.py build_sphinx
 ```

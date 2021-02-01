@@ -24,7 +24,7 @@ Acceleration fields that model flowing fluids.
 import logging
 import warnings
 from abc import ABC
-from typing import Tuple
+from typing import Tuple, Union
 
 import h5py  # TODO should this code here really be concerned with I/O?
 import numpy as np
@@ -80,6 +80,22 @@ class DragForceInterpolationField(RegularGridInterpolationField, ABC):
         return self._z_boundary
 
     def _set_cascading(self, attribute_name, passed_arg, h5f, key):
+        """
+        Sets attributes that are stored on the field file and/or passed explicitly, getting the value
+        to set in a cascading manner:
+
+          * the field file's attribute (if present) is considered first and sets the value
+          * the explicitly passed argument is considered second, and overrides the value **unless None is passed**.
+
+        If neither step succeeded, a ValueError is raised.
+
+        :raises: ValueError
+        :param attribute_name: The attribute name to set on this object (self).
+        :param passed_arg: The explicitly passed argument. Should be None if and only if nothing was passed.
+        :param h5f: The HDF5 file handle that represents the field file.
+        :param key: The key from the file's attributes to use.
+        :return: Nothing.
+        """
         if passed_arg is not None:
             setattr(self, attribute_name, passed_arg)
         elif key in h5f.attrs:
@@ -87,6 +103,37 @@ class DragForceInterpolationField(RegularGridInterpolationField, ABC):
         elif getattr(self, attribute_name, None) is None:
             # couldn't find value and hasn't already been set
             raise ValueError(f"Could not retrieve value for {attribute_name} from HDF5 and function arguments!")
+
+    def _set_properties_based_on_gas_type(self, gas_type: str):
+        """
+        Sets several relevant quantities for fluid flow based on a given gas type and this field's current temperature.
+        Prints warnings if values cannot be picked with certainty from the given gas type and temperature.
+
+        :param gas_type: The gas type to use. Currently implemented: [N, He]
+        :return: Nothing.
+        """
+        # TODO this should be some kind of table, maybe along with interpolation, rather than for a very small finite...
+        # TODO ...set of temperature/gas combinations
+        gas_temp = self.temperature
+        if gas_type is not None:
+            logging.info(f"Automatically setting mu and m_gas for gas type '{gas_type}' at {gas_temp}K.")
+        if gas_type == 'He':
+            self.m_gas = 6.6e-27
+            if gas_temp == 4.0:
+                self.dynamic_viscosity = 1.02e-6
+            else:
+                self.dynamic_viscosity = 1.96e-5
+                if gas_temp != 293.15:
+                    warnings.warn(
+                        f"WARNING: Unknown mu/m for gas type {gas_type} at {gas_temp}. Using "
+                        f"approximation for room temperature (293.15K).")
+        elif gas_type == 'N':
+            self.m_gas = 4.7e-26
+            self.dynamic_viscosity = 1.76e-5
+            if gas_temp != 293.15:
+                warnings.warn(
+                    f"WARNING: Unknown mu/m for gas type {gas_type} at {gas_temp}. Using "
+                    f"approximation for room temperature (293.15K).")
 
 
 class StokesDragForceField(DragForceInterpolationField):
@@ -101,22 +148,16 @@ class StokesDragForceField(DragForceInterpolationField):
         # Store all the fixed initial properties
         self.dynamic_viscosity, self.density, self.m_gas, self.temperature, self.slip_correction_scale = [None] * 5
         with h5py.File(filename, 'r') as h5f:
+            self._set_cascading('temperature', temperature, h5f, 'flow_temperature')
             if 'flow_gas' in h5f.attrs:
-                temp = h5f.attrs['flow_temperature']
-                self._set_properties_based_on_gas_type(h5f.attrs['flow_gas'], temp)
-                if temperature is not None and temperature != temp:
+                self._set_properties_based_on_gas_type(h5f.attrs['flow_gas'])
+                if temperature is not None and temperature != self.temperature:
                     warnings.warn(
                         f"WARNING: Given temperature ({temperature}) is not equal to the temperature stored on the "
-                        f"field ({temp}). Things like the assumed dynamic viscosity might be off, so "
+                        f"field ({self.temperature}). Things like the assumed dynamic viscosity might be off, so "
                         f"you might need to set them manually.")
-
-            # Set all the values that are either stored on the field file or passed explicitly, getting the value
-            # to set in a 'cascading' manner, where first the field file is looked at, and the value from there stored,
-            # and then the passed argument is looked at, which -- if it is not None -- overrides the value from the
-            # field file.
             self._set_cascading('dynamic_viscosity', dynamic_viscosity, h5f, 'flow_dynamic_viscosity')
             self._set_cascading('m_gas', m_gas, h5f, 'flow_gas_mass')
-            self._set_cascading('temperature', temperature, h5f, 'flow_temperature')
             self._set_cascading('slip_correction_scale', slip_correction_scale, h5f, 'flow_slip_scale')
 
         # Set the correct slip correction model
@@ -161,32 +202,7 @@ class StokesDragForceField(DragForceInterpolationField):
             self.m_gas, self.slip_correction_scale
         )
 
-    def _set_properties_based_on_gas_type(self, gas_type: str, gas_temp: float):
-        # TODO this should be some kind of table, maybe along with interpolation, rather than for a very small finite...
-        # TODO ...set of temperature/gas combinations
-        self.temperature = gas_temp
-
-        if gas_type is not None:
-            logging.info(f"Automatically setting mu and m_gas for gas type '{gas_type}' at {gas_temp}K.")
-        if gas_type == 'He':
-            self.m_gas = 6.6e-27
-            if gas_temp == 4.0:
-                self.dynamic_viscosity = 1.02e-6
-            else:
-                self.dynamic_viscosity = 1.96e-5
-                if gas_temp != 293.15:
-                    warnings.warn(
-                        f"WARNING: Unknown mu/m for gas type {gas_type} at {gas_temp}. Using "
-                        f"approximation for room temperature (293.15K).")
-        elif gas_type == 'N':
-            self.m_gas = 4.7e-26
-            self.dynamic_viscosity = 1.76e-5
-            if gas_temp != 293.15:
-                warnings.warn(
-                    f"WARNING: Unknown mu/m for gas type {gas_type} at {gas_temp}. Using "
-                    f"approximation for room temperature (293.15K).")
-
-    def _init_slip_correction_model(self, slip_correction_model: str):
+    def _init_slip_correction_model(self, slip_correction_model: Union[str, None]):
         # Either take the manually set slip correction model,
         if slip_correction_model is not None:
             self.slip_correction_model = slip_correction_model
@@ -203,7 +219,8 @@ class StokesDragForceField(DragForceInterpolationField):
                     f" or even implement a new model, for optimal results.")
 
         # In any case, check that the model that has been set is one that is actually implemented
-        if self.slip_correction_model not in ['4_kelvin', 'room_temp']:
+        implementations = {'4_kelvin': self._calc_slip_correction_4k, 'room_temp': self._calc_slip_correction_hutchins}
+        if self.slip_correction_model not in implementations.keys():
             raise ValueError(f"Invalid slip correction model: {self.slip_correction_model}")
         if self.slip_correction_model == 'room_temp':
             # Require m_gas for the room_temp model
@@ -211,11 +228,7 @@ class StokesDragForceField(DragForceInterpolationField):
                 raise ValueError("m_gas is a required parameter for the 'room_temp' slip correction model!")
 
         # Swap out the implementation
-        if self.slip_correction_model == '4_kelvin':
-            self.calc_slip_correction = self._calc_slip_correction_4k
-        else:
-            self.calc_slip_correction = self._calc_slip_correction_hutchins
-
+        self.calc_slip_correction = implementations[self.slip_correction_model]
         logging.info(f"Set slip correction model to {self.slip_correction_model}.")
 
 
@@ -227,9 +240,9 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
     def __init__(self, filename: str, m_gas: float = None, temperature: float = None, *args, **kwargs):
         self.temperature, self.m_gas = None, None
         with h5py.File(filename, 'r') as h5f:
-            self._set_cascading('m_gas', m_gas, h5f, 'flow_gas_mass')
             self._set_cascading('temperature', temperature, h5f, 'flow_temperature')
-
+            self._set_properties_based_on_gas_type(h5f.attrs['flow_gas'])
+            self._set_cascading('m_gas', m_gas, h5f, 'flow_gas_mass')
         super().__init__(filename, *args, **kwargs)
 
     def calculate_acceleration(self,
@@ -240,12 +253,12 @@ class MolecularFlowDragForceField(DragForceInterpolationField):
         in molecular flow with corrections for high velocities
         """
         pressure, relative_velocity = self.get_local_properties(particle.phase_space_position)
-
-        # Negative pressure or zero pressure is akin to the particle not being in the flow field, force is zero
-        if pressure <= 0:
+        if pressure <= 0:  # non-positive pressure means zero acceleration
             return self._zero_acceleration
-        elif not np.isfinite(pressure):
+        elif not np.isfinite(pressure):  # nonfinite (NaN) pressure means NaN acceleration
             return self._nan_acceleration
-
-        return fluid_flow.a_roth(pressure, relative_velocity, self.m_gas, self.temperature,
-                                 particle.temperature, particle.radius, particle.mass)
+        else:
+            return fluid_flow.a_roth(
+                pressure, relative_velocity, self.m_gas, self.temperature,
+                particle.temperature, particle.radius, particle.mass
+            )

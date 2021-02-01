@@ -49,11 +49,12 @@ class MolecularFlowUpdateTemperature(Action, ConfigSubscriber):
             self.dt = value
 
     def __call__(self, particle: ThermallyConductiveSphericalParticle, time: float) -> bool:
-        pressure = self.field.interpolate(particle.position)[self.number_of_dimensions]
-        h = self.field.m_gas / (2 * Boltzmann * self.field.temperature)
-        h_ = self.field.m_gas / (2 * Boltzmann * particle.temperature)
-        deltaE = 4 * pressure * np.sqrt(np.pi) * particle.radius**2 * (np.sqrt(h)/h_ - 1/np.sqrt(h))
-        deltaT = deltaE / (particle.specific_heat * particle.mass)
+        if not np.isclose(particle.temperature, self.field.temperature):
+            pressure = self.field.interpolate(particle.position)[self.number_of_dimensions]
+            h = self.field.m_gas / (2 * Boltzmann * self.field.temperature)
+            h_ = self.field.m_gas / (2 * Boltzmann * particle.temperature)
+            deltaE = 4 * pressure * np.sqrt(np.pi) * particle.radius**2 * (np.sqrt(h)/h_ - 1/np.sqrt(h))
+            deltaT = deltaE / (particle.specific_heat * particle.mass)
 
-        particle.temperature -= deltaT * self.dt
+            particle.temperature -= deltaT * self.dt
         return False

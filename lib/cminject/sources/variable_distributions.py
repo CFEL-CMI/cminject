@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License along with this program. If not, see
 # <http://www.gnu.org/licenses/>.
 
-from typing import List, Type, Dict, Any
+from typing import List, Type, Dict, Any, Union
 
 import numpy as np
 
@@ -64,13 +64,20 @@ class VariableDistributionSource(Source, ConfigSubscriber):
                     f"the position description passed at construction was {self.number_of_dimensions}-dimensional."
                 )
 
-    def generate_particles(self, start_time: float = 0.0):
+    def _generate(self, dist: Union[Distribution, int, float]):
         n = self.number_of_particles
-        position = np.array([pdist.generate(n) for pdist in self.position]).transpose()
-        velocity = np.array([vdist.generate(n) for vdist in self.velocity]).transpose()
-        r = self.radius.generate(n)
-        rho = self.density.generate(n)
+        if type(dist) in [int, float]:  # handle case when 'distribution' is a plain number (int or float)
+            return constant(dist).generate(n)
+        else:
+            return dist.generate(n)
 
+    def generate_particles(self, start_time: float = 0.0):
+        position = np.array([self._generate(pdist) for pdist in self.position]).transpose()
+        velocity = np.array([self._generate(vdist) for vdist in self.velocity]).transpose()
+        r = self._generate(self.radius)
+        rho = self._generate(self.density)
+
+        n = self.number_of_particles
         particles = [
             self.particle_class(
                 identifier=i,
