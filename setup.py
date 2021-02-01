@@ -26,19 +26,23 @@ from Cython.Build import cythonize
 import numpy
 
 name = 'cminject'
-version = '1.0.0-rc2'
+version = '1.0.0'
 release = version
-copyright = 'Muhamed Amin, Simon Welker, and the CFEL Controlled Molecule Imaging group'
+author = 'Simon Welker, Muhamed Amin, and the CFEL Controlled Molecule Imaging group'
+copyright = f'2021, {author}'
+description = 'A Python framework for defining and executing particle trajectory simulations for sample injection.'
 
-long_description = """
-CMInject -- A Python framework for defining and executing particle trajectory simulations for sample injection.
+curr_maintainer_name = 'Simon Welker'
+curr_maintainer_email = 'simon.welker@cfel.de'
 
-Developed by Muhamed Amin, Simon Welker, and the Controlled Molecule Imaging group at the Center for
-Free-Electron Laser Science, Deutsches Elektronen-Synchrotron DESY and Universität Hamburg, Hamburg,
-Germany.
+long_description = f"""
+CMInject -- {description}.
+
+Developed by {author} at the Center for Free-Electron Laser Science, Deutsches Elektronen-Synchrotron DESY and
+Universität Hamburg, Hamburg, Germany.
 
 Original author:    Muhamed Amin <muhamed.amin@cfel.de> and the CMI COMOTION team
-Current maintainer: Simon Welker <simon.welker@cfel.de> and the Controlled Molecule Imaging group
+Current maintainer: {curr_maintainer_name} <{curr_maintainer_email}> and the Controlled Molecule Imaging group
 """
 
 if sys.version_info < (3, 6):
@@ -104,11 +108,10 @@ build_sphinx_options = {
 
 setup(name=name,
       version=release,
-      description='A Python framework for defining and executing particle trajectory simulations '
-                  'for sample injection.',
+      description=description,
       long_description=long_description,
-      author='Simon Welker, Muhamed Amin, and the CFEL Controlled Molecule Imaging group',
-      author_email='simon.welker@cfel.de',
+      author=author,
+      author_email=curr_maintainer_email,
       maintainer='CFEL Controlled Molecule Imaging group',
       maintainer_email='cminject@desy.de',  # need to set up an email list with that name ;-)
       url='https://github.com/CFEL-CMI/cminject',  # put on github and adjust
@@ -118,7 +121,7 @@ setup(name=name,
       python_requires='>=3.6',
       install_requires=install_requires,
       ext_modules=cythonize(extensions),
-      command_options={'build_sphinx': build_sphinx_options,},
+      command_options={'build_sphinx': build_sphinx_options},
       classifiers=classifiers
 )
 
