@@ -18,6 +18,10 @@
 # <http://www.gnu.org/licenses/>.
 
 import argparse
+import logging
+import os
+import warnings
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -107,20 +111,24 @@ def get_beam_overview(h5f, percentile=70):
 
     result = {'zs': zs, 'throughputs': tps, 'focus_sizes': fss}
 
-    if h5f.file_handle.attrs['flow_field'] is not None:
-        from cminject.utils.structured_txt_hdf5 import hdf5_to_data_grid
-        coords, dat = hdf5_to_data_grid(h5f.file_handle.attrs['flow_field'])
-        dims = len(coords)
-        imshow_args = {
-            'extent': [np.min(coords[-1]), np.max(coords[-1]), 0, 1],
-            'aspect': 'auto',
-            'zorder': -100,
-            'alpha': 0.3
-        }
-        if dims in [2, 3]:
-            imshow_args['X'] = dat[..., -1] if dims == 2 else dat[dat.shape[1]//2, :, :, -1]
-            result['imshow_args'] = imshow_args
-
+    filename = h5f.file_handle.attrs.get('flow_field', None)
+    if filename is not None:
+        if os.path.isfile(filename):
+            from cminject.utils.structured_txt_hdf5 import hdf5_to_data_grid
+            coords, dat = hdf5_to_data_grid(filename)
+            dims = len(coords)
+            imshow_args = {
+                'extent': [np.min(coords[-1]), np.max(coords[-1]), 0, 1],
+                'aspect': 'auto',
+                'zorder': -100,
+                'alpha': 0.3
+            }
+            if dims in [2, 3]:
+                imshow_args['X'] = dat[..., -1] if dims == 2 else dat[dat.shape[1]//2, :, :, -1]
+                result['imshow_args'] = imshow_args
+        else:
+            logging.warning(f"Flow field file '{filename}' stored on results file but could not be found in filesystem!"
+                            f" Omitting the flow field for drawing.")
     return result
 
 
