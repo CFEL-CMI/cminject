@@ -36,6 +36,7 @@ from cminject.fields.function_based import FunctionField
 from cminject.particles import ThermallyConductiveSphericalParticle
 from cminject.sources.variable_distributions import VariableDistributionSource
 from cminject.utils.args import distribution_description, SetupArgumentParser
+from cminject.utils.distributions import NormOfDistributions, GaussianDistribution
 
 
 class DesyatnikovPhotophoresisSetup(Setup):
@@ -98,9 +99,9 @@ class DesyatnikovPhotophoresisSetup(Setup):
 
         parser.set_defaults(
             # Defaults given to me by Andrei Rode
-            position=[{'kind': 'radial_gaussian', 'mu': 0.0, 'sigma': 20e-6}, 0.9e-3],
-            velocity=[{'kind': 'gaussian', 'mu': 0.0, 'sigma': 0.01}, {'kind': 'gaussian', 'mu': -10.0, 'sigma': 0.01}],
-            radius={'kind': 'gaussian', 'mu': 2e-6, 'sigma': 10e-9},
+            position=[NormOfDistributions(GaussianDistribution(0, 20e-6), GaussianDistribution(0, 20e-6)), 0.9e-3],
+            velocity=[GaussianDistribution(0, 0.01), GaussianDistribution(-10.0, 0.01)],
+            radius=GaussianDistribution(2e-6, 10e-9),
             # Assume polystyrene spheres
             rho=1050.0,  # [kg/(m^3)]
             thermal_conductivity=0.030,  # [W/(m*K)]
