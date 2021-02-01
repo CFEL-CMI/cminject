@@ -51,7 +51,8 @@ scripts = [
     'bin/cminject',
     'bin/cminject_txt-to-hdf5',
     'bin/cminject_visualize',
-    'bin/cminject_analyze-asymmetry'
+    'bin/cminject_analyze-asymmetry',
+    'bin/cminject_analyze-beam'
 ]
 
 install_requires = [
