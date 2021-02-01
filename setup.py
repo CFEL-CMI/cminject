@@ -125,5 +125,3 @@ setup(name=name,
       classifiers=classifiers
 )
 
-
-

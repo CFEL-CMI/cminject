@@ -1,0 +1,7 @@
+graft doc
+prune doc/_build
+graft examples
+global-exclude .gitignore
+
+include README.md
+include README.devel
