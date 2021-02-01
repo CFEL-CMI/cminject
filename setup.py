@@ -21,12 +21,13 @@ import sys
 from setuptools import setup, find_packages, Extension, dist
 
 # https://luminousmen.com/post/resolve-cython-and-numpy-dependencies
-dist.Distribution().fetch_build_eggs(['Cython>=0.29.15', 'numpy>=1.16.0'])
+cython_numpy = ['Cython<0.29.21,>0.29.0', 'numpy~=1.19.0']
+dist.Distribution().fetch_build_eggs(cython_numpy)
 from Cython.Build import cythonize
 import numpy
 
 name = 'cminject'
-version = '1.0.0'
+version = '1.0.1'
 release = version
 author = 'Simon Welker, Muhamed Amin, and the CFEL Controlled Molecule Imaging group'
 copyright = f'2021, {author}'
@@ -59,17 +60,16 @@ scripts = [
     'bin/cminject_analyze-beam'
 ]
 
-install_requires = [
-    'scipy~=1.3.0',
-    'numpy~=1.16.0',
+install_requires = cython_numpy + [
+    'scipy~=1.5.0',
     'numba~=0.50.1',
-    'pandas~=0.24.0',
-    'matplotlib~=3.1.0',
+    'pandas~=1.0.5',
+    'matplotlib~=3.3.4',
     'h5py~=2.10.0',
-    'sphinx~=2.4.4',
+    'Sphinx~=3.4.3',
     'docutils<0.16',  # see e.g. https://github.com/matplotlib/matplotlib/pull/16358
-    'sphinx_rtd_theme~=0.5.0',
-    'tqdm~=4.41.1'
+    'sphinx_rtd_theme~=0.5.1',
+    'tqdm~=4.56.0'
 ]
 
 extensions = [
