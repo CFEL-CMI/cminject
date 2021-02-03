@@ -27,7 +27,7 @@ from Cython.Build import cythonize
 import numpy
 
 name = 'cminject'
-version = '1.0.3'
+version = '1.0.4'
 release = version
 author = 'Simon Welker, Muhamed Amin, and the CFEL Controlled Molecule Imaging group'
 copyright = f'2021, {author}'
@@ -124,4 +124,3 @@ setup(name=name,
       command_options={'build_sphinx': build_sphinx_options},
       classifiers=classifiers
 )
-

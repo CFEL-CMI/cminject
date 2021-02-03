@@ -1,7 +1,10 @@
 graft doc
 prune doc/_build
 graft examples
-global-exclude .gitignore
 
-include README.md
+global-include README.md
 include README.devel
+
+global-exclude .gitignore
+global-include *.pyx
+prune .eggs
