@@ -19,8 +19,8 @@ cminject -f "als_field.h5"\
     `# Insert the detectors at positions as in the experiment`\
     -d 0.001 0.00141 0.00181 0.00221 0.00261\
        0.00301 0.00341 0.00381 0.00421 0.00461\
-    `# Simulate 10^5 particles`\
-    -n 100\
+    `# Simulate 10^3 particles`\
+    -n 1000\
     `# Write results to als_output.h5`\
     -o als_output.h5\
     `# Turn Brownian motion on for this simulation`\
