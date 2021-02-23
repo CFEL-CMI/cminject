@@ -76,7 +76,7 @@ def get_focus_size(det, percentile):
     elif ndim == 3:
         r = np.sqrt(det['position'][:, 0] ** 2 + det['position'][:, 1] ** 2)
 
-    return np.percentile(r, percentile)
+    return 4*np.percentile(r, percentile)
 
 
 def get_beam_overview(h5f, percentile=70):
@@ -147,15 +147,17 @@ def plot_beam_overview(beam_overview, ax=None):
         ax = fig.gca()
     zs, tps, fss = beam_overview['zs'], beam_overview['throughputs'], beam_overview['focus_sizes']
 
+    lines = []
+
     tpax = ax
     fsax = plt.twinx()
-    tpax.plot(zs, tps, '-o')
-    fsax.plot(zs, fss, '-o', color='C1')
-    ax.set_ylim(ax.get_ylim()[0], min(1.01, ax.get_ylim()[1]))  # between >=0 and ~=1
+    lines += tpax.plot(zs, tps, '-o', label='Throughput')
+    lines += fsax.plot(zs, fss, '-o', color='C1', label='Focus')
+    ax.set_ylim(ax.get_ylim()[0], min(1.001, ax.get_ylim()[1]))  # between >=0 and ~=1
 
     ax.set_xlabel('z')
     tpax.set_ylabel('Throughput')
-    fsax.set_ylabel('Focus size')
+    fsax.set_ylabel('Focus size (m)')
 
     if 'imshow_args' in beam_overview:
         ax.autoscale(False)
@@ -166,18 +168,39 @@ def plot_beam_overview(beam_overview, ax=None):
     if fig is not None:
         fig.tight_layout()
 
-    return ax, fig
+    return lines, ax, fig
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('file', help='A result HDF5 file to analyze.', type=str)
+    parser.add_argument('-d', '--datafile', help='Experimental results data file to compare with.',
+                        type=str, default=None)
+    parser.add_argument('-o', '--outfile', help='Output filename for the plot.', type=str, default=None)
     args = parser.parse_args()
 
     with HDF5ResultStorage(args.file) as h5f:
-        plot_beam_overview(get_beam_overview(h5f))
+        lines, ax, fig = plot_beam_overview(get_beam_overview(h5f))
+
+    if args.datafile is not None:
+        dat = np.loadtxt(args.datafile)
+        label = 'Exp. focus'
+        if dat.shape[0] == 2:
+            lines += plt.plot(dat[0], dat[1], label=label, color='k')
+        elif dat.shape[0] == 3:
+            r = plt.errorbar(dat[0], dat[1], dat[2], label=label, color='k')
+            lines += [r]
+        else:
+            raise ValueError(f"Experimental values with shape ([2,3], n) expected, got ({','.join(dat.shape)})")
+
+    labels = [line.get_label() for line in lines]
+    plt.legend(lines, labels)
+    if args.outfile:
+        plt.savefig(args.outfile)
     plt.show()
-        
+
+
+
 
 if __name__ == '__main__':
     main()

@@ -27,7 +27,8 @@ from itertools import repeat
 from typing import Optional, List, Union, Sequence, Dict, Callable
 
 import numpy as np
-from matplotlib import pyplot as plt
+
+from matplotlib import pyplot as plt, patheffects
 from matplotlib.animation import Animation, FuncAnimation
 from matplotlib.collections import LineCollection
 from matplotlib.colors import LogNorm
@@ -259,7 +260,11 @@ def plot_detectors(detectors: Dict[str, np.array], dimension_description: str,
     extractor = parse_multiple_dimensions_description(dimension_description, n=(1, 2))
     plots = [plot_detector(detectors[d_id], extractor, ax, **kwargs) for ax, d_id in zip(axes, detectors.keys())]
     for ax, d_id in zip(axes, detectors.keys()):
-        ax.text(0.9, 0.87, d_id, transform=ax.transAxes, fontdict={'size': 8})
+        ax.axhline(0, color='k', alpha=.3, linewidth=1)
+        ax.axvline(0, color='k', alpha=.3, linewidth=1)
+
+        txt = ax.text(0.5, 0.87, d_id, transform=ax.transAxes, fontdict={'size': 9, 'color': 'black'}, ha='center')
+        txt.set_path_effects([patheffects.withStroke(linewidth=3, foreground=(1,1,1,0.7))])
         ax.ticklabel_format(scilimits=(-2, 2))
 
     return plots
