@@ -71,14 +71,23 @@ class HDF5ResultStorage(ResultStorage):
     """
     def __init__(self, filename: str, mode: str = 'r', force_writable: bool = False, metadata: Dict[str, Any] = None):
         self.filename = filename
+        self.dirname = os.path.dirname(self.filename)
         self.mode = mode
         self.metadata = metadata
         self._handle: Union[h5py.File, None] = None  # will be set in __enter__
 
-        if self.mode != 'r' and not force_writable:
-            # Verify that the output file doesn't already exist, let's avoid overwriting existing data
-            if os.path.isfile(filename):
-                raise ValueError(f"Output file {filename} already exists! Please delete or move the existing file.")
+        if self.mode == 'r':
+            if not os.path.isfile(self.filename):
+                raise ValueError(f"Cannot open nonexistent HDF5 result file {filename} for reading!")
+        else:
+            if not force_writable:
+                # Verify that the output file doesn't already exist, let's avoid overwriting existing data
+                if os.path.isfile(filename):
+                    raise ValueError(f"Output file {filename} already exists! Please delete or move the existing file.")
+
+            if self.dirname and not os.path.isdir(self.dirname):
+                raise ValueError(f"Output file cannot be written into nonexistent directory '{self.dirname}'! "
+                                 f"Please create the output directory before trying to write to it.")
 
     @property
     def file_handle(self):
