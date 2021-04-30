@@ -69,7 +69,7 @@ install_requires = cython_numpy + [
     'Sphinx~=3.4.3',
     'docutils<0.16',  # see e.g. https://github.com/matplotlib/matplotlib/pull/16358
     'sphinx_rtd_theme~=0.5.1',
-    'tqdm~=4.56.0'
+    'tqdm~=4.56.0',
 ]
 
 extensions = [
@@ -120,6 +120,8 @@ setup(name=name,
       scripts=scripts,
       python_requires='>=3.6',
       install_requires=install_requires,
+      setup_requires=['pytest-runner~=5.3.0'],
+      tests_require=['pytest~=6.2.3'],
       ext_modules=cythonize(extensions),
       command_options={'build_sphinx': build_sphinx_options},
       classifiers=classifiers

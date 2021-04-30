@@ -59,12 +59,15 @@ class SimpleZDetector(Detector, ConfigSubscriber):
 
     def _has_particle_reached_detector(self, identifier: str, position: np.array) -> bool:
         if position[-1] == self.z_position:
+            self.particle_distances[identifier] = 0.0
             return True
-        prev_distance = self.particle_distances.get(identifier, None)
-        curr_distance = position[-1] - self.z_position
-        self.particle_distances[identifier] = curr_distance
-
-        return prev_distance is not None and np.sign(curr_distance) != np.sign(prev_distance)
+        else:
+            prev_distance = self.particle_distances.get(identifier, None)
+            curr_distance = position[-1] - self.z_position
+            self.particle_distances[identifier] = curr_distance
+            return prev_distance is not None and\
+                np.sign(curr_distance) != np.sign(prev_distance) and\
+                np.sign(prev_distance) != 0
 
     def _hit_position3(self, ps_position: np.array) -> Optional[np.array]:
         if ps_position[2] == self.z_position:

@@ -671,3 +671,12 @@ class ParticleDetectorHit(object):
         :return: The position of the hit.
         """
         return self._hit_state
+
+    def __getitem__(self, item):
+        return self._hit_state[item]
+
+    def __setitem__(self, key, value):
+        self._hit_state[key] = value
+
+    def __delitem__(self, key):
+        del self._hit_state[key]
