@@ -11,7 +11,7 @@ def test_detector_returning_true_updates_particle_detector_hits():
         def _has_particle_reached_detector(self, particle_identifier: int, position: np.array):
             return True
         def _hit_position(self, phase_space_position: np.array):
-            return phase_space_position[:2] + 1.0  # ah well - it's just for testing
+            return phase_space_position[:2] + 1.0  # just some arbitrary detection position
         def z_boundary(self):
             return (-np.inf, np.inf)
 
@@ -26,15 +26,30 @@ def test_detector_returning_true_updates_particle_detector_hits():
     assert (p.detector_hits['silly'][0]['velocity'] == p.velocity).all()
 
 
-def test_simple_z_detector():
+def test_simple_z_detector(dims2d, spherical_particle_2d):
     """
     Tests the basic functionality of the SimpleZDetector class.
+
+    Let the particle (o) move in the Z dimension with time as follows:
+
+               t -->
+
+    z=1        o     o
+    z=0 -----o-----o-----------
+    z=-1         o
+
+             |  |  |
+         detection times
+
+    Then make some reasonable expectations about when a detector at z=0
+    should 'trigger' (see the 'detection times' above).
     """
-    GlobalConfig().set(ConfigKey.NUMBER_OF_DIMENSIONS, 2)
     det = SimpleZDetector(0.0, identifier='test0')
     pos = np.array([1.0, 0.0])
     vel = np.array([1.0, 2.0])
-    p = SphericalParticle(0, 0, pos, vel, radius=1e-6, rho=1050)
+    p = spherical_particle_2d
+    p.position = pos
+    p.velocity = vel
 
     # start exactly on detector -- should detect
     p.position[-1] = 0.0
