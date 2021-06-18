@@ -62,7 +62,7 @@ scripts = [
 
 install_requires = cython_numpy + [
     'scipy~=1.5.0',
-    'numba~=0.50.1',
+    'numba~=0.53.1',
     'pandas~=1.0.5',
     'matplotlib~=3.3.4',
     'h5py~=2.10.0',
