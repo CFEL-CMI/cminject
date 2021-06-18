@@ -71,7 +71,7 @@ class VariableDistributionSource(Source, ConfigSubscriber):
         else:
             return dist.generate(n)
 
-    def generate_particles(self, start_time: float = 0.0):
+    def generate_particles(self, start_time: float = 0.0) -> List[SphericalParticle]:
         position = np.array([self._generate(pdist) for pdist in self.position]).transpose()
         velocity = np.array([self._generate(vdist) for vdist in self.velocity]).transpose()
         r = self._generate(self.radius)

@@ -330,8 +330,7 @@ class Experiment:
         :param number_of_dimensions: The number of spatial dimensions of this experiment. The phase space will
            accordingly have 2*number_of_dimensions dimensions.
         :param time_interval: The time interval to run the experiment in, as a 2-tuple of (`t_start`, `t_end`).
-        :param time_step: The time step to use. If None is passed, a time step is picked based on the initial particle
-            velocities.
+        :param time_step: The time step to use. Default is 1e-5 (10us).
         :param z_boundary: (Optional) If passed, the Z boundary of the entire experimental setup. Particles will not
             be simulated outside of this boundary. If this argument is not passed, the minimal interval enclosing all
             Devices and Detectors along the Z axis will be calculated and used as the Z boundary.
