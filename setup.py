@@ -65,7 +65,7 @@ install_requires = cython_numpy + [
     'numba~=0.53.1',
     'pandas~=1.0.5',
     'matplotlib~=3.3.4',
-    'h5py~=2.10.0',
+    'h5py~=3.2.1',
     'Sphinx~=3.4.3',
     'docutils<0.16',  # see e.g. https://github.com/matplotlib/matplotlib/pull/16358
     'sphinx_rtd_theme~=0.5.1',
