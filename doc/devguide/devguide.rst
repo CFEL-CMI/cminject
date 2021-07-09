@@ -20,8 +20,25 @@ you don't have to reinstall after every code change you make to see an effect wh
 running your changed code.
 
 .. warning::
-  When making changes to code that is compiled, like Cython code, you still  need to rerun the
+  When making changes to code that is compiled, like Cython code, you still need to rerun the
   ``python3 setup.py develop`` to see an effect.
+
+Tests
+-----
+
+Tests are located in the ``tests/`` subdirectory. They can be executed
+via the command ``pytest``. You may need to install ``pytest`` first,
+as it is not an explicit dependency of CMInject:
+
+.. code-block:: bash
+
+    pip install pytest
+
+
+You should then be able to just run ``pytest`` from your console. Make
+sure you are in the top-level directory of the CMInject code folder
+when executing ``pytest``, so that pytest can find the test files.
+
 
 Starting points
 ---------------

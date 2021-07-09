@@ -58,6 +58,20 @@ The generated HTML documentation can then be viewed by opening `./build/sphinx/h
 browser.
 
 
+## Tests
+
+Tests are located in the `tests/` subdirectory. They can be executed via the command `pytest`. You may
+need to install `pytest` first, as it is not an explicit dependency of CMInject:
+
+```bash
+pip install pytest
+```
+
+You should then be able to just run `pytest` from your console. Make sure you are in the top-level
+directory of the CMInject code folder when executing `pytest`, so that pytest can find the test
+files.
+
+
 <!-- Put Emacs local variables into HTML comment
 Local Variables:
 coding: utf-8

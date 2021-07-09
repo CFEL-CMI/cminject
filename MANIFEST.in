@@ -1,9 +1,13 @@
 graft doc
 prune doc/_build
 graft examples
+graft tests
 
 global-include README.md
 include README.devel
+
+prune **/__pycache__
+prune .pytest_cache
 
 global-exclude .gitignore
 global-include *.pyx
