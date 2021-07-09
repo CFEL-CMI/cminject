@@ -3,6 +3,8 @@
 Welcome to CMInject's documentation!
 ====================================
 
+*GitHub Repository:* `https://github.com/CFEL-CMI/cminject <https://github.com/CFEL-CMI/cminject>`_
+
 CMInject is a Python3 framework that can be used to define and run nanoparticle trajectory
 simulations. It can run 1D, 2D and 3D (or other) simulations, given that all parts in a
 simulation setup allow the given dimensionality.
