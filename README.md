@@ -23,6 +23,12 @@ For detailed installation instructions and more, please have a look at the
 https://cminject.readthedocs.io/en/latest/userguide/userguide.html#installation).
 
 
+### Prerequisites
+
+On some systems, in particular for Python version 3.6, it may be necessary to install the [HDF5
+libraries](https://www.hdfgroup.org/downloads/hdf5/) before attempting to install CMInject.
+
+
 ### Installing CMInject:
 
 Installation of CMInject proceeds through standard Python procedures, i.e., in the code directory

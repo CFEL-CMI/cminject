@@ -9,6 +9,14 @@ nanoparticle trajectory simulations.
 
 .. contents::
 
+*************
+Prerequisites
+*************
+
+On some systems, in particular for Python version 3.6, it may be necessary to install the
+`HDF5 libraries <https://www.hdfgroup.org/downloads/hdf5/>`_ before attempting to install CMInject.
+
+
 ************
 Installation
 ************
