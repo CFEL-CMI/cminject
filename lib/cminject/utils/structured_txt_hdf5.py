@@ -29,7 +29,7 @@ import logging
 import re
 import warnings
 from collections import OrderedDict
-from typing import Tuple, List, Dict, Union
+from typing import Tuple, List, Dict, Union, Optional
 
 import h5py
 import numpy as np
@@ -77,7 +77,7 @@ def _mirror_around_axis(arr, axis=0, flip_sign=False):
 
 
 def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror: bool = False,
-                attributes: Union[Dict, None] = None) -> None:
+                mirror_antisym: Optional[List[int]] = None, attributes: Optional[Dict] = None) -> None:
     """
     A function that reads a structured .txt file and stores a sparse specially constructed HDF5 file, while keeping
     metadata from the original file. The general structure of the .txt input file must be as follows (example for 3D)::
@@ -117,14 +117,21 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
     :param outfile_name: The output file name.
     :param dimensions: The number of spatial dimensions the txt file is defined in. 3 by default, will be 2 or 3 for
         most cases.
-    :param mirror: A flag for symmetry around an axis: If true, the entire field will be duplicated and mirrored around
-        an axis in the first dimension that's positioned the minimal position in the first dimension.
+    :param mirror: If True, enforce symmetry around the zero-axis of the first dimension, by mirroring the field
+        around that axis. If True, the first output quantity (column) is antisymmetrically mirrored around this axis
+        by default. See the param `mirror_antisym` to extend this behavior to other quantities, or to turn it off.
+    :param mirror_antisym: Column indices of the output quantities that should change sign around the symmetry axis.
+        Useful for, e.g., v_x/v_r. The default value is [0], i.e., assuming that the first quantity is v_x/v_r.
+        This option only has any effect if `mirror=True`.
     :param attributes: Optionally, a dictionary of attributes to attach to the output HDF5 file (as HDF5 attributes on
         the root node). Useful to store global properties of the field or anything else that tools or people who later
         read this file might need.
     :return: None.
 
     """
+    # Defaults
+    mirror_antisym = [0] if mirror_antisym is None else mirror_antisym
+
     f = open(infile_name, 'r')
     # strictly speaking we only need a set for storing indices, but there is no OrderedSet in base python3
     index = [OrderedDict() for _ in range(dimensions)]
@@ -214,9 +221,9 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
                 .reshape((np.prod(index_n),))
 
         if mirror:
-            # Determine if we need to flip the sign on the mirrored side (only for v_r)
+            # Determine if we need to flip the sign on the mirrored side (only for v_x)
             # TODO better conditions to check for?
-            flip_sign = headers[i][0] in ['v_r', 'V_R', 'u', 0]
+            flip_sign = i in mirror_antisym
             # Mirror the value array along that axis, possibly flipping the mirrored values' signs
             # TODO what if flip_indices *and* mirror is True? is this correct then? I think so
             #  but I'm unsure  - Simon
