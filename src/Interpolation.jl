@@ -1,0 +1,75 @@
+using HDF5
+
+struct RegularGrid{D,N,T,A<:AbstractArray{T,D}}
+    ranges::NTuple{D,StepRangeLen{T,T,T}}
+    data::NTuple{N,A}
+end
+
+function interpol1!(out::V, grid::RegularGrid{2,N,T}, x::T, y::T) where {N, T, V<:AbstractVector{T}}
+    xrange = grid.ranges[1]
+    yrange = grid.ranges[2]
+
+    if isnan(x) || isnan(y)
+        for i in 1:N
+            out[i] = NaN
+        end
+
+        return nothing
+    end
+
+    scaledx = (x - xrange[1]) / xrange.step
+    scaledy = (y - yrange[1]) / yrange.step
+    xw, xi = modf(scaledx)
+    yw, yi = modf(scaledy)
+    xi = Int(xi)+1  # TODO: +1 correct? seems good at first glance, also in 2D, but hmm...
+    yi = Int(yi)+1
+
+    outofbounds = (xi < 1) || (xi >= xrange.len) || (yi < 1) || (yi >= yrange.len)
+
+    if outofbounds
+        for i in 1:N
+            out[i] = NaN
+        end
+    else
+        for i in 1:N
+            dat = grid.data[i]'
+            a0 = dat[xi,yi  ]*(1-xw) + dat[xi+1,yi  ]*xw
+            a1 = dat[xi,yi+1]*(1-xw) + dat[xi+1,yi+1]*xw
+            out[i] = a0*(1-yw) + a1*yw
+        end
+    end
+
+    nothing
+end
+
+function interpol1(grid::RegularGrid{2,N,T,A}, x::T, y::T) where {T, N, A}
+	out = zeros(T, N)
+	interpol1!(out, grid, x, y)
+	out
+end
+
+function nodes_to_range(nodes::AbstractArray{T,N}; delta=nothing) where {T, N}
+    xα = nodes[1]
+    xβ = nodes[2]
+	Δx = isnothing(delta) ? xβ - xα : delta
+    StepRangeLen{T, T, T}(xα, Δx, length(nodes))
+end
+
+function hdf5_to_regulargrid(filename::AbstractString)
+    h5open(filename) do h5f
+		idx = h5f["index"]
+
+		index = [read(idx, k) for k in keys(idx)]
+		index = tuple(index...)
+		sizes = (size(idx)[1] for idx in reverse(index))
+
+		dat = h5f["data"]
+		data = [
+			permutedims(reshape(read(dat, k), sizes...), (2,1))'
+			for k in keys(dat)
+		]
+
+		ranges = nodes_to_range.(index)
+		RegularGrid(ranges, Tuple(data))
+    end
+end
