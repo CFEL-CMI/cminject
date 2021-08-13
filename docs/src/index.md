@@ -4,7 +4,7 @@ CurrentModule = CMInject
 
 # CMInject
 
-Documentation for [CMInject](https://github.com/cobalamin/CMInject.jl).
+Documentation for [CMInject](https://github.com/CFEL-CMI/CMInject.jl).
 
 ```@index
 ```
