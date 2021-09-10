@@ -8,6 +8,21 @@ include("Interpolation.jl")
 abstract type Field
 end
 
+struct SumOfFields{N} <: Field
+    fields::NTuple{N, Field}
+end
+
+function Base.:+(f1::Field, f2::Field)
+    SumOfFields{2}((f1, f2))
+end
+
+function acceleration(particle::Particle, field::SumOfFields, time)
+    a = zeros(2)  # FIXME
+    for subfield in field.fields
+        a .+= acceleration(particle, subfield, time)
+    end
+end
+
 struct StokesFlowField{T,D,A} <: Field
     # TODO replace with struct from Interpolations.jl
     grid::RegularGrid{D,3,T,A}

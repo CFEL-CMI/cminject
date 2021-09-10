@@ -7,22 +7,6 @@ using DiffEqGPU
 using Plots
 using Statistics
 
-# ---------------------------------------------------------------------------
-
-module CMInject
-using StaticArrays
-abstract type Particle end
-
-struct SphericalParticle{F<:Real, D} <: Particle
-    p::SVector{D,F}
-    v::SVector{D,F}
-    r::F
-    ρ::F
-end
-end
-
-# ---------------------------------------------------------------------------
-
 const kB = Float64(1.380649e-23)
 
 # D = spatial dimensions, N = interpolated quantities
@@ -386,6 +370,12 @@ function main(n=1000)
     rs = [filter(!isnan, get_detector_r(det)) for det in detectors]
     focus_sizes = 4*Statistics.quantile.(rs, 0.7)
     display(plot(zs, focus_sizes))
+end
+
+struct Affenbrotbaum
+    x::Float64
+    y::Float64
+    z::Float64
 end
 
 end

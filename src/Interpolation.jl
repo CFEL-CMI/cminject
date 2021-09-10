@@ -1,6 +1,6 @@
 using HDF5
 
-struct RegularGrid{D,N,T,A<:AbstractArray{T,D}}
+struct RegularGrid{D,N<:Any,T,A<:AbstractArray{T,D}}
     ranges::NTuple{D,StepRangeLen{T,T,T}}
     data::NTuple{N,A}
 end
@@ -10,32 +10,29 @@ function interpol1!(out::V, grid::RegularGrid{2,N,T}, x::T, y::T) where {N, T, V
     yrange = grid.ranges[2]
 
     if isnan(x) || isnan(y)
-        for i in 1:N
-            out[i] = NaN
-        end
-
+        out .= NaN
         return nothing
     end
 
     scaledx = (x - xrange[1]) / xrange.step
     scaledy = (y - yrange[1]) / yrange.step
-    xw, xi = modf(scaledx)
-    yw, yi = modf(scaledy)
-    xi = Int(xi)+1  # TODO: +1 correct? seems good at first glance, also in 2D, but hmm...
-    yi = Int(yi)+1
+    xw, xif = modf(scaledx)
+    yw, yif = modf(scaledy)
+    xi = Int(xif)+1  # TODO: +1 correct? seems good at first glance, also in 2D, but hmm...
+    yi = Int(yif)+1
 
     outofbounds = (xi < 1) || (xi >= xrange.len) || (yi < 1) || (yi >= yrange.len)
 
-    if outofbounds
-        for i in 1:N
-            out[i] = NaN
-        end
-    else
-        for i in 1:N
-            dat = grid.data[i]'
-            a0 = dat[xi,yi  ]*(1-xw) + dat[xi+1,yi  ]*xw
-            a1 = dat[xi,yi+1]*(1-xw) + dat[xi+1,yi+1]*xw
-            out[i] = a0*(1-yw) + a1*yw
+    @inbounds begin
+        if outofbounds
+            out .= NaN
+        else
+            for i in eachindex(grid.data)
+                dat = grid.data[i]'
+                a0 = dat[xi,yi  ]*(1-xw) + dat[xi+1,yi  ]*xw
+                a1 = dat[xi,yi+1]*(1-xw) + dat[xi+1,yi+1]*xw
+                out[i] = a0*(1-yw) + a1*yw
+            end
         end
     end
 
