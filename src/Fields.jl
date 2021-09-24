@@ -53,19 +53,6 @@ function stokes_vars(particle, field)
     return isnan(p), a₀, Δvˣ, Δvᶻ
 end
 
-#= function stokes_vars(particle, field)
-    rₚ, mₚ = particle[:r], particle[:ρ] * 0.75particle[:r]^3 * π
-
-    vˣᶠ, vᶻᶠ, p = field.interpolator(particle[:x], particle[:z])
-    Knf = field.μ * √(π * kB * field.T / (2*field.mᶠ))
-    Kn = Knf / (p * rₚ)
-    Cc = 1 + Kn*(1.231 + 0.4695exp(-1.1783 / Kn))
-    a₀ = 6π * field.μ * rₚ / Cc / mₚ
-    Δvˣ, Δvᶻ = (vˣᶠ - particle[:vx]), (vᶻᶠ - particle[:vz])
-
-    return isnan(p), a₀, Δvˣ, Δvᶻ
-end =#
-
 function stokes_vars_direct(particle, field)
     rₚ, mₚ = particle._p.r, particle._p.ρ * 0.75particle._p.r^3 * π
 
