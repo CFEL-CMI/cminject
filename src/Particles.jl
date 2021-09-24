@@ -4,54 +4,54 @@ using LabelledArrays
 
 # ----- Particles
 
-abstract type Particle{T}
-end
+#abstract type Particle{T} where T end
 
-function get_u(p::P where P<:Particle)
-    p._u
-end
-
-function get_params(p::P where P<:Particle)
-    p._params
-end
-
-function Base.setproperty!(particle::P where P<:Particle, f::Symbol, v)
-    # provide a less confusing error than "particle does not have field x" or such
-    error(
-        "Particles are immutable, cannot set a property! Construct a new Particle instead."
-    )
-end
-
-struct _SphericalParticleProps{T}
-    ρ::T
+mutable struct SphericalParticleProps{T}
     r::T
-    affe::Int64
+    ρ::T
 end
-
-struct SphericalParticle{T} <: Particle{T}
-    _params::_SphericalParticleProps{T}
-    _u::@SLVector T (:x, :z, :vx, :vz)
+ParticlePhasePos2D{T} = @SLVector T (:x, :z, :vx, :vz)
+struct SphericalParticle{T}
+    _u::ParticlePhasePos2D{T}
+    _p::SphericalParticleProps{T}
 end
-SphericalParticle(ρ::T, r::T, x::T, z::T, vx::T, vz::T) where T = (
-    SphericalParticle{T}(_SphericalParticleProps(ρ, r, 12), SLVector(x=x, z=z, vx=vx, vz=vz))
+SphericalParticle{T}(x, z, vx, vz, r, ρ) where T = SphericalParticle{T}(
+    ParticlePhasePos2D{T}(x, z, vx, vz),
+    SphericalParticleProps{T}(r, ρ)
 )
 
-const example_particle = SphericalParticle(1050.0, 100e-9, 0.0, -0.128, 0.0, 10.0)
-
-Base.@propagate_inbounds function Base.getproperty(particle::SphericalParticle{T}, f::Symbol) where T
-    if f ∈ (:x, :z, :vx, :vz)
-        Base.getproperty(particle._u, f)
-    elseif f ∈ (:ρ, :r, :affe)
-        Base.getfield(particle._params, f)
+@inline @generated function Base.getindex(x::SphericalParticle{T},::Val{s}) where {s, T}
+    if s ∈ (:x, :z, :vx, :vz)
+        :(x._u[s]::T)
+    elseif s ∈ (:ρ, :r)
+        _ptype = x.types[findfirst(n->n==:_p, fieldnames(x))]
+        _ftype = _ptype.types[findfirst(n->n==s, fieldnames(_ptype))]
+        :(x._p.$s::$_ftype)
     else
-        Base.getfield(particle, f)  # required so `particle._u` and `particle._params` can resolve
+        :(Base.getfield(x, s))
     end
 end
 
-function u(particle::SphericalParticle)
+@inline function Base.getproperty(particle::SphericalParticle{T}, s::Symbol) where T
+    getindex(particle,Val(s))
+    #= if s ∈ (:x, :z, :vx, :vz)
+        :(Base.getproperty(particle._u, s))
+    elseif s ∈ (:ρ, :r)
+        :(Base.getfield(particle._p, s))
+    else
+        :(Base.getfield(particle, s))
+    end =#
+end
+
+const example_u = ParticlePhasePos2D{Float64}(.1e-3, -0.1284, 7e-5, 3.63)
+const example_p = SphericalParticleProps{Float64}(100e-9, 1050.0)
+const example_particle = SphericalParticle{Float64}(example_u, example_p)
+
+
+function u(particle)
     particle.u
 end
 
-function mass(particle::SphericalParticle)
-    particle._params.ρ * (4/3)particle._params.r^3 * π
+function mass(particle)
+    particle.p.ρ * (4/3)particle.p.r^3 * π
 end

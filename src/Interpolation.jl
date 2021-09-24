@@ -1,4 +1,6 @@
 using HDF5
+using LabelledArrays
+using Interpolations
 
 struct RegularGrid{D,N<:Any,T,A<:AbstractArray{T,D}}
     ranges::NTuple{D,StepRangeLen{T,T,T}}
@@ -55,18 +57,39 @@ end
 function hdf5_to_regulargrid(filename::AbstractString)
     h5open(filename) do h5f
 		idx = h5f["index"]
-
 		index = [read(idx, k) for k in keys(idx)]
 		index = tuple(index...)
 		sizes = (size(idx)[1] for idx in reverse(index))
+        ranges = nodes_to_range.(index)
 
 		dat = h5f["data"]
 		data = [
 			permutedims(reshape(read(dat, k), sizes...), (2,1))'
 			for k in keys(dat)
 		]
+        RegularGrid(ranges, Tuple(data))
+    end
+end
 
-		ranges = nodes_to_range.(index)
-		RegularGrid(ranges, Tuple(data))
+
+GridT = @SLVector Float64 (:vx, :vz, :p)
+function hdf5_to_interpolator(filename::AbstractString)
+    h5open(filename) do h5f
+		idx = h5f["index"]
+		index = [read(idx, k) for k in keys(idx)]
+		index = tuple(index...)
+		sizes = (size(idx)[1] for idx in reverse(index))
+
+		dat = h5f["data"]
+		data = cat([
+			permutedims(reshape(read(dat, k), sizes...), (2,1))'
+			for k in keys(dat)
+		]..., dims=3)
+        data_ = [
+            GridT(data[k, l, :]) for l in 1:size(data)[2], k in 1:size(data)[1]
+        ]
+
+        itp = scale(interpolate(data_, BSpline(Linear())), -0.01:1e-4:0.01, -0.1285:1e-4:0.005)
+        extrapolate(itp, GridT(NaN, NaN, NaN))
     end
 end
