@@ -8,23 +8,7 @@ include("Interpolation.jl")
 abstract type Field
 end
 
-struct SumOfFields{N} <: Field
-    fields::NTuple{N, Field}
-end
-
-function Base.:+(f1::Field, f2::Field)
-    SumOfFields{2}((f1, f2))
-end
-
-#function acceleration(particle, field::SumOfFields, time)
-#    a = zeros(2)  # FIXME
-#    for subfield in field.fields
-#        a .+= acceleration(particle, subfield, time)
-#    end
-#end
-
 struct StokesFlowField{T,ITP<:AbstractInterpolation} <: Field
-    # TODO replace with struct from Interpolations.jl
     interpolator::ITP
     T::T
     mᶠ::T
@@ -35,51 +19,32 @@ function StokesFlowField(itp::ITP, t::T, mf::T, mu::T) where {ITP, T}
 end
 Base.show(io::IO, f::StokesFlowField) = print(io, "StokesFlowField(T=$(f.T),mᶠ=$(f.mᶠ),μ=$(f.μ))")
 
-const example_itp = hdf5_to_interpolator(
-    "/home/chip/Documents/cminject-materials/goldspheres-27nm/nitrogen_1.8mbar_extended_nan.h5"
-)
+const example_itp = hdf5_to_interpolator(joinpath(@__DIR__, "../data/nitrogen_1.8mbar_extended_nan.h5"))
 const example_field = StokesFlowField(example_itp, 293.15, 4.27e-26, 1.76e-5)
 
 function stokes_vars(particle, field)
-    rₚ, mₚ = particle.r, particle.ρ * 0.75particle.r^3 * π
+    rₚ, mₚ = particle.r, mass(particle)
+    xₚ, zₚ, vˣₚ, vᶻₚ = particle.x, particle.z, particle.vx, particle.vz
+    μ, T, mᶠ = field.μ, field.T, field.mᶠ
 
-    vˣᶠ, vᶻᶠ, p = field.interpolator(particle.x, particle.z)
-    Knf = field.μ * √(π * kB * field.T / (2*field.mᶠ))
-    Kn = Knf / (p * rₚ)
+    vˣᶠ, vᶻᶠ, p = field.interpolator(xₚ, zₚ)
+    Kn = μ * √(π * kB * T / 2mᶠ) / (p * rₚ)
+    # TODO this Cunningham correction is only one specific model. Make it parameterizable (-> field property)
     Cc = 1 + Kn*(1.231 + 0.4695exp(-1.1783 / Kn))
-    a₀ = 6π * field.μ * rₚ / Cc / mₚ
-    Δvˣ, Δvᶻ = (vˣᶠ - particle.vx), (vᶻᶠ - particle.vz)
+    a₀ = 6π * μ * rₚ / (Cc * mₚ)
+    Δvˣ, Δvᶻ = (vˣᶠ - vˣₚ), (vᶻᶠ - vᶻₚ)
 
-    return isnan(p), a₀, Δvˣ, Δvᶻ
+    return isnan(p), a₀, Δvˣ, Δvᶻ, Cc
 end
 
-function stokes_vars_direct(particle, field)
-    rₚ, mₚ = particle._p.r, particle._p.ρ * 0.75particle._p.r^3 * π
-
-    vˣᶠ, vᶻᶠ, p = field.interpolator(particle._u.x, particle._u.z)
-    Knf = field.μ * √(π * kB * field.T / (2*field.mᶠ))
-    Kn = Knf / (p * rₚ)
-    Cc = 1 + Kn*(1.231 + 0.4695exp(-1.1783 / Kn))
-    a₀ = 6π * field.μ * rₚ / Cc / mₚ
-    Δvˣ, Δvᶻ = (vˣᶠ - particle._u.vx), (vᶻᶠ - particle._u.vz)
-
-    return isnan(p), a₀, Δvˣ, Δvᶻ
+function acceleration(particle, field::StokesFlowField, time)
+    invalid, a₀, Δvˣ, Δvᶻ, _ = stokes_vars(particle, field)
+    invalid ? (vx=NaN, vz=NaN) : (vx = a₀ * Δvˣ, vz = a₀ * Δvᶻ)
 end
 
-function acceleration(
-    particle,
-    field,
-    time
-) where T
-    invalid, a₀, Δvˣ, Δvᶻ = stokes_vars(particle, field)
-    invalid ? (NaN, NaN) : (a₀ * Δvˣ, a₀ * Δvᶻ)
-end
-
-function acceleration_direct(
-    particle,
-    field,
-    time
-) where T
-    invalid, a₀, Δvˣ, Δvᶻ = stokes_vars_direct(particle, field)
-    invalid ? (NaN, NaN) : (a₀ * Δvˣ, a₀ * Δvᶻ)
+function noise(particle, field::StokesFlowField, time)
+    invalid, _, _, _, Cc = stokes_vars(particle, field)
+    s₀fπ = π * 216field.μ * kB * field.T / (π^2 * (2particle.r)^5 * particle.ρ^2)
+    s₀ = √(s₀fπ / Cc)
+    invalid ? (vx=0, vz=0) : (vx=s₀, vz=s₀)
 end

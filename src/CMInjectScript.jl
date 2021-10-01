@@ -1,3 +1,12 @@
+## NOTE: This is not a functional part of CMInject.jl. It's an initial development notebook, to learn about
+## performance issues and implement a working ALS simulation by hand, with no generic framework in sight.
+## I'm keeping it around as long as there are features to be carried over to the framework. -Simon
+##
+## Features to transfer:
+##  - 3D simulations (in particular: with an underlying axisymmetric 2D field)
+##  - Detectors (post-processing style like done here)
+##  - Some plotting utilities
+
 module CMInjectScript
 
 using HDF5
@@ -370,12 +379,6 @@ function main(n=1000)
     rs = [filter(!isnan, get_detector_r(det)) for det in detectors]
     focus_sizes = 4*Statistics.quantile.(rs, 0.7)
     display(plot(zs, focus_sizes))
-end
-
-struct Affenbrotbaum
-    x::Float64
-    y::Float64
-    z::Float64
 end
 
 end
