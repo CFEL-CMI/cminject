@@ -4,7 +4,6 @@ using LabelledArrays
 ## Abstract Particle definition
 
 abstract type AbstractParticle end
-abstract type DefaultParticle{T} <: AbstractParticle end
 
 
 # copied from LabelledArrays.jl, since it doesn't export this function
@@ -156,15 +155,15 @@ macro declare_particle(expr::Expr)
 
     esc(quote
         # Declare the phase-space type
-        $phase_type{T} = @SLVector T $phase_names_tuple
+        $phase_type{$phase_typevar} = @SLVector $phase_typevar $phase_names_tuple
         # Declare the props type (as a mutable struct)
-        mutable struct $props_type{T}
+        mutable struct $props_type{$(typeargs...)}
             $(prop_declarations...)
         end
 
-        struct $ptype{$(typeargs...)} <: DefaultParticle{$phase_typevar}
+        struct $ptype{$(typeargs...)} <: CMInject.AbstractParticle
             _u::$phase_type{$phase_typevar}  # TODO carry over type variables from outer-level declaration!!
-            _p::$props_type{$typeargs...}
+            _p::$props_type{$(typeargs...)}
 
             $ptype{$(typeargs...)}(u, p) where {$(typeargs...)} = let p = new{$(typeargs...)}(u, p)
                 # Force-realize the generated functions for access to all properties.
@@ -174,24 +173,24 @@ macro declare_particle(expr::Expr)
                 $(all_prop_accesses...)
                 p
             end
-            $ptype{$(typeargs...)}($(phase_fieldnames...), $(prop_fieldnames...)) where {$(typeargs...)} = $ptype{$(typeargs...)}(
-                $phase_type{$phase_typevar}($(phase_fieldnames...)),
-                $props_type{$(typeargs...)}($(prop_fieldnames...))
-            )
-            $ptype{$(typeargs...)}(; $(phase_fieldnames...), $(prop_fieldnames...)) where {$(typeargs...)} = $ptype{$(typeargs...)}(
-                $(phase_fieldnames...),
-                $(prop_fieldnames...)
-            )
         end
+        $ptype{$(typeargs...)}($(phase_fieldnames...), $(prop_fieldnames...)) where {$(typeargs...)} = $ptype{$(typeargs...)}(
+            $phase_type{$phase_typevar}($(phase_fieldnames...)),
+            $props_type{$(typeargs...)}($(prop_fieldnames...))
+        )
+        $ptype{$(typeargs...)}(; $(phase_fieldnames...), $(prop_fieldnames...)) where {$(typeargs...)} = $ptype{$(typeargs...)}(
+            $(phase_fieldnames...),
+            $(prop_fieldnames...)
+        )
 
         # The block below attaches concrete methods to the utility functions
         # `associated_particle_type` and `carry_velocities!`.
 
         # Maps the props type (which f! and g! receive) to the particle type
         # (which the acceleration functions should receive)
-        # function CMInject.associated_particle_type(::Type{$props_type{$typeargs...}}) where {$typeargs...}
-        #     $ptype{$typeargs...}
-        # end
+        function CMInject.associated_particle_type(::Type{$props_type{$(typeargs...)}}) where {$(typeargs...)}
+            $ptype{$(typeargs...)}
+        end
         # Based on the @velocities declaration, defines a mapping of position->velocity properties of the phase-space
         # position. Can be used to realize any second-order dynamics between pairs of phase-space terms.
         @inline function CMInject.carry_velocities!(du, u::$phase_type{$phase_typevar}) where $phase_typevar

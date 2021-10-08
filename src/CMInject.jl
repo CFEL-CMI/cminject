@@ -147,27 +147,4 @@ function _quick()
     _du
 end
 
-# Small MWE macro to figure out some esc hygiene gensym epic bacon keanu reeves stuff
-macro mwe(name)
-    a_name = gensym("A")
-    quote
-        struct $(esc(a_name)){T}
-            x::T
-        end
-
-        struct $(esc(name)){T}
-            y::Float64
-            a::$(esc(a_name)){T}
-        end
-    end
-end
-
-macro mfe()
-    @assert (expr.head == :struct) "Particle definition needs to be a struct, check the docs"
-    @assert (length(expr.args) == 3) "Malformed particle struct definition, check the docs"
-    _, typedef, block = expr.args
-    ptype = typedef.args[1]
-    typeargs = typedef.args[2:end]
-end
-
 end
