@@ -3,7 +3,7 @@ using Distributions
 abstract type Source end
 
 struct SamplingSource{PT} <: Source where PT<:AbstractParticle
-    distributions::Dict{Symbol, Samp} where {Samp <: Sampleable{F, S} where {F<:VariateForm,S<:ValueSupport}}
+    distributions::Dict{Symbol, Samp} where {Samp<:Sampleable{F, S} where {F<:VariateForm,S<:ValueSupport}}
 end
 
 function generate(source::SamplingSource{PT}, n::I) where {PT, I<:Integer}

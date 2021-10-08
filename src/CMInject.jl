@@ -21,7 +21,7 @@ using DifferentialEquations
 
         du .= 0
         # TODO refactor to be generic, based on the @velocities meta-information from a future @particle macro
-        carry_velocities!(du, particle._u)
+        transfer_velocities!(du, particle)
         @inbounds for field in fields
             # TODO refactor to be generic, based on the values in the @velocities meta-information
             acc = acceleration(particle, field, time)
