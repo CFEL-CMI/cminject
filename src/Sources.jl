@@ -2,7 +2,7 @@ using Distributions
 
 abstract type Source end
 
-struct SamplingSource{PT} <: Source where PT<:Particle
+struct SamplingSource{PT} <: Source where PT<:AbstractParticle
     distributions::Dict{Symbol, Samp} where {Samp <: Sampleable{F, S} where {F<:VariateForm,S<:ValueSupport}}
 end
 

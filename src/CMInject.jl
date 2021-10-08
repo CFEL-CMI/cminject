@@ -13,9 +13,7 @@ using DifferentialEquations
     # TODO this isn't so nice, we need to pass an initial p twice:
     #  - for determining particle type (indirectly, via associated_particle_type on p's type at compile time)
     #  - the actual p that can be modified, during the integration loop
-    #
-    # However, I think(?) that we need a generated function so that it's clear to the compiler that
-    # `particle` will be type-stable. Probably a good idea to investigate other ways for that.
+    #    -> we can't pass this on the type-level since it will live in a mutable list (I think)
     ptype = associated_particle_type(params.types[1])
     quote
         _, (p,), fields = params
@@ -23,13 +21,11 @@ using DifferentialEquations
 
         du .= 0
         # TODO refactor to be generic, based on the @velocities meta-information from a future @particle macro
-        du.x = u.vx
-        du.z = u.vz
-        for field in fields
+        carry_velocities!(du, particle._u)
+        @inbounds for field in fields
             # TODO refactor to be generic, based on the values in the @velocities meta-information
-            acc = acceleration(particle, field, t)
-            du.vx += acc.vx
-            du.vz += acc.vz
+            acc = acceleration(particle, field, time)
+            accelerate!(du, acc)
         end
         nothing
     end
@@ -43,10 +39,9 @@ end
         particle = $ptype(u, p)
 
         du .= 0
-        for field in fields
+        @inbounds for field in fields
             acc = noise(particle, field, t)
-            du.vx += acc.vx
-            du.vz += acc.vz
+            accelerate!(du, acc)
         end
         nothing
     end
@@ -150,6 +145,29 @@ function _quick()
     f = CMInject.example_field
     f!(_du, p._u, (p._p, [p._p,], (f,)), 0.0)
     _du
+end
+
+# Small MWE macro to figure out some esc hygiene gensym epic bacon keanu reeves stuff
+macro mwe(name)
+    a_name = gensym("A")
+    quote
+        struct $(esc(a_name)){T}
+            x::T
+        end
+
+        struct $(esc(name)){T}
+            y::Float64
+            a::$(esc(a_name)){T}
+        end
+    end
+end
+
+macro mfe()
+    @assert (expr.head == :struct) "Particle definition needs to be a struct, check the docs"
+    @assert (length(expr.args) == 3) "Malformed particle struct definition, check the docs"
+    _, typedef, block = expr.args
+    ptype = typedef.args[1]
+    typeargs = typedef.args[2:end]
 end
 
 end

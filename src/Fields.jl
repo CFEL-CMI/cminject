@@ -7,6 +7,8 @@ include("Interpolation.jl")
 
 abstract type Field
 end
+noise(particle, f::Field, time) = ()  # no noise term for fields required by default
+
 
 struct StokesFlowField{T,ITP<:AbstractInterpolation} <: Field
     interpolator::ITP
@@ -46,5 +48,5 @@ function noise(particle, field::StokesFlowField, time)
     invalid, _, _, _, Cc = stokes_vars(particle, field)
     s₀fπ = π * 216field.μ * kB * field.T / (π^2 * (2particle.r)^5 * particle.ρ^2)
     s₀ = √(s₀fπ / Cc)
-    invalid ? (vx=0, vz=0) : (vx=s₀, vz=s₀)
+    invalid ? (vx=0.0, vz=0.0) : (vx=s₀, vz=s₀)
 end
