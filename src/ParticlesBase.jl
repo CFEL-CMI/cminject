@@ -118,29 +118,30 @@ macro declare_particle(expr::Expr)
     @assert (expr.head == :struct) "Particle definition needs to be a struct, check the docs"
     @assert (length(expr.args) == 3) "Malformed particle struct definition, check the docs"
     _, typedef, block = expr.args
-    ptype = typedef.args[1]
-    typeargs = typedef.args[2:end]
+    particle_typename = isa(typedef, Symbol) ? typedef : typedef.args[1]
+    typeargs = isa(typedef, Symbol ) ? () : typedef.args[2:end]
 
     phase_declaration = find_macrocall(block.args, "@phase_space")
     @assert !isnothing(phase_declaration) "@phase_space declaration is required!"
+    phase_typevar, phase_fieldnames_tuple = eval(phase_declaration)
+    phase_fieldnames_tuple = eval(phase_fieldnames_tuple)
+    phase_fieldnames = collect(phase_fieldnames_tuple)
+
+    # Parse and process the @velocities declaration
     velocity_declaration = find_macrocall(block.args, "@velocities")
     @assert !isnothing(velocity_declaration) "@velocities declaration is required!"
-
-    phase_type = gensym("ParticlePhaseSpace")
-    props_type = gensym("ParticleProps")
     velocity_map = eval(velocity_declaration)
     velocity_map = velocity_map isa Tuple ? velocity_map : (velocity_map,)
-    phase_typevar, phase_names_tuple = eval(phase_declaration)
-    phase_names_tuple = eval(phase_names_tuple)
-    phase_fieldnames = collect(phase_names_tuple)
     @assert all([
         lhs ∈ phase_fieldnames && rhs ∈ phase_fieldnames
         for (lhs, rhs) in velocity_map
-    ]) "@velocity declaration must refer to phase-space position properties only!"
+    ]) "@velocity declaration must refer to phase-space properties only!"
 
-    # Retrieve the struct's property declarations, which will later actually be put in a "sub-struct"
+    # Parse and process the struct's property declarations, which will later actually be put in a "sub-struct"
     prop_declarations = [expr for expr in block.args if typeof(expr) == Expr && expr.head == Symbol("::")]
     prop_fieldnames = [expr.args[1] for expr in prop_declarations]
+    clashing_names = intersect(Set(phase_fieldnames), Set(prop_fieldnames))
+    @assert isempty(clashing_names) "Property names must be unique; I found these duplicated between phase-space and other props: $(collect(clashing_names))"
     all_fieldnames = vcat(phase_fieldnames, prop_fieldnames)
 
     # For the generated function force-realization block in the type constructor declaration:
@@ -148,22 +149,29 @@ macro declare_particle(expr::Expr)
     # For defining `transfer_velocities!`:
     velocity_assignments = [:(du.$lhs = particle.$rhs) for (lhs, rhs) in velocity_map]
 
+    # Generate new unique type names for the 'inner' phase-space and props types
+    phase_typename = gensym("ParticlePhaseSpace")
+    props_typename = gensym("ParticleProps")
+    phase_type = :($phase_typename{$phase_typevar})
+    props_type = typeargs === () ? :($props_typename) : :($props_typename{$(typeargs...)})
+    particle_type = typeargs === () ? :($particle_typename) : :($particle_typename{$(typeargs...)})
+
     # TODO: move the esc inwards as much as possible, ensuring macro hygiene
     esc(quote
         # Declare the phase-space type
-        $phase_type{$phase_typevar} = @SLVector $phase_typevar $phase_names_tuple
+        $phase_typename{$phase_typevar} = @SLVector $phase_typevar $phase_fieldnames_tuple
 
         # Declare the props type (as a mutable struct)
-        mutable struct $props_type{$(typeargs...)}
+        mutable struct $props_typename{$(typeargs...)}
             $(prop_declarations...)
         end
 
         # Declare the particle type
-        struct $ptype{$(typeargs...)} <: CMInject.AbstractParticle
-            _u::$phase_type{$phase_typevar}  # TODO carry over type variables from outer-level declaration!!
-            _p::$props_type{$(typeargs...)}
+        struct $particle_type <: CMInject.AbstractParticle
+            _u::$phase_type  # TODO carry over type variables from outer-level declaration!!
+            _p::$props_type
 
-            $ptype{$(typeargs...)}(u, p) where {$(typeargs...)} = let particle = new{$(typeargs...)}(u, p)
+            $particle_type(u, p) where {$(typeargs...)} = let particle = new{$(typeargs...)}(u, p)
                 # Force-realize the generated functions for access to all properties.
                 # If we don't do this, using solve() will compile to slow versions (for whatever reason), and those
                 # will stick. Note that these field accesses are compiled out: The compiler understands that they
@@ -172,19 +180,17 @@ macro declare_particle(expr::Expr)
                 particle
             end
 
-            $ptype{$(typeargs...)}($(phase_fieldnames...),
-                                   $(prop_fieldnames...)) where {$(typeargs...)} = $ptype{$(typeargs...)}(
-                $phase_type{$phase_typevar}($(phase_fieldnames...)),
-                $props_type{$(typeargs...)}($(prop_fieldnames...))
+            $particle_type($(phase_fieldnames...), $(prop_fieldnames...)) where {$(typeargs...)} = $particle_type(
+                $phase_type($(phase_fieldnames...)),
+                $props_type($(prop_fieldnames...))
             )
-            $ptype{$(typeargs...)}(; $(phase_fieldnames...),
-                                     $(prop_fieldnames...)) where {$(typeargs...)} = $ptype{$(typeargs...)}(
+            $particle_type(; $(phase_fieldnames...), $(prop_fieldnames...)) where {$(typeargs...)} = $particle_type(
                 $(phase_fieldnames...),
                 $(prop_fieldnames...)
             )
         end
 
-        function Base.show(io::IO, ::MIME"text/plain", particle::$ptype{$(typeargs...)}) where {$(typeargs...)}
+        function Base.show(io::IO, ::MIME"text/plain", particle::$particle_type) where {$(typeargs...)}
             field_list = join([
                 "$(sym)="*repr(MIME("text/plain"), getproperty(particle, sym))
                 for sym in $all_fieldnames
@@ -197,12 +203,12 @@ macro declare_particle(expr::Expr)
 
         # Maps the props type (which f! and g! receive) to the particle type
         # (which the acceleration functions should receive)
-        function CMInject.associated_particle_type(::Type{$props_type{$(typeargs...)}}) where {$(typeargs...)}
-            $ptype{$(typeargs...)}
+        function CMInject.associated_particle_type(::Type{$props_type}) where {$(typeargs...)}
+            $particle_type
         end
         # Based on the @velocities declaration, defines a mapping of position->velocity properties of the phase-space
-        # position. Can be used to realize any second-order dynamics between pairs of phase-space terms.
-        @inline function CMInject.transfer_velocities!(du, particle::$ptype{$(typeargs...)}) where {$(typeargs...)}
+        # position. Can be used to realize any second-order dynamics through pairs of phase-space terms.
+        @inline function CMInject.transfer_velocities!(du, particle::$particle_type) where {$(typeargs...)}
             @inbounds begin
                 $(velocity_assignments...)
             end
