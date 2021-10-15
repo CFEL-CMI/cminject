@@ -10,7 +10,6 @@ end
 
 # For linear top (recognizable by the quantum numbers)
 # with completed shells (hence integer quantum numbers)
-# TODO: Validate results
 function calculateStarkCurves(ΔE::T, E_min::T, E_max::T,
         # TODO: It might be cleaner to just pass the particle directly
         J_min::Int, J_max::Int, M::Int, B::T, D::T, μ::T)::Vector{StarkCurve{T}} where T
