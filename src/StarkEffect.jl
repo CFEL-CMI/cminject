@@ -13,12 +13,11 @@ end
 # with completed shells (hence integer quantum numbers)
 function calculateStarkCurves(ΔE, E_min, E_max,
         # TODO: It might be cleaner to just pass the particle directly
-        J_min::I, J_max::I, M::I,
-        B, D, μ) where I <: Integer
+        J_min::I, J_max::I, M::I, B, D, μ) where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, E, B, D, μ) for E ∈ E_min:ΔE:E_max]
     # We now have field -> J -> energy, but want J -> field -> energy
     jFieldEnergy = invert(fieldJEnergy)
-    StarkCurve.(ΔE, E_min, jFieldEnergy)
+    StarkCurve.(float(ΔE), float(E_min), jFieldEnergy)
 end
 
 function calculateEnergies(J_min::I, J_max::I, M::I, E, B, D, μ) where I <: Integer
@@ -34,5 +33,6 @@ end
 function getHamiltonian(J_min::I, J_max::I, M::I, E, B, D, μ) where I <: Integer
     fieldFree = [B * J*(J+1) - D * (J*(J+1))^2 for J ∈ J_min:J_max]
     offDiagonal = [-μ * E * √((J+1)^2-M^2) / √((2*J+1) * (2*J+3)) for J ∈ J_min:J_max-1]
+    fieldFree, offDiagonal = promote(fieldFree, offDiagonal)
     SymTridiagonal(fieldFree, offDiagonal)
 end
