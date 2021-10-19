@@ -1,4 +1,5 @@
 # This whole file is heavily inspired by the CMIstark project, see https://doi.org/10.1016/j.cpc.2013.09.001
+# TODO: Validate results
 using Parameters
 using LinearAlgebra
 using SplitApplyCombine
@@ -83,7 +84,7 @@ here Joules are used directly.
 Returns a vector of the calculated Stark curves
 """
 function calculateStarkCurves(ΔE, E_min, E_max,
-        # TODO: It might be cleaner to just pass the particle directly
+        # TODO: Once the particles are implemented, they should probably be passed in directly
         J_min::I, J_max::I, M::I, K::I, B, AC, Δ_J, Δ_JK, Δ_K, μ) where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, K, E, B, AC, Δ_J, Δ_JK, Δ_K, μ)
                     for E ∈ E_min:ΔE:E_max]
