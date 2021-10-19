@@ -25,3 +25,12 @@ function hdf5_to_interpolator(filename::AbstractString)
         extrapolate(itp, GridT(NaN, NaN, NaN))
     end
 end
+
+# In the end, the gradient of the energy over space is given by
+# ∇E(r_0) = E'(ε(r_0))⋅∇ε(r_0)
+
+function interpolateStarkCurve(
+        energies::Vector{T})::AbstractInterpolation where T<:Real
+    # TODO: Validate that quadratic is reasonable (e.g. vs. cubic / linear)
+    interpolate(energies, BSpline(Quadratic(Natural(OnGrid()))))
+end
