@@ -41,13 +41,10 @@ here Joules are used directly.
 - `B`: The second rotational constant, B=h/(8π^2⋅I_b). Unit: Joule [J]
 - `D`: The centrifugal distortion constant. Unit: Joule [J]
 - `μ`: The dipole moment along its symmetry axis. Unit: Coulomb⋅Meter [Cm]
-
-# Returns
-Returns a vector of the calculated Stark curves
 """
 function calculateStarkCurves(ΔE, E_min, E_max,
         # TODO: It might be cleaner to just pass the particle directly
-        J_min::I, J_max::I, M::I, B, D, μ) where I <: Integer
+        J_min::I, J_max::I, M::I, B, D, μ)::AbstractVector{StarkCurve} where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, E, B, D, μ) for E ∈ E_min:ΔE:E_max]
     # We now have field -> J -> energy, but want J -> field -> energy
     jFieldEnergy = invert(fieldJEnergy)
@@ -85,7 +82,8 @@ Returns a vector of the calculated Stark curves
 """
 function calculateStarkCurves(ΔE, E_min, E_max,
         # TODO: Once the particles are implemented, they should probably be passed in directly
-        J_min::I, J_max::I, M::I, K::I, B, AC, Δ_J, Δ_JK, Δ_K, μ) where I <: Integer
+        J_min::I, J_max::I, M::I, K::I, B, AC,
+        Δ_J, Δ_JK, Δ_K, μ)::AbstractVector{StarkCurve} where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, K, E, B, AC, Δ_J, Δ_JK, Δ_K, μ)
                     for E ∈ E_min:ΔE:E_max]
     # We now have field -> J -> energy, but want J -> field -> energy
@@ -116,7 +114,8 @@ here Joules are used directly.
 # Returns
 Returns a vector of the calculated energies. Unit: Joule [J]
 """
-function calculateEnergies(J_min::I, J_max::I, M::I, E, B, D, μ) where I <: Integer
+function calculateEnergies(J_min::I, J_max::I, M::I, E,
+        B, D, μ)::AbstractVector where I <: Integer
     hamiltonian = getHamiltonian(J_min, J_max, M, E, B, D, μ)
     sort(eigvals(hamiltonian))
 end
@@ -152,7 +151,7 @@ here Joules are used directly.
 Returns a vector of the calculated energies. Unit: Joule [J]
 """
 function calculateEnergies(J_min::I, J_max::I, M::I, K::I, E, B, AC,
-        Δ_J, Δ_JK, Δ_K, μ) where I <: Integer
+        Δ_J, Δ_JK, Δ_K, μ)::AbstractVector where I <: Integer
     hamiltonian = getHamiltonian(J_min, J_max, M, K, E, B, AC, Δ_J, Δ_JK, Δ_K, μ)
     sort(eigvals(hamiltonian))
 end
@@ -182,7 +181,7 @@ here Joules are used directly.
 Returns an AbstractMatrix (specifically a symmetrical tridiagonal matrix)
 representing the Hamiltonian.
 """
-function getHamiltonian(J_min::I, J_max::I, M::I, E, B, D, μ) where I <: Integer
+function getHamiltonian(J_min::I, J_max::I, M::I, E, B, D, μ)::AbstractMatrix where I <: Integer
     fieldFree = [B * J*(J+1) - D * (J*(J+1))^2 for J ∈ J_min:J_max]
     stark = [-μ * E * √((J+1)^2-M^2) / √((2*J+1) * (2*J+3)) for J ∈ J_min:J_max-1]
     fieldFree, stark = promote(fieldFree, stark)
@@ -220,7 +219,7 @@ here Joules are used directly.
 Returns an AbstractMatrix (specifically a symmetrical tridiagonal matrix) representing the Hamiltonian.
 """
 function getHamiltonian(J_min::I, J_max::I, M::I, K::I, E, B, AC,
-        Δ_J, Δ_JK, Δ_K, μ) where I <: Integer
+        Δ_J, Δ_JK, Δ_K, μ)::AbstractMatrix where I <: Integer
     rigid = [B * J*(J+1) + (AC-B) * K^2 for J ∈ J_min:J_max]
     distortion = [-Δ_J * (J*(J+1))^2 - Δ_JK * J*(J+1) * K^2 - Δ_K * K^4 for J ∈ J_min:J_max]
     fieldFree = rigid + distortion
