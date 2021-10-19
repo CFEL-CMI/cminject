@@ -1,6 +1,7 @@
 using HDF5
 using LabelledArrays
-import Interpolations: scale as itpscale, interpolate, extrapolate, BSpline, Linear, AbstractInterpolation
+include("StarkEffect.jl")
+import Interpolations: scale as itpscale, interpolate, extrapolate, BSpline, Linear, Quadratic, AbstractInterpolation, OnGrid, Natural, gradient
 
 
 GridT = @SLVector Float64 (:vx, :vz, :p)  # TODO generalize: read from file!
@@ -26,11 +27,16 @@ function hdf5_to_interpolator(filename::AbstractString)
     end
 end
 
-# In the end, the gradient of the energy over space is given by
-# ∇E(r_0) = E'(ε(r_0))⋅∇ε(r_0)
-
+# TODO: Possibly this could also be used to interpolate fields
 function interpolateStarkCurve(
         energies::Vector{T})::AbstractInterpolation where T<:Real
     # TODO: Validate that quadratic is reasonable (e.g. vs. cubic / linear)
     interpolate(energies, BSpline(Quadratic(Natural(OnGrid()))))
+end
+
+function getEnergyGradient(fieldInterpolation::AbstractInterpolation,
+        starkCurve::StarkCurve{T}, r) where T<:Real
+    # The gradient of the energy over space is given by
+    # ∇E(r) = E'(ε(r))⋅∇ε(r)
+    gradient(starkCurve.energies(fieldInterpolation(r))) * gradient(fieldInterpolation(r))
 end

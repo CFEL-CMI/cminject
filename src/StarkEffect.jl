@@ -18,6 +18,7 @@ The field strengths are given in Volts/Meter [V/m] and the energies in Joule [J]
 @with_kw struct StarkCurve{T<:Real}
     ΔE::T
     E_min::T
+    # TODO: Store interpolated
     energies::Vector{T}
 end
 
