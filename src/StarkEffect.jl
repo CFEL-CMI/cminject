@@ -21,15 +21,14 @@ export StarkCurve, calculateStarkCurves
 
 Represents a Stark curve, that is the energies over a certain range of field strengths.
 
-This is sampled (not continuous) with a step size of `ΔE`. The start is `E_min`.
-
 The field strengths are given in Volts/Meter [V/m] and the energies in Joule [J].
+
+The data is interpolated over a certain range of field strenghts
+and extrapolated outside of it to Nan
 """
 # TODO: If the result is in Joule, why is the multiplication with h skipped
 #  for the matrix elements then?
 @with_kw struct StarkCurve{T<:Real}
-    ΔE::T
-    E_min::T
     energies::AbstractInterpolation{T}
 end
 
@@ -107,8 +106,8 @@ Utility function to instantiate Stark curves (including interpolation of the ene
 function instantiateStarkCurves(ΔE, E_min, fieldJEnergy)
     # We now have field -> J -> energy, but want J -> field -> energy
     jFieldEnergy = invert(fieldJEnergy)
-    interpolatedEnergies = interpolateStarkCurve.(jFieldEnergy)
-    StarkCurve.(float(ΔE), float(E_min), interpolatedEnergies)
+    interpolatedEnergies = interpolateStarkCurve.(ΔE, E_min, jFieldEnergy)
+    StarkCurve.(interpolatedEnergies)
 end
 
 """

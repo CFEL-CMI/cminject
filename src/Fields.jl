@@ -23,8 +23,18 @@ function StokesFlowField(itp::ITP, t::T, mf::T, mu::T) where {ITP, T}
 end
 Base.show(io::IO, f::StokesFlowField) = print(io, "StokesFlowField(T=$(f.T),mᶠ=$(f.mᶠ),μ=$(f.μ))")
 
+"""
+    ElectricField
+
+Representation of an electric field.
+The data is stored in an interpolated form,
+not merely the values at the grid points are available.
+"""
 struct ElectricField{ITP<:AbstractInterpolation} <: Field
     interpolator::ITP
+end
+function ElectricField(itp::ITP) where ITP
+    ElectricField{ITP}(itp)
 end
 Base.show(io::IO, f::ElectricField) = print(io, "ElectricField")
 
@@ -67,11 +77,13 @@ function acceleration(particle, field::ElectricField, time)
     force/mass(particle)
 end
 
+"""
+    getEnergyGradient(field, starkCurve, r)
+
+Calculates the energy gradient of the specified electric field
+"""
 function getEnergyGradient(field, starkCurve::StarkCurve{T}, r)::AbstractArray where T<:Real
-    # TODO: Once the field is properly defined, this index will probably not just be identity
-    fieldIndex = r
-    energyIndex = (field(fieldIndex...) - starkCurve.E_min) / starkCurve.ΔE + 1
     # The gradient of the energy over space is given by
     # ∇E(r) = E'(ε(r))⋅∇ε(r)
-    gradient(starkCurve.energies, energyIndex) .* gradient(field, fieldIndex...)
+    gradient(starkCurve.energies, field(r...)) .* gradient(field, r...)
 end

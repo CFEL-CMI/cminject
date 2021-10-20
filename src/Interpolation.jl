@@ -27,9 +27,10 @@ function hdf5_to_interpolator(filename::AbstractString)
     end
 end
 
-# TODO: Possibly this could also be used to interpolate fields
-function interpolateStarkCurve(
+function interpolateStarkCurve(ΔE, E_min,
         energies::Vector{T})::AbstractInterpolation where T<:Real
     # TODO: Validate that quadratic is reasonable (e.g. vs. cubic / linear)
-    interpolate(energies, BSpline(Quadratic(Natural(OnGrid()))))
+    itp = interpolate(energies, BSpline(Quadratic(Natural(OnGrid()))))
+    scaledItp = itpscale(itp, range(E_min; length=length(energies), step=ΔE))
+    extrapolate(scaledItp, NaN)
 end
