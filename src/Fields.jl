@@ -1,4 +1,6 @@
 import PhysicalConstants.CODATA2018: k_B
+include("StarkEffect.jl")
+using .StarkEffect
 const kB = k_B.val
 
 include("Interpolation.jl")
@@ -49,4 +51,13 @@ function noise(particle, field::StokesFlowField, time)
     s₀fπ = π * 216field.μ * kB * field.T / (π^2 * (2particle.r)^5 * particle.ρ^2)
     s₀ = √(s₀fπ / Cc)
     invalid ? (vx=0.0, vz=0.0) : (vx=s₀, vz=s₀)
+end
+
+function getEnergyGradient(field, starkCurve::StarkCurve{T}, r)::AbstractArray where T<:Real
+    # TODO: Once the field is properly defined, this index will probably not just be identity
+    fieldIndex = r
+    energyIndex = (field(fieldIndex...) - starkCurve.E_min) / starkCurve.ΔE + 1
+    # The gradient of the energy over space is given by
+    # ∇E(r) = E'(ε(r))⋅∇ε(r)
+    gradient(starkCurve.energies, energyIndex) .* gradient(field, fieldIndex...)
 end

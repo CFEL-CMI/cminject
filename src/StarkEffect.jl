@@ -1,8 +1,13 @@
 # This whole file is heavily inspired by the CMIstark project, see https://doi.org/10.1016/j.cpc.2013.09.001
+module StarkEffect
+
 # TODO: Validate results
 using Parameters
 using LinearAlgebra
 using SplitApplyCombine
+include("Interpolation.jl")
+
+export StarkCurve, calculateStarkCurves
 
 """
     StarkCurve
@@ -18,8 +23,7 @@ The field strengths are given in Volts/Meter [V/m] and the energies in Joule [J]
 @with_kw struct StarkCurve{T<:Real}
     ΔE::T
     E_min::T
-    # TODO: Store interpolated
-    energies::Vector{T}
+    energies::AbstractInterpolation{T}
 end
 
 """
@@ -47,9 +51,7 @@ function calculateStarkCurves(ΔE, E_min, E_max,
         # TODO: It might be cleaner to just pass the particle directly
         J_min::I, J_max::I, M::I, B, D, μ)::AbstractVector{StarkCurve} where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, E, B, D, μ) for E ∈ E_min:ΔE:E_max]
-    # We now have field -> J -> energy, but want J -> field -> energy
-    jFieldEnergy = invert(fieldJEnergy)
-    StarkCurve.(float(ΔE), float(E_min), jFieldEnergy)
+    createStarkCurve(ΔE, E_min, fieldJEnergy)
 end
 
 """
@@ -87,9 +89,14 @@ function calculateStarkCurves(ΔE, E_min, E_max,
         Δ_J, Δ_JK, Δ_K, μ)::AbstractVector{StarkCurve} where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, K, E, B, AC, Δ_J, Δ_JK, Δ_K, μ)
                     for E ∈ E_min:ΔE:E_max]
+    createStarkCurve(ΔE, E_min, fieldJEnergy)
+end
+
+function createStarkCurve(ΔE, E_min, fieldJEnergy)
     # We now have field -> J -> energy, but want J -> field -> energy
     jFieldEnergy = invert(fieldJEnergy)
-    StarkCurve.(float(ΔE), float(E_min), jFieldEnergy)
+    interpolatedEnergies = interpolateStarkCurve.(jFieldEnergy)
+    StarkCurve.(float(ΔE), float(E_min), interpolatedEnergies)
 end
 
 """
@@ -229,4 +236,6 @@ function getHamiltonian(J_min::I, J_max::I, M::I, K::I, E, B, AC,
                 for J ∈ J_min:J_max]
     fieldFree, starkMain, starkOff = promote(fieldFree, starkMain, starkOff)
     SymTridiagonal(fieldFree + starkMain, starkOff)
+end
+
 end
