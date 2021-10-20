@@ -23,6 +23,11 @@ function StokesFlowField(itp::ITP, t::T, mf::T, mu::T) where {ITP, T}
 end
 Base.show(io::IO, f::StokesFlowField) = print(io, "StokesFlowField(T=$(f.T),mᶠ=$(f.mᶠ),μ=$(f.μ))")
 
+struct ElectricField{ITP<:AbstractInterpolation} <: Field
+    interpolator::ITP
+end
+Base.show(io::IO, f::ElectricField) = print(io, "ElectricField")
+
 const example_itp = hdf5_to_interpolator(joinpath(@__DIR__, "../data/nitrogen_1.8mbar_extended_nan.h5"))
 const example_field = StokesFlowField(example_itp, 293.15, 4.27e-26, 1.76e-5)
 
@@ -51,6 +56,15 @@ function noise(particle, field::StokesFlowField, time)
     s₀fπ = π * 216field.μ * kB * field.T / (π^2 * (2particle.r)^5 * particle.ρ^2)
     s₀ = √(s₀fπ / Cc)
     invalid ? (vx=0.0, vz=0.0) : (vx=s₀, vz=s₀)
+end
+
+function acceleration(particle, field::ElectricField, time)
+    # TODO: Obtain Stark curve from particle
+    starkCurve=calculateStarkCurves(1e-3, 0.0, 1e-2, 0, 5, 0, 0, 9.93910344e-26, 3.31303448e-26, 1, 1, 1, 1.66782048e-29)[5]
+    # TODO: Obtain location from particle
+    r = [1.5, 1.2]
+    force = getEnergyGradient(field.interpolator, starkCurve, r)
+    force/mass(particle)
 end
 
 function getEnergyGradient(field, starkCurve::StarkCurve{T}, r)::AbstractArray where T<:Real
