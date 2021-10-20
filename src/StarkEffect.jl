@@ -9,28 +9,13 @@ see https://doi.org/10.1016/j.cpc.2013.09.001.
 module StarkEffect
 
 # TODO: Validate results
-using Parameters
+# TODO: If the result is in Joule, why is the multiplication with h skipped
+#  for the matrix elements then?
 using LinearAlgebra
 using SplitApplyCombine
 include("Interpolation.jl")
 
-export StarkCurve, calculateStarkCurves
-
-"""
-    StarkCurve
-
-Represents a Stark curve, that is the energies over a certain range of field strengths.
-
-The field strengths are given in Volts/Meter [V/m] and the energies in Joule [J].
-
-The data is interpolated over a certain range of field strenghts
-and extrapolated outside of it to Nan
-"""
-# TODO: If the result is in Joule, why is the multiplication with h skipped
-#  for the matrix elements then?
-@with_kw struct StarkCurve{T<:Real}
-    energies::AbstractInterpolation{T}
-end
+export calculateStarkCurves
 
 """
     calculateStarkCurves(ΔE, E_min, E_max, J_min, J_max, M, B, D, μ)
@@ -55,7 +40,8 @@ here Joules are used directly.
 """
 function calculateStarkCurves(ΔE, E_min, E_max,
         # TODO: It might be cleaner to just pass the particle directly
-        J_min::I, J_max::I, M::I, B, D, μ)::AbstractVector{StarkCurve} where I <: Integer
+        J_min::I, J_max::I, M::I,
+        B, D, μ)::AbstractVector{AbstractInterpolation} where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, E, B, D, μ) for E ∈ E_min:ΔE:E_max]
     instantiateStarkCurves(ΔE, E_min, fieldJEnergy)
 end
@@ -92,7 +78,7 @@ Returns a vector of the calculated Stark curves
 function calculateStarkCurves(ΔE, E_min, E_max,
         # TODO: Once the particles are implemented, they should probably be passed in directly
         J_min::I, J_max::I, M::I, K::I, B, AC,
-        Δ_J, Δ_JK, Δ_K, μ)::AbstractVector{StarkCurve} where I <: Integer
+        Δ_J, Δ_JK, Δ_K, μ)::AbstractVector{AbstractInterpolation} where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, K, E, B, AC, Δ_J, Δ_JK, Δ_K, μ)
                     for E ∈ E_min:ΔE:E_max]
     instantiateStarkCurves(ΔE, E_min, fieldJEnergy)
@@ -103,11 +89,10 @@ end
 
 Utility function to instantiate Stark curves (including interpolation of the energies)
 """
-function instantiateStarkCurves(ΔE, E_min, fieldJEnergy)
+function instantiateStarkCurves(ΔE, E_min, fieldJEnergy)::AbstractVector{AbstractInterpolation}
     # We now have field -> J -> energy, but want J -> field -> energy
     jFieldEnergy = invert(fieldJEnergy)
-    interpolatedEnergies = interpolateStarkCurve.(ΔE, E_min, jFieldEnergy)
-    StarkCurve.(interpolatedEnergies)
+    interpolateStarkCurve.(ΔE, E_min, jFieldEnergy)
 end
 
 """

@@ -82,8 +82,8 @@ end
 
 Calculates the energy gradient of the specified electric field
 """
-function getEnergyGradient(field, starkCurve::StarkCurve{T}, r)::AbstractArray where T<:Real
+function getEnergyGradient(field, starkCurve, r)::AbstractArray
     # The gradient of the energy over space is given by
     # ∇E(r) = E'(ε(r))⋅∇ε(r)
-    gradient(starkCurve.energies, field(r...)) .* gradient(field, r...)
+    gradient(starkCurve, field(r...)) .* gradient(field, r...)
 end
