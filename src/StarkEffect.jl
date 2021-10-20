@@ -1,4 +1,11 @@
-# This whole file is heavily inspired by the CMIstark project, see https://doi.org/10.1016/j.cpc.2013.09.001
+"""
+    StarkEffect
+
+This module provides functionality for calculating Stark curves for certain molecules.
+
+The whole module is heavily inspired by the CMIstark project,
+see https://doi.org/10.1016/j.cpc.2013.09.001.
+"""
 module StarkEffect
 
 # TODO: Validate results
@@ -107,18 +114,6 @@ This is done for the given `J` quantum number range, `M` quantum number and fiel
 The result is ordered by the `J` quantum number in ascending order
 (which is also the ascending order of the energies themselves).
 
-Note that while usually the rotational constants are given in Hertz,
-here Joules are used directly.
-
-# Arguments
-- `J_min::I`: The minimum J quantum number
-- `J_max::I`: The maximum J quantum number
-- `M::I`: The M quantum number
-- `E`: The field strength. Unit: Volts/Meter [V/m]
-- `B`: The second rotational constant, B=h/(8π^2⋅I_b). Unit: Joule [J]
-- `D`: The centrifugal distortion constant. Unit: Joule [J]
-- `μ`: The dipole moment along its symmetry axis. Unit: Coulomb⋅Meter [Cm]
-
 # Returns
 Returns a vector of the calculated energies. Unit: Joule [J]
 """
@@ -138,23 +133,6 @@ This is done for the given `J` quantum number range, `M` quantum number,
 The result is ordered by the `J` quantum number in ascending order
 (which is also the ascending order of the energies themselves).
 
-Note that while usually the rotational constants are given in Hertz,
-here Joules are used directly.
-
-# Arguments
-- `J_min::I`: The minimum J quantum number
-- `J_max::I`: The maximum J quantum number
-- `M::I`: The M quantum number
-- `K::I`: The K quantum number
-- `E`: The field strength. Unit: Volts/Meter [V/m]
-- `B`: The second rotational constant, B=h/(8π^2⋅I_b). Unit: Joule [J]
-- `AC`: Either the first (for prolate molecules) or third (for oblate molecules)
-        rotational constant, A/C=h/(8π^2⋅I_a/b). Unit: Joule [J]
-- `Δ_J`: One of the first order quartic centrifugal distortion constants. Unit: Joule [J]
-- `Δ_JK`: One of the first order quartic centrifugal distortion constants. Unit: Joule [J]
-- `Δ_K`: One of the first order quartic centrifugal distortion constants. Unit: Joule [J]
-- `μ`: The dipole moment along its symmetry axis. Unit: Coulomb⋅Meter [Cm]
-
 # Returns
 Returns a vector of the calculated energies. Unit: Joule [J]
 """
@@ -170,20 +148,9 @@ end
 Calculates the Hamiltonian for a lienar top molecule with completed shells.
 This is done for the given range of `J` quantum numbers,
 the `M` quantum number and the field strength.
+
 Note that this is only one block of the whole
 block-diagonalized Hamiltonian consisting of all the `M` quantum numbers.
-
-Note that while usually the rotational constants are given in Hertz,
-here Joules are used directly.
-
-# Arguments
-- `J_min::I`: The minimum J quantum number. Must be bigger or equal to `M`.
-- `J_max::I`: The maximum J quantum number
-- `M::I`: The M quantum number
-- `E`: The field strength. Unit: Volts/Meter [V/m]
-- `B`: The second rotational constant, B=h/(8π^2⋅I_b). Unit: Joule [J]
-- `D`: The centrifugal distortion constant. Unit: Joule [J]
-- `μ`: The dipole moment along its symmetry axis. Unit: Coulomb⋅Meter [Cm]
 
 # Returns
 Returns an AbstractMatrix (specifically a symmetrical tridiagonal matrix)
@@ -205,23 +172,6 @@ the `M` quantum number, the `K` quantum number and the field strength.
 
 Note that this is only one block of the whole
 block-diagonalized Hamiltonian consisting of all the `M` and `K` quantum numbers.
-
-Note that while usually the rotational constants are given in Hertz,
-here Joules are used directly.
-
-# Arguments
-- `J_min::I`: The minimum J quantum number. Must be bigger or equal to `M` and `|K|`.
-- `J_max::I`: The maximum J quantum number
-- `M::I`: The M quantum number
-- `K::I`: The K quantum number
-- `E`: The field strength. Unit: Volts/Meter [V/m]
-- `B`: The second rotational constant, B=h/(8π^2⋅I_b). Unit: Joule [J]
-- `AC`: Either the first (for prolate molecules) or third (for oblate molecules)
-        rotational constant, A/C=h/(8π^2⋅I_a/b). Unit: Joule [J]
-- `Δ_J`: One of the first order quartic centrifugal distortion constants. Unit: Joule [J]
-- `Δ_JK`: One of the first order quartic centrifugal distortion constants. Unit: Joule [J]
-- `Δ_K`: One of the first order quartic centrifugal distortion constants. Unit: Joule [J]
-- `μ`: The dipole moment along its symmetry axis. Unit: Coulomb⋅Meter [Cm]
 
 # Returns
 Returns an AbstractMatrix (specifically a symmetrical tridiagonal matrix) representing the Hamiltonian.
