@@ -1,6 +1,6 @@
 module CMInject
 
-include("Particles.jl")
+include("Particles/Particles.jl")
 include("Fields/Fields.jl")
 include("Sources.jl")
 
