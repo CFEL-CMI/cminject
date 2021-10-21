@@ -70,7 +70,8 @@ end
 
 function acceleration(particle, field::ElectricField, time)
     # TODO: Obtain Stark curve from particle
-    starkCurve=calculateStarkCurves(1e-3, 0.0, 1e-2, 0, 5, 0, 0, 9.93910344e-26, 3.31303448e-26, 1, 1, 1, 1.66782048e-29)[5]
+    allStarkCurves = calculateStarkCurves(1e-3, 0.0, 1e-2, 0, 5, 0, 0, 9.93910344e-26, 3.31303448e-26, 1, 1, 1, 1.66782048e-29)
+    @inbounds starkCurve=allStarkCurves[5]
     # TODO: Obtain location from particle
     r = [1.5, 1.2]
     force = getEnergyGradient(field.interpolator, starkCurve, r)

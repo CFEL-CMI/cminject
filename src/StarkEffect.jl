@@ -41,7 +41,7 @@ here Joules are used directly.
 function calculateStarkCurves(ΔE, E_min, E_max,
         # TODO: It might be cleaner to just pass the particle directly
         J_min::I, J_max::I, M::I,
-        B, D, μ)::AbstractVector{AbstractInterpolation} where I <: Integer
+        B, D, μ)::AbstractVector where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, E, B, D, μ) for E ∈ E_min:ΔE:E_max]
     instantiateStarkCurves(ΔE, E_min, fieldJEnergy)
 end
@@ -78,7 +78,7 @@ Returns a vector of the calculated Stark curves
 function calculateStarkCurves(ΔE, E_min, E_max,
         # TODO: Once the particles are implemented, they should probably be passed in directly
         J_min::I, J_max::I, M::I, K::I, B, AC,
-        Δ_J, Δ_JK, Δ_K, μ)::AbstractVector{AbstractInterpolation} where I <: Integer
+        Δ_J, Δ_JK, Δ_K, μ)::AbstractVector where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, K, E, B, AC, Δ_J, Δ_JK, Δ_K, μ)
                     for E ∈ E_min:ΔE:E_max]
     instantiateStarkCurves(ΔE, E_min, fieldJEnergy)
@@ -89,7 +89,7 @@ end
 
 Utility function to instantiate Stark curves (including interpolation of the energies)
 """
-function instantiateStarkCurves(ΔE, E_min, fieldJEnergy)::AbstractVector{AbstractInterpolation}
+function instantiateStarkCurves(ΔE, E_min, fieldJEnergy)::AbstractVector
     # We now have field -> J -> energy, but want J -> field -> energy
     jFieldEnergy = invert(fieldJEnergy)
     interpolateStarkCurve.(ΔE, E_min, jFieldEnergy)
