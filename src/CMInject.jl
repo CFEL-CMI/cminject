@@ -3,6 +3,8 @@ module CMInject
 include("Particles.jl")
 include("Fields.jl")
 include("Sources.jl")
+include("Detectors.jl")
+include("ResultPlots.jl")
 
 using DifferentialEquations
 
@@ -109,10 +111,9 @@ const example_dists = Dict(
 )
 const example_source = SamplingSource{SphericalParticle2D{Float64}}(example_dists)
 
-function initial_vals_sampled(source, n)
+function make_initial_values(source, fields, n)
     particles = generate(source, n)
-
-    function prob_func(prob,i,repeat)
+    function prob_func(prob::P, i, repeat)::P where P
         particle = particles[i]
         prob.u0 .= particle._u
         prob.p[2][1] = particle._p
@@ -122,18 +123,33 @@ function initial_vals_sampled(source, n)
     u0 = similar(particles[1]._u)
     u0 .= particles[1]._u
     p0 = particles[1]._p
-    fields = (CMInject.example_field,)
     params = (p0, [p0], fields)
-    tspan = (0.0, 0.03)
 
-    u0, tspan, params, prob_func
+    u0, params, prob_func
 end
 
-function ensemble_solve(n)
-    u0, tspan, params, prob_func = initial_vals_sampled(example_source, n)
+function main(
+    ; source::S, fields, detectors, tspan, n_particles::Integer,
+    solver=EulerHeun(), solver_opts=(), ensemble_strategy=EnsembleThreads()
+) where {S<:Source}
+    make_initial_values(source, fields, n_particles)
+    u0, params, prob_func = make_initial_values(source, fields, n_particles)
     problem = SDEProblem{true}(f!, g!, u0, tspan, params)
     ep = EnsembleProblem(problem, prob_func=prob_func, safetycopy=false)
-    solve(ep, EulerHeun(), EnsembleThreads(); trajectories=n, default_solver_opts...)
+    sol = solve(ep, solver, ensemble_strategy; trajectories=n_particles, solver_opts...)
+
+    detector_hits = [calculate_hits(sol, detector) for detector in detectors]
+    return sol, detector_hits
+end
+
+
+function ensemble_solve(n; tspan=(0, 0.05), detector_positions=-0.003:0.001:0.003)
+    main(
+        ; source=example_source, fields=(example_field,),
+        detectors=Tuple([SectionDetector{Float64, :z}(pos, true) for pos in detector_positions]),
+        tspan=tspan, n_particles=n,
+        solver_opts=default_solver_opts
+    )
 end
 
 

@@ -32,7 +32,7 @@ function _apply_default_symbols(symbols, filename)
 				   "columns!"
 			return symbols
 		else
-			@warn "No names were defined in your file $(filename). Implicitly using names $(symbols) "
+			@warn "No names were defined in your file $(filename). Implicitly using names $(defaults) "
 			       "- it would be better if the file contained names for the columns!"
 			return defaults
 		end
