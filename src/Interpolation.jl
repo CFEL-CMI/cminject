@@ -18,7 +18,7 @@ end
 
 function _apply_default_symbols(symbols, filename)
 	# If symbols were created from pure indices, attempt
-	if symbols == Symbol.(1:length(symbols))
+	if all(symbols .== Symbol.(0:length(symbols)-1))
 		defaults = nothing
 		if length(symbols) == 3
 			defaults = (:vx, :vz, :p)
@@ -30,9 +30,11 @@ function _apply_default_symbols(symbols, filename)
 			@warn "No names were defined in your file $(filename). Could not assign default names, "
 			       "so using $(symbols) - it would be better if the file contained names for the "
 				   "columns!"
+			return symbols
 		else
-			@warn "No names were defined in your file $(filename). Implicitly using names $(syms) "
+			@warn "No names were defined in your file $(filename). Implicitly using names $(symbols) "
 			       "- it would be better if the file contained names for the columns!"
+			return defaults
 		end
 	else
 		symbols
