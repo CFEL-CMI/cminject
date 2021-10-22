@@ -1,7 +1,7 @@
 module CMInject
 
 include("Particles.jl")
-include("Fields/Fields.jl")
+include("Fields.jl")
 include("Sources.jl")
 
 using DifferentialEquations
