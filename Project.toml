@@ -1,6 +1,6 @@
 name = "CMInject"
 uuid = "d64b6d3e-625c-4905-85c2-695248535433"
-authors = ["Simon Welker <simon.welker@outlook.com> and contributors"]
+authors = ["Simon Welker <simon.welker@outlook.com>, Timo Borner <timo.borner@cfel.de> and contributors"]
 version = "0.1.0"
 
 [deps]
@@ -19,12 +19,14 @@ ImageView = "86fae568-95e7-573e-a6b2-d8a6b900c9ef"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 LabelledArrays = "2ee39098-c373-598a-b85f-a56591580800"
 Lazy = "50d2b5c4-7a5e-59d5-8109-a42b560f39c0"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 PhysicalConstants = "5ad8b20f-a522-5ce9-bfc9-ddf1d5bda6ab"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+SplitApplyCombine = "03a91e81-4c3e-53e1-a0a4-9c0c8f19dd66"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 

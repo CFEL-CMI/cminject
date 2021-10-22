@@ -1,7 +1,7 @@
 module CMInject
 
 include("Particles.jl")
-include("Fields.jl")
+include("Fields/Fields.jl")
 include("Sources.jl")
 
 using DifferentialEquations
@@ -125,7 +125,7 @@ function initial_vals_sampled(source, n)
     u0 .= particles[1]._u
     p0 = particles[1]._p
     fields = (CMInject.example_field,)
-    params = (p0, [p0,], fields)
+    params = (p0, [p0], fields)
     tspan = (0.0, 0.03)
 
     u0, tspan, params, prob_func

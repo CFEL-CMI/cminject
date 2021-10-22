@@ -2,8 +2,8 @@ using Logging
 using HDF5
 using LabelledArrays
 using Statistics
-import Interpolations: scale as itpscale, interpolate, extrapolate,
-	BSpline, Linear, AbstractInterpolation
+using Interpolations
+import Interpolations: scale as itpscale
 
 
 function _reduce_to_labelled_array(A::AbstractArray{T, N}, InnerT::Type{U}) where {T, N, U <: SLArray}
@@ -74,4 +74,12 @@ function hdf5_to_interpolator(filename::AbstractString, names=:default)
         itp = itpscale(interpolate(data, BSpline(Linear())), grid_ranges...)
         extrapolate(itp, InnerT(repeat([NaN], N)))
     end
+end
+
+function interpolateStarkCurve(ΔE, E_min,
+        energies::Vector{T})::AbstractInterpolation where T<:Real
+    # TODO: Validate that quadratic is reasonable (e.g. vs. cubic / linear)
+    itp = interpolate(energies, BSpline(Quadratic(Natural(OnGrid()))))
+    scaledItp = itpscale(itp, range(E_min; length=length(energies), step=ΔE))
+    extrapolate(scaledItp, NaN)
 end

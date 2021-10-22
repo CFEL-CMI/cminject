@@ -1,14 +1,7 @@
+# Note that you can't directly include this file, you'll have to include "Fields.jl"
 import PhysicalConstants.CODATA2018: k_B
 const kB = k_B.val
-
-include("Interpolation.jl")
-
-# ------ Fields
-
-abstract type Field
-end
-noise(particle, f::Field, time) = ()  # no noise term for fields required by default
-
+include("../Interpolation.jl")
 
 struct StokesFlowField{T,ITP<:AbstractInterpolation} <: Field
     interpolator::ITP
@@ -21,7 +14,7 @@ function StokesFlowField(itp::ITP, t::T, mf::T, mu::T) where {ITP, T}
 end
 Base.show(io::IO, f::StokesFlowField) = print(io, "StokesFlowField(T=$(f.T),mᶠ=$(f.mᶠ),μ=$(f.μ))")
 
-const example_itp = hdf5_to_interpolator(joinpath(@__DIR__, "../data/nitrogen_1.8mbar_extended_nan.h5"))
+const example_itp = hdf5_to_interpolator(joinpath(@__DIR__, "../../data/nitrogen_1.8mbar_extended_nan.h5"))
 const example_field = StokesFlowField(example_itp, 293.15, 4.27e-26, 1.76e-5)
 
 function stokes_vars(particle, field)
@@ -50,3 +43,5 @@ function noise(particle, field::StokesFlowField, time)
     s₀ = √(s₀fπ / Cc)
     invalid ? (vx=0.0, vz=0.0) : (vx=s₀, vz=s₀)
 end
+
+
