@@ -16,6 +16,7 @@ using DifferentialEquations
     #    -> we can't pass this on the type-level since it will live in a mutable list (I think)
     ptype = associated_particle_type(params.types[1])
     quote
+        Base.@_inline_meta
         _, (p,), fields = params
         particle = $ptype(u, p)
 
@@ -35,6 +36,7 @@ end
 @generated function g!(du, u, params, t)
     ptype = associated_particle_type(params.types[1])
     quote
+        Base.@_inline_meta
         _, (p,), fields = params
         particle = $ptype(u, p)
 
