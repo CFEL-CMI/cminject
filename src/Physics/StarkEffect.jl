@@ -13,7 +13,7 @@ module StarkEffect
 #  for the matrix elements then?
 using LinearAlgebra
 using SplitApplyCombine
-include("Interpolation.jl")
+include("../Interpolation.jl")
 
 export calculateStarkCurves
 
