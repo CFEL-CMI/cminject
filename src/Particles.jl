@@ -1,7 +1,7 @@
 using LabelledArrays
 
 include("ParticlesBase.jl")
-include("../Interpolation.jl")
+include("Interpolation.jl")
 
 
 ## SphericalParticle2D definition

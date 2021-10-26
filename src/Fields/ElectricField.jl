@@ -1,5 +1,5 @@
 # Note that you can't directly include this file, you'll have to include "Fields.jl"
-include("../StarkEffect.jl")
+include("../Physics/StarkEffect.jl")
 using .StarkEffect
 include("../Interpolation.jl")
 
