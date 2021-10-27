@@ -38,9 +38,10 @@ here Joules are used directly.
 - `D`: The centrifugal distortion constant. Unit: Joule [J]
 - `μ`: The dipole moment along its symmetry axis. Unit: Coulomb⋅Meter [Cm]
 """
-function calculateStarkCurves(ΔE, E_min, E_max,
-        # TODO: It might be cleaner to just pass the particle directly
+function calculateStarkCurves(ΔE, E_min, E_max;
+        # Quantum state
         J_min::I, J_max::I, M::I,
+        # Particle properties
         B, D, μ)::AbstractVector where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, E, B, D, μ) for E ∈ E_min:ΔE:E_max]
     instantiateStarkCurves(ΔE, E_min, fieldJEnergy)
@@ -75,10 +76,11 @@ here Joules are used directly.
 # Returns
 Returns a vector of the calculated Stark curves
 """
-function calculateStarkCurves(ΔE, E_min, E_max,
-        # TODO: Once the particles are implemented, they should probably be passed in directly
-        J_min::I, J_max::I, M::I, K::I, B, AC,
-        Δ_J, Δ_JK, Δ_K, μ)::AbstractVector where I <: Integer
+function calculateStarkCurves(ΔE, E_min, E_max;
+        # Quantum state
+        J_min::I, J_max::I, M::I, K::I,
+        # Particle properties
+        B, AC, Δ_J, Δ_JK, Δ_K, μ)::AbstractVector where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, K, E, B, AC, Δ_J, Δ_JK, Δ_K, μ)
                     for E ∈ E_min:ΔE:E_max]
     instantiateStarkCurves(ΔE, E_min, fieldJEnergy)
