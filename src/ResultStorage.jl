@@ -19,18 +19,22 @@ function get_hdf5_datatype(::Type{T}) where T
 end
 
 
-function store_properties(file::HDF5.File, particles::AbstractVector{PT}) where {PT<:AbstractParticle}
+function store_properties!(file::HDF5.File, particles::AbstractVector{PT}) where {PT<:AbstractParticle}
     # Collect properties
-    props_dtype = get_hdf5_datatype(associated_props_type(PT))
+    dtype = get_hdf5_datatype(associated_props_type(PT))
     props = [ntfromstruct(particle._p) for particle in particles]
 
-    props_dset = create_dataset(file, "particles/properties", props_dtype, dataspace(props))
-    write_dataset(props_dset, props_dtype, props)
+    props_dset = create_dataset(file, "particles/properties", dtype, dataspace(props))
+    write_dataset(props_dset, dtype, props)
 end
 
-function store_trajectories(file::HDF5.File, solution)
+function store_trajectories!(file::HDF5.File, solution)
     # Collect trajectories from `solution[i].u` and `solution[i].t` for every `i`
-    trajs = [NamedTuple.(solution[i].u) for i ∈ 1:length(solution)]
+    # FIXME: this is terribly slow because of type instability from the NamedTuple call - we need to somehow force
+    #        HDF5 to accept our structs instead of converting to a NamedTuple...
+    #        I've seen this said to be working on some GitHub issue comment for HDF5.jl, but I just got random floats
+    #        when I tried passing an array of structs rather than one of NamedTuples :/
+    trajs = (map(sol_ -> NamedTuple.(sol_.u), sol))
     times = [[(t=t_,) for t_ in solution[i].t] for i ∈ 1:length(solution)]
     # Concatenate them together as one matrix that will be stored
     # TODO: in the future we'll need to play around with variable lengths, or put each trajectory
@@ -38,26 +42,42 @@ function store_trajectories(file::HDF5.File, solution)
     trajs_with_times = hcat([merge.(traj, time) for (traj, time) in zip(trajs, times)]...)
 
     # Only store trajectories if there is at least one
-    if !isempty(trajs_with_times)
-        trajs_with_times_dtype = get_hdf5_datatype(eltype(trajs_with_times))
+    if !isempty(trajs)
+        dtype = get_hdf5_datatype(eltype(trajs_with_times))
         trajs_dset = create_dataset(
-            file, "particles/trajectories",
-            trajs_with_times_dtype, dataspace(trajs_with_times)
+            file, "particles/tracked/trajectories",
+            dtype, dataspace(trajs)
         )
-        write_dataset(trajs_dset, trajs_with_times_dtype, trajs_with_times)
+        write_dataset(trajs_dset, dtype, trajs)
     end
+
+    nothing
 end
 
-function store_results(
-    stor::HDF5ResultStorage{PT}, solution, hits, particles::AbstractVector{PT},
-) where {PT<:AbstractParticle}
-    h5open(stor.path, "cw") do f
-        store_properties(f, particles)
-        store_trajectories(f, solution)
-        # TODO: store the hits as well
+function store_hits!(file::HDF5.File, detector_hits)
+    for (i, detector) in enumerate(detector_hits)
+        hits = NamedTuple.(detector)
+        dtype = get_hdf5_datatype(eltype(hits))
+        hits_dset = create_dataset(
+            file, "detectors/$(i)", dtype, dataspace(hits)
+        )
+        write_dataset(hits_dset, dtype, hits)
     end
 
-    if !isempty(hits)
-        @warn "Detector hits are currently not stored in HDF5 files - sorry!"
+    nothing
+end
+
+function store_results!(
+    stor::HDF5ResultStorage{PT}, solution, hits, particles::AbstractVector{PT};
+    store_trajectories=true
+) where {PT<:AbstractParticle}
+    h5open(stor.path, "cw") do f
+        store_properties!(f, particles)
+        store_hits!(f, hits)
+        if store_trajectories
+            store_trajectories!(f, solution)
+        end
     end
+
+    nothing
 end

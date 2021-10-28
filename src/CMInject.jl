@@ -1,5 +1,12 @@
 module CMInject
 
+export Experiment, simulate,
+    SamplingSource,
+    StokesFlowField,
+    SectionDetector,
+    SphericalParticle2D, SphericalParticle3D,
+    HDF5ResultStorage, store_results!, plot_results
+
 include("Interpolation.jl")
 include("Particles.jl")
 include("Fields.jl")
