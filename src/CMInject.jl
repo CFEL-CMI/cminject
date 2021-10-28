@@ -1,7 +1,7 @@
 module CMInject
 
-include("Particles.jl")
 include("Interpolation.jl")
+include("Particles.jl")
 include("Fields.jl")
 include("Sources.jl")
 include("Detectors.jl")

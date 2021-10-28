@@ -1,16 +1,30 @@
+"""
+The abstract particle type all particle types should derive from.
+
+TODO document required methods to implement
+"""
 abstract type AbstractParticle end
 
+## Logic for passing through particle property accesses to the nested fields _u and _p
 
-## Helper functions for `get_at`
-
+# (Helper functions for `get_at`)
 # copied from LabelledArrays.jl, since it doesn't export this function
 @inline _symnames(::Type{SLArray{S,T,N,L,Syms}}) where {S,T,N,L,Syms} = Syms
 # helper for getting the type of the fields of a struct, from the struct type
 @inline _get_fieldtype(t::Type, f::Symbol) = t.types[findfirst(n->n==f, fieldnames(t))]
 
+"""
+    get_at(x::P,::Val{s}) where {s, P<:AbstractParticle}
 
-## Logic for passing through particle property accesses to the nested fields _u and _p
+Given a particle of some specific particle type and a `Val(s)` indicating a property of the particle,
+e.g., Val(:x) and a SphericalParticle2D instance, returns this property of the particle.
 
+This is a generated function, meaning to generate the most efficient code possible for each specific field. It's used
+to define a specific `Base.getproperty` for all particle types. See also the blog post by Chris Rackauckas on
+zero-overhead abstractions, which this is heavily based on:
+
+http://www.stochasticlifestyle.com/zero-cost-abstractions-in-julia-indexing-vectors-by-name-with-labelledarrays/
+"""
 @generated function get_at(x::P,::Val{s}) where {s, P<:AbstractParticle}
     _utype = _get_fieldtype(x, :_u)
     _ptype = _get_fieldtype(x, :_p)
@@ -34,17 +48,42 @@ abstract type AbstractParticle end
     end
 end
 
-Base.@propagate_inbounds function Base.getproperty(particle::P, s::Symbol) where P<:AbstractParticle
+"""
+    Base.getproperty(particle::AbstractParticle, s::Symbol)
+
+Returns the property `s` of the particle `particle`, where `s` may be part of the phase-space properties or the
+particle properties. This implementation allows you to write code like
+
+    `particle.x * particle.T`
+
+rather than
+
+    `particle._u.x * particle._p.T`
+"""
+Base.@propagate_inbounds function Base.getproperty(particle::AbstractParticle, s::Symbol)
     get_at(particle,Val(s))
 end
 
 
 ## Functions for implementing the main loop
 
+"""
+    associated_particle_type(props_type)
+
+Must return the associated particle type given the particle props type that's nested within this particle type.
+When using the @declare_particle macro, a implementation for each new particle type will automatically be created.
+"""
 associated_particle_type(props_type) = error("Unknown particle props type $(typeof(props_type))")
 
-transfer_velocities!(du, u) = nothing
+"""
+    transfer_velocities(du, particle::AbstractParticle)
 
+Enforces second-order dynamics for each particle type as declared by `@velocities` in the `@declare_particle` macro, by
+writing each current velocity (e.g., `particle.vx`) to the differential of each associated position (e.g., `du.x`).
+"""
+transfer_velocities!(du, particle::AbstractParticle) = nothing
+
+# TODO docstring
 @generated function accelerate!(du, acc)
     # Why is this written the way it is?
     #
@@ -89,6 +128,15 @@ end
 
 ## Generic particle function definitions
 
+"""
+    mass(particle::AbstractParticle)
+
+Calculates the mass of the particle. The default implementation returns
+
+    `particle.ρ * (4/3)particle.r^3 * π`
+
+and may be overridden for a concrete particle type via multiple dispatch.
+"""
 function mass(particle::P) where P <: AbstractParticle
     particle.ρ * (4/3)particle.r^3 * π
 end
