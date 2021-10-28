@@ -72,12 +72,21 @@ def plot_trajectories(trajectories: Sequence[np.array], ax: Optional[plt.Axes] =
     if trajectories is None or not any(True for _ in trajectories):
         warnings.warn('No trajectories to plot were passed!')
         return None
-    dims = trajectories[0]['position'].shape[1]
-    ax = _get_axis(ax, dims)
+
+    sample_traj = trajectories[0]
+
+    julia_mode = 'position' not in sample_traj.dtype.fields
+    if julia_mode:
+        dims = 2
+        ax = _get_axis(ax, dims)
+    else:  # assume 2-D x/z from Julia code for now...
+        dims = sample_traj['position'].shape[1]
+        ax = _get_axis(ax, dims)
 
     plots = []
     for traj in trajectories:
-        plots.append(ax.plot(*traj['position'].T, **plot_kwargs))
+        show = traj['position'].T if not julia_mode else (traj['x'], traj['z'])
+        plots.append(ax.plot(*show, **plot_kwargs))
     return plots
 
 
