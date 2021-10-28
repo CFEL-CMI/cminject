@@ -7,6 +7,7 @@ include("Sources.jl")
 include("Detectors.jl")
 include("ResultPlots.jl")
 include("Experiment.jl")
+include("ResultStorage.jl")
 
 using DifferentialEquations
 

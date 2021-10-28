@@ -2,7 +2,41 @@ using DifferentialEquations
 import SciMLBase: AbstractSDEAlgorithm, EnsembleAlgorithm
 using Parameters
 
-# Generic problem/experiment implementation
+"""
+    Experiment(; source, n_particles, time_span, time_step
+               [fields=(), detectors=(), solver=EulerHeun(),
+                solver_opts=(adaptive=false, dense=false, unstable_check=always_false),
+                ensemble_alg=EnsembleThreads()])
+
+Fully specifies a particle trajectory simulation experiment in CMInject, consisting of:
+
+- `source`, a source of particles
+- `n_particles`, the number of particles to be simulated
+- `time_span`, the timespan to simulate over
+- `time_step`, the macro-timestep for the integrator
+- `fields`, a tuple of (acceleration) fields - none by default
+- `detectors`, a tuple of detectors - none by default
+- `solver`: A solver algorithm for `SDEProblem`s
+- `solver_opts`: A (Named)Tuple of options to be passed to the solver
+- `ensemble_alg`: The ensemble algorithm to use for parallelizing over the particles,
+   see the DifferentialEquations.jl docs
+"""
+@with_kw struct Experiment{
+    Src<:AbstractSource,Fields,Dets,
+    TimeStep,SolvAlg<:AbstractSDEAlgorithm,SolvOpts,EnsAlg<:EnsembleAlgorithm
+}
+    source::Src
+    n_particles::Int64
+    time_span::Tuple{TimeStep,TimeStep}
+    time_step::TimeStep
+    fields::Fields = ()
+    detectors::Dets = ()
+
+    solver::SolvAlg = EulerHeun()
+    solver_opts::SolvOpts = (adaptive=false, dense=false, unstable_check=always_false)
+    ensemble_alg::EnsAlg = EnsembleThreads()
+end
+
 
 """
     f!(du, u, params, t)
@@ -70,41 +104,6 @@ doing NaN-based handling.
 end
 
 """
-    Experiment(; source, n_particles, time_span, time_step
-               [fields=(), detectors=(), solver=EulerHeun(),
-                solver_opts=(adaptive=false, dense=false, unstable_check=always_false),
-                ensemble_alg=EnsembleThreads()])
-
-Fully specifies a particle trajectory simulation experiment in CMInject, consisting of:
-
-- `source`, a source of particles
-- `n_particles`, the number of particles to be simulated
-- `time_span`, the timespan to simulate over
-- `time_step`, the macro-timestep for the integrator
-- `fields`, a tuple of (acceleration) fields - none by default
-- `detectors`, a tuple of detectors - none by default
-- `solver`: A solver algorithm for `SDEProblem`s
-- `solver_opts`: A (Named)Tuple of options to be passed to the solver
-- `ensemble_alg`: The ensemble algorithm to use for parallelizing over the particles,
-   see the DifferentialEquations.jl docs
-"""
-@with_kw struct Experiment{
-    Src<:AbstractSource,Fields,Dets,
-    TimeStep,SolvAlg<:AbstractSDEAlgorithm,SolvOpts,EnsAlg<:EnsembleAlgorithm
-}
-    source::Src
-    n_particles::Int64
-    time_span::Tuple{TimeStep,TimeStep}
-    time_step::TimeStep
-    fields::Fields = ()
-    detectors::Dets = ()
-
-    solver::SolvAlg = EulerHeun()
-    solver_opts::SolvOpts = (adaptive=false, dense=false, unstable_check=always_false)
-    ensemble_alg::EnsAlg
-end
-
-"""
     make_initial_values(source, fields, n::Integer)
 
 From a `source` and a collection of `fields`, generates `n` initial particle values and returns a tuple of
@@ -128,7 +127,7 @@ function make_initial_values(source, fields, n::Integer)
     p0 = particles[1]._p
     params = (p0, [p0], fields)
 
-    u0, params, prob_func
+    u0, params, particles, prob_func
 end
 
 """
@@ -137,7 +136,7 @@ end
 Simulates an `Experiment`, returning a tuple of `(trajectories, detector_hits)`.
 """
 function simulate(exp::Experiment)
-    u0, params, prob_func = make_initial_values(exp.source, exp.fields, exp.n_particles)
+    u0, params, particles, prob_func = make_initial_values(exp.source, exp.fields, exp.n_particles)
     prob = SDEProblem{true}(f!, g!, u0, exp.time_span, params)
     ens_prob = EnsembleProblem(prob, prob_func=prob_func, safetycopy=false)
 
@@ -148,5 +147,5 @@ function simulate(exp::Experiment)
         exp.solver_opts...
     )
     hits = [calculate_hits(solution, detector) for detector in exp.detectors]
-    return solution, hits
+    return solution, hits, particles
 end

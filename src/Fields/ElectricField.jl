@@ -9,13 +9,13 @@ Representation of a 2d electric field.
 The data is stored in an interpolated form,
 not merely the values at the grid points are available.
 """
-struct ElectricField2d{ITP<:AbstractInterpolation} <: Field
+struct ElectricField2D{ITP<:AbstractInterpolation} <: Field
     interpolator::ITP
 end
-function ElectricField2d(itp::ITP) where ITP
+function ElectricField2D(itp::ITP) where ITP
     ElectricField{ITP}(itp)
 end
-Base.show(io::IO, f::ElectricField2d) = print(io, "ElectricField2d")
+Base.show(io::IO, f::ElectricField2D) = print(io, "ElectricField2D")
 
 """
     ElectricField
@@ -32,7 +32,7 @@ function ElectricField(itp::ITP) where ITP
 end
 Base.show(io::IO, f::ElectricField) = print(io, "ElectricField")
 
-function acceleration(particle, field::ElectricField2d, time)
+function acceleration(particle, field::ElectricField2D, time)
     r = [particle.x, particle.y]
     force = getEnergyGradient(field.interpolator, particle.starkCurve, r)
     force/mass(particle)

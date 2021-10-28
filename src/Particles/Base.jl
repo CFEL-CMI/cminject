@@ -73,7 +73,23 @@ end
 Must return the associated particle type given the particle props type that's nested within this particle type.
 When using the @declare_particle macro, a implementation for each new particle type will automatically be created.
 """
-associated_particle_type(props_type) = error("Unknown particle props type $(typeof(props_type))")
+associated_particle_type(props_type) = error("Don't know the particle type of $(props_type)")
+
+"""
+    associated_props_type(particle_type)
+
+Must return the associated particle props type given the particle type that's nesting this props type.
+When using the @declare_particle macro, a implementation for each new particle type will automatically be created.
+"""
+associated_props_type(particle_type) = error("Don't know the particle props type of $(particle_type)")
+
+"""
+    associated_u_type(particle_type)
+
+Must return the associated particle phase-space type given the particle type that's nesting this props type.
+When using the @declare_particle macro, a implementation for each new particle type will automatically be created.
+"""
+associated_u_type(particle_type) = error("Don't know the phase-space type of $(particle_type)")
 
 """
     transfer_velocities(du, particle::AbstractParticle)
@@ -178,6 +194,7 @@ end
 _extract_typename(expr::Symbol) = expr
 
 
+# TODO require some additional constraints about field names, e.g. forbid :t (reserved for time, relevant for storing)
 macro declare_particle(expr::Expr)
     # TODO perhaps force all type vars to be unique through gensym, so we won't get clashes with fieldnames
     # (expected example for error: T as fieldname for temperature, but also as the main type variable {T})
@@ -273,6 +290,17 @@ macro declare_particle(expr::Expr)
         function CMInject.associated_particle_type(::Type{$props_type}) where {$(typeargs...)}
             $particle_type
         end
+
+        # Maps the particle type to the wrapped particle props type
+        function CMInject.associated_props_type(::Type{$particle_type}) where {$(typeargs...)}
+            $props_type
+        end
+
+        # Maps the particle type to the wrapped particle props type
+        function CMInject.associated_u_type(::Type{$particle_type}) where {$(typeargs...)}
+            $phase_typename{$phase_typevar}
+        end
+
         # Based on the @velocities declaration, defines a mapping of position->velocity properties of the phase-space
         # position. Can be used to realize any second-order dynamics through pairs of phase-space terms.
         @inline function CMInject.transfer_velocities!(du, particle::$particle_type) where {$(typeargs...)}

@@ -69,7 +69,7 @@ function hdf5_to_interpolator(filename::AbstractString, names=:default)
 			permutedims(reshape(read(h5data, k), sizes...), (2,1))
 			for k in keys(h5data)
 		]..., dims=3)
-		# Convert the array 
+		# Convert the array
         data = _reduce_to_labelled_array(data_, InnerT)
 
 		grid_ranges = _grid_points_to_range.(index)
