@@ -13,6 +13,7 @@ module StarkEffect
 #  for the matrix elements then?
 using LinearAlgebra
 using SplitApplyCombine
+import CMInject: interpolateStarkCurve
 
 export calculateStarkCurves, Symmetry
 
