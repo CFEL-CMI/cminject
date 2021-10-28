@@ -34,6 +34,7 @@ function generate(source::StarkSamplingSource{PT}, n::I)::Vector{PT} where {PT, 
     # TODO: Make ΔE etc. changeable
     starkCurves = getStarkCurves(source, n, 0.1, 0, 10)
     # TODO: Guarantee that PT is a Stark particle
+    # TODO: This doesn't work anymore
     particles = [PT{typeof(starkCurves[1])}(; starkCurve=starkCurves[i], samples[i]...) for i=1:n]
 end
 
