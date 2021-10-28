@@ -104,13 +104,31 @@ macro velocities(mapping)
     mapping
 end
 
-function find_macrocall(args, macro_name)
+function _find_macrocall(args, macro_name)
     idx = findfirst(
         (expr) -> typeof(expr) == Expr && expr.head == :macrocall && expr.args[1] == Symbol(macro_name),
         args
     )
     isnothing(idx) ? nothing : args[idx]
 end
+
+"""
+    extract_typename(expr)
+
+Extracts only the typevar name from a type declaration expression,
+e.g., when called on :(A <: AbstractArray), will return just the symbol :A.
+
+When called with a Symbol as `expr`, will return exactly that symbol (no-op).
+"""
+function _extract_typename(expr::Expr)
+    if expr.head == :<:
+        expr.args[1]
+    else
+        expr
+    end
+end
+_extract_typename(expr::Symbol) = expr
+
 
 macro declare_particle(expr::Expr)
     # TODO perhaps force all type vars to be unique through gensym, so we won't get clashes with fieldnames
@@ -119,16 +137,17 @@ macro declare_particle(expr::Expr)
     @assert (length(expr.args) == 3) "Malformed particle struct definition, check the docs"
     _, typedef, block = expr.args
     particle_typename = isa(typedef, Symbol) ? typedef : typedef.args[1]
-    typeargs = isa(typedef, Symbol ) ? () : typedef.args[2:end]
+    typeargs = isa(typedef, Symbol) ? () : typedef.args[2:end]
+    typeargs_names = _extract_typename.(typeargs)
 
-    phase_declaration = find_macrocall(block.args, "@phase_space")
+    phase_declaration = _find_macrocall(block.args, "@phase_space")
     @assert !isnothing(phase_declaration) "@phase_space declaration is required!"
     phase_typevar, phase_fieldnames_tuple = eval(phase_declaration)
     phase_fieldnames_tuple = eval(phase_fieldnames_tuple)
     phase_fieldnames = collect(phase_fieldnames_tuple)
 
     # Parse and process the @velocities declaration
-    velocity_declaration = find_macrocall(block.args, "@velocities")
+    velocity_declaration = _find_macrocall(block.args, "@velocities")
     @assert !isnothing(velocity_declaration) "@velocities declaration is required!"
     velocity_map = eval(velocity_declaration)
     velocity_map = velocity_map isa Tuple ? velocity_map : (velocity_map,)
@@ -153,13 +172,13 @@ macro declare_particle(expr::Expr)
     phase_typename = gensym("ParticlePhaseSpace")
     props_typename = gensym("ParticleProps")
     phase_type = :($phase_typename{$phase_typevar})
-    props_type = typeargs === () ? :($props_typename) : :($props_typename{$(typeargs...)})
-    particle_type = typeargs === () ? :($particle_typename) : :($particle_typename{$(typeargs...)})
+    props_type = typeargs === () ? :($props_typename) : :($props_typename{$(typeargs_names...)})
+    particle_type = typeargs === () ? :($particle_typename) : :($particle_typename{$(typeargs_names...)})
 
     # TODO: move the esc inwards as much as possible, ensuring macro hygiene
     esc(quote
         # Declare the phase-space type
-        $phase_typename{$phase_typevar} = @SLVector $phase_typevar $phase_fieldnames_tuple
+        $phase_typename{$phase_typevar} = @CMInject.SLVector $phase_typevar $phase_fieldnames_tuple
 
         # Declare the props type (as a mutable struct)
         mutable struct $props_typename{$(typeargs...)}
@@ -167,7 +186,7 @@ macro declare_particle(expr::Expr)
         end
 
         # Declare the particle type
-        struct $particle_type <: CMInject.AbstractParticle
+        struct $particle_typename{$(typeargs...)} <: CMInject.AbstractParticle
             _u::$phase_type  # TODO carry over type variables from outer-level declaration!!
             _p::$props_type
 
