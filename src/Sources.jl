@@ -16,6 +16,8 @@ struct StarkSamplingSource{PT, T} <: AbstractSamplingSource where {PT<:AbstractP
         {Samp<:Sampleable{F, S} where {F<:VariateForm, S<:Discrete}}
     # Contains the particle properties which are the same for all particles
     particleProperties::Dict{Symbol, T}
+    # Defines the symmetry of the to-be-created particles
+    symmetry::Symmetry
 end
 
 function generate(source::SamplingSource{PT}, n::I) where {PT, I<:Integer}
@@ -24,11 +26,14 @@ function generate(source::SamplingSource{PT}, n::I) where {PT, I<:Integer}
 end
 
 function generate(source::StarkSamplingSource{PT}, n::I) where {PT, I<:Integer}
+    if n == 0
+        return []
+    end
     samples = getSamples(source.distributions, n)
     # TODO: Make ΔE etc. changeable
     starkCurves = getStarkCurves(source, n, 0.1, 0, 10)
     # TODO: Guarantee that PT is a Stark particle
-    particles = [PT{typeof(starkCurve)}(; starkCurve=starkCurves[i], samples[i]...) for i=1:n]
+    particles = [PT{typeof(starkCurves[1])}(; starkCurve=starkCurves[i], samples[i]...) for i=1:n]
 end
 
 function getStarkCurves(source::StarkSamplingSource{PT}, n::I,
@@ -43,11 +48,16 @@ function getStarkCurves(source::StarkSamplingSource{PT}, n::I,
     # It's assumed here that for every possible combination of M, K, etc. all values of J
     #  are possible and hence the performance isn't decremented
     starkCurves = Dict([(quantumParams,
-                         StarkEffect.calculateStarkCurves(ΔE, E_min, E_max;
-                                             J_min=J_min, J_max=J_max,
-                                             quantumParams..., source.particleProperties...))
+                         StarkEffect.calculateStarkCurves(ΔE, E_min, E_max,
+                             source.symmetry,
+                             namedTupleToDict((J_min=J_min, J_max=J_max, quantumParams...)),
+                             source.particleProperties))
                         for quantumParams ∈ uniqueParameters])
-    [starkCurves[withoutJ[i]][Js[i]-J_min] for i=1:n]
+    [starkCurves[withoutJ[i]][Js[i]-J_min+1] for i=1:n]
+end
+
+function namedTupleToDict(namedTuple::NamedTuple)::Dict
+    Dict(zip(keys(namedTuple), namedTuple))
 end
 
 function getSamples(dists::Dict{Symbol, Samp}, n::I) where {Symbol, Samp, I<:Integer}
