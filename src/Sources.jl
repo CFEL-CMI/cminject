@@ -20,12 +20,12 @@ struct StarkSamplingSource{PT, T} <: AbstractSamplingSource where {PT<:AbstractP
     symmetry::Symmetry
 end
 
-function generate(source::SamplingSource{PT}, n::I) where {PT, I<:Integer}
+function generate(source::SamplingSource{PT}, n::I)::Vector{PT} where {PT, I<:Integer}
     samples = getSamples(source.distributions, n)
     particles = [PT(; samples[i]...) for i=1:n]
 end
 
-function generate(source::StarkSamplingSource{PT}, n::I) where {PT, I<:Integer}
+function generate(source::StarkSamplingSource{PT}, n::I)::Vector{PT} where {PT, I<:Integer}
     if n == 0
         return []
     end
