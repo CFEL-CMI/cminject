@@ -3,7 +3,7 @@ using HDF5
 using LabelledArrays
 using Statistics
 using Interpolations
-import Interpolations: scale as itpscale
+import Interpolations: scale as itpscale, gradient
 
 
 function _reduce_to_labelled_array(A::AbstractArray{T, N}, InnerT::Type{U}) where {T, N, U <: SLArray}
