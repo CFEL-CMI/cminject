@@ -51,14 +51,10 @@ function getStarkCurves(source::StarkSamplingSource{PT}, n::I,
     starkCurves = Dict([(quantumParams,
                          StarkEffect.calculateStarkCurves(ΔE, E_min, E_max,
                              source.symmetry,
-                             namedTupleToDict((J_min=J_min, J_max=J_max, quantumParams...)),
+                             Dict(pairs((J_min=J_min, J_max=J_max, quantumParams...))),
                              source.particleProperties))
                         for quantumParams ∈ uniqueParameters])
     [starkCurves[withoutJ[i]][Js[i]-J_min+1] for i=1:n]
-end
-
-function namedTupleToDict(namedTuple::NamedTuple)::Dict
-    Dict(zip(keys(namedTuple), namedTuple))
 end
 
 function getSamples(dists::Dict{Symbol, Samp}, n::I) where {Symbol, Samp, I<:Integer}

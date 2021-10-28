@@ -13,7 +13,7 @@ module StarkEffect
 #  for the matrix elements then?
 using LinearAlgebra
 using SplitApplyCombine
-import CMInject: interpolateStarkCurve
+import CMInject: interpolateStarkCurve, AbstractInterpolation
 
 export calculateStarkCurves, Symmetry
 
@@ -37,9 +37,11 @@ here Joules are used directly.
 - `quantumState::Dict{Symbol, I}`: The quantum numbers of the molecule
 - `properties::Dict{Symbol, T}`: The general properties of the particle
 """
+# TODO: Restrict return types like here
 function calculateStarkCurves(ΔE, E_min, E_max,
         symmetry::Symmetry, quantumState::Dict{Symbol, I},
-        properties::Dict{Symbol, T})::AbstractVector where {I <: Integer, T}
+        properties::Dict{Symbol, T})::AbstractVector{<:AbstractInterpolation} where {
+                                                                              I <: Integer, T}
     if symmetry == linearTop
         calculateStarkCurves(ΔE, E_min, E_max,
                              quantumState[:J_min], quantumState[:J_max], quantumState[:M],
