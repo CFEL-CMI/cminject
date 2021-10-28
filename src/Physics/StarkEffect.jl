@@ -14,7 +14,47 @@ module StarkEffect
 using LinearAlgebra
 using SplitApplyCombine
 
-export calculateStarkCurves
+export calculateStarkCurves, Symmetry
+
+@enum Symmetry linearTop sphericalTop symmetricTop asymmetricTop
+
+"""
+   calculateStarkCurves(ΔE, E_min, E_max, symmetry, quantumState, properties)
+
+Calculates the Stark curves for a molecule with completed shells.
+This is done for multiple `J` quantum numbers at once (from `J_min` to `J_max`).
+The symmetry determines which calculation will be used.
+
+Note that while usually the rotational constants are given in Hertz,
+here Joules are used directly.
+
+# Arguments
+- `ΔE`: The field strength step size. Unit: Volts/Meter [V/m]
+- `E_min`: The starting field strength. Unit: Volts/Meter [V/m]
+- `E_max`: The ending field strength. Unit: Volts/Meter [V/m]
+- `symmetry::Symmetry`: The symmetry of the molecule
+- `quantumState::Dict{Symbol, I}`: The quantum numbers of the molecule
+- `properties::Dict{Symbol, T}`: The general properties of the particle
+"""
+function calculateStarkCurves(ΔE, E_min, E_max,
+        symmetry::Symmetry, quantumState::Dict{Symbol, I},
+        properties::Dict{Symbol, T})::AbstractVector where {I <: Integer, T}
+    if symmetry == linearTop
+        calculateStarkCurves(ΔE, E_min, E_max,
+                             quantumState[:J_min], quantumState[:J_max], quantumState[:M],
+                             properties[:B], properties[:D], properties[:μ])
+    elseif symmetry == sphericalTop
+        error("Spherical top molecules are not yet supported")
+    elseif symmetry == symmetricTop
+        calculateStarkCurves(ΔE, E_Min, E_max,
+                             quantumstate[:J_min], qunatumState[:J_max],
+                             quantumState[:M], quantumState[:K],
+                             properties[:B], properties[:AC], properties[:Δ_J],
+                             properties[:Δ_JK], properties[:Δ_K], properties[:μ])
+    elseif symmetry == asymmetricTop
+        error("Asymmetric top molecules are not yet supported")
+    end
+end
 
 """
     calculateStarkCurves(ΔE, E_min, E_max, J_min, J_max, M, B, D, μ)
@@ -38,8 +78,9 @@ here Joules are used directly.
 - `μ`: The dipole moment along its symmetry axis. Unit: Coulomb⋅Meter [Cm]
 """
 function calculateStarkCurves(ΔE, E_min, E_max,
-        # TODO: It might be cleaner to just pass the particle directly
+        # Quantum state
         J_min::I, J_max::I, M::I,
+        # Particle properties
         B, D, μ)::AbstractVector where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, E, B, D, μ) for E ∈ E_min:ΔE:E_max]
     instantiateStarkCurves(ΔE, E_min, fieldJEnergy)
@@ -75,9 +116,10 @@ here Joules are used directly.
 Returns a vector of the calculated Stark curves
 """
 function calculateStarkCurves(ΔE, E_min, E_max,
-        # TODO: Once the particles are implemented, they should probably be passed in directly
-        J_min::I, J_max::I, M::I, K::I, B, AC,
-        Δ_J, Δ_JK, Δ_K, μ)::AbstractVector where I <: Integer
+        # Quantum state
+        J_min::I, J_max::I, M::I, K::I,
+        # Particle properties
+        B, AC, Δ_J, Δ_JK, Δ_K, μ)::AbstractVector where I <: Integer
     fieldJEnergy = [calculateEnergies(J_min, J_max, M, K, E, B, AC, Δ_J, Δ_JK, Δ_K, μ)
                     for E ∈ E_min:ΔE:E_max]
     instantiateStarkCurves(ΔE, E_min, fieldJEnergy)
