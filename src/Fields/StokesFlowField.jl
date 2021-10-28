@@ -1,7 +1,6 @@
 # Note that you can't directly include this file, you'll have to include "Fields.jl"
 import PhysicalConstants.CODATA2018: k_B
 const kB = k_B.val
-include("../Interpolation.jl")
 
 struct StokesFlowField{T,ITP<:AbstractInterpolation} <: Field
     interpolator::ITP

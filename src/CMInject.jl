@@ -1,6 +1,7 @@
 module CMInject
 
 include("Particles.jl")
+include("Interpolation.jl")
 include("Fields.jl")
 include("Sources.jl")
 include("Detectors.jl")
@@ -128,7 +129,7 @@ function make_initial_values(source, fields, n)
     u0, params, prob_func
 end
 
-function main(
+function simulate(
     ; source::S, fields, detectors, tspan, n_particles::Integer,
     solver=EulerHeun(), solver_opts=(), ensemble_strategy=EnsembleThreads()
 ) where {S<:Source}
@@ -144,7 +145,7 @@ end
 
 
 function ensemble_solve(n; tspan=(0, 0.05), detector_positions=-0.003:0.001:0.003)
-    main(
+    simulate(
         ; source=example_source, fields=(example_field,),
         detectors=Tuple([SectionDetector{Float64, :z}(pos, true) for pos in detector_positions]),
         tspan=tspan, n_particles=n,
