@@ -29,30 +29,19 @@ function generate(source::StarkSamplingSource{PT}, n::I)::Vector{PT} where {PT, 
         return []
     end
     samples = getSamples(source.distributions, n)
-    # TODO: Make ΔE etc. changeable
-    starkCurves = getStarkCurves(source, n, 0.1, 0, 10)
+    starkCurves = getStarkCurves(source, n)
     # TODO: Guarantee that PT is a Stark particle
     particles = [PT{typeof(starkCurves[1])}(; starkCurve=starkCurves[i], samples[i]...) for i=1:n]
 end
 
-function getStarkCurves(source::StarkSamplingSource{PT}, n::I,
-        ΔE, E_min, E_max) where {PT, I<:Integer}
+function getStarkCurves(source::StarkSamplingSource{PT}, n::I) where {PT, I<:Integer}
     stateSamples = getSamples(source.stateDistributions, n)
-    # The calculation of the Stark curves is done for multiple Js at once
-    Js = [sample.J for sample ∈ stateSamples]
-    J_min = minimum(Js)
-    J_max = maximum(Js)
-    withoutJ = [filter(p->first(p) != :J, pairs(sample)) for sample ∈ stateSamples]
-    uniqueParameters = unique(withoutJ)
-    # It's assumed here that for every possible combination of M, K, etc. all values of J
-    #  are possible and hence the performance isn't decremented
-    #starkCurves = Dict([(quantumParams,
-                         #StarkEffect.calculateStarkCurves(ΔE, E_min, E_max,
-                             #source.symmetry,
-                             #Dict(pairs((J_min=J_min, J_max=J_max, quantumParams...))),
-                             #source.particleProperties))
-                        #for quantumParams ∈ uniqueParameters])
-    #[starkCurves[withoutJ[i]][Js[i]-J_min+1] for i=1:n]
+    uniqueParameters = unique(stateSamples)
+    starkCurves = Dict([(quantumParams,
+                         # TODO: Parametric file name
+                         interpolateStarkCurve("../cmistark/OCS.molecule"; quantumParams...))
+                         for quantumParams ∈ uniqueParameters])
+    [starkCurves[sample] for sample ∈ stateSamples]
 end
 
 function getSamples(dists::Dict{Symbol, Samp}, n::I) where {Symbol, Samp, I<:Integer}
