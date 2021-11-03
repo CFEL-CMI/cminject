@@ -17,8 +17,6 @@ struct StarkSamplingSource{PT, T} <: AbstractSamplingSource where {PT<:AbstractP
         {Samp<:Sampleable{F, S} where {F<:VariateForm, S<:Discrete}}
     # Contains the particle properties which are the same for all particles
     particleProperties::Dict{Symbol, T}
-    # Defines the symmetry of the to-be-created particles
-    symmetry::Symmetry
 end
 
 function generate(source::SamplingSource{PT, Dists}, n::Integer) where {PT,Dists}
@@ -48,13 +46,13 @@ function getStarkCurves(source::StarkSamplingSource{PT}, n::I,
     uniqueParameters = unique(withoutJ)
     # It's assumed here that for every possible combination of M, K, etc. all values of J
     #  are possible and hence the performance isn't decremented
-    starkCurves = Dict([(quantumParams,
-                         StarkEffect.calculateStarkCurves(ΔE, E_min, E_max,
-                             source.symmetry,
-                             Dict(pairs((J_min=J_min, J_max=J_max, quantumParams...))),
-                             source.particleProperties))
-                        for quantumParams ∈ uniqueParameters])
-    [starkCurves[withoutJ[i]][Js[i]-J_min+1] for i=1:n]
+    #starkCurves = Dict([(quantumParams,
+                         #StarkEffect.calculateStarkCurves(ΔE, E_min, E_max,
+                             #source.symmetry,
+                             #Dict(pairs((J_min=J_min, J_max=J_max, quantumParams...))),
+                             #source.particleProperties))
+                        #for quantumParams ∈ uniqueParameters])
+    #[starkCurves[withoutJ[i]][Js[i]-J_min+1] for i=1:n]
 end
 
 function getSamples(dists::Dict{Symbol, Samp}, n::I) where {Symbol, Samp, I<:Integer}

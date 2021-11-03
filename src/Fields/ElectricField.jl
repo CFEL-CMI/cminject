@@ -1,6 +1,4 @@
 # Note that you can't directly include this file, you'll have to include "Fields.jl"
-include("../Physics/StarkEffect.jl")
-using .StarkEffect
 
 """
     ElectricField2d
