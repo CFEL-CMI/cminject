@@ -85,3 +85,40 @@ function interpolateStarkCurve(ΔE, E_min,
     scaledItp = itpscale(itp, range(E_min; length=length(energies), step=ΔE))
     extrapolate(scaledItp, NaN)
 end
+
+"""
+    interpolateStarkCurve(filename; J, Ka, Kc, M, Iso)
+
+Note that the data HAS to be UNIFORMLY spaced and has to contain at least 2 data points.
+"""
+function interpolateStarkCurve(filename::AbstractString;
+        J::I=0, Ka::I=0, Kc::I=0, M::I=0, Iso::I=0)::AbstractInterpolation where {T<:Real, I<:Int}
+    # The HDF5 file has the following hierarchy:
+    #  root
+    #  > masses
+    #    ] Index?
+    #      ] Molecule?
+    #        ] mass
+    #        ] name
+    #        ] num
+    #  > _J
+    #    > _Ka
+    #      > _Kc
+    #        > _M
+    #          > _Iso
+    #            > dcfield
+    #              ] field strenghts (tuple)
+    #            > dcstarkenergy
+    #              ] energies (tuple)
+    # TODO: Validate that quadratic is reasonable (e.g. vs. cubic / linear)
+    group = h5read(filename, "/_$J/_$Ka/_$Kc/_$M/_$Iso")
+    energies = group["dcstarkenergy"][1]
+    fields = group["dcfield"][1]
+    if length(fields) < 2
+        error("Has to contain at least two data points")
+    end
+    itp = interpolate(energies, BSpline(Quadratic(Natural(OnGrid()))))
+    # TODO: It's not nice that this requires the data to be uniformly spaced
+    scaledItp = itpscale(itp, fields[1]:(fields[2]-fields[1]):fields[end])
+    extrapolate(scaledItp, NaN)
+end
