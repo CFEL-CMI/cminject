@@ -6,9 +6,7 @@ using Test
     itpScaled = CMInject.itpscale(itp, -2:1:2, -2:1:2)
     dists = Dict(:x => CMInject.Normal(0, 1e-3), :y => CMInject.Dirac(-0.128), :vx => CMInject.Normal(0, 0.1), :vy => CMInject.Dirac(10.0), :m => CMInject.Dirac(2))
     stateDists = Dict(:J => CMInject.DiscreteUniform(2,5), :M => CMInject.DiscreteUniform(0,2))
-    # TODO: These are not appropriate properties for the current particle
-    properties = Dict(:B => 1, :D => 2, :μ => 3)
-    source = CMInject.StarkSamplingSource{CMInject.StarkParticle2D{Float64}, Float64}(dists, stateDists, properties)
+    source = CMInject.StarkSamplingSource{CMInject.StarkParticle2D{Float64}, Float64}(dists, stateDists, "../cmistark/OCS.molecule")
 
     @test CMInject.generate(source, 1) != nothing
 
