@@ -34,7 +34,7 @@ function store_trajectories!(file::HDF5.File, solution)
     #        HDF5 to accept our structs instead of converting to a NamedTuple...
     #        I've seen this said to be working on some GitHub issue comment for HDF5.jl, but I just got random floats
     #        when I tried passing an array of structs rather than one of NamedTuples :/
-    trajs = (map(sol_ -> NamedTuple.(sol_.u), sol))
+    trajs = (map(sol -> NamedTuple.(sol.u), solution))
     times = [[(t=t_,) for t_ in solution[i].t] for i ∈ 1:length(solution)]
     # Concatenate them together as one matrix that will be stored
     # TODO: in the future we'll need to play around with variable lengths, or put each trajectory

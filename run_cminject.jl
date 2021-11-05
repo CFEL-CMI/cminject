@@ -4,13 +4,6 @@ using Distributions
 using Plots
 using DifferentialEquations
 
-#=
-plotly()
-sol, detector_hits = CMInject.ensemble_solve(100)
-#plot = CMInject.plot_solution(sol, detector_hits; vars=(:x, :z, :vz))
-display(plot)
-=#
-
 
 # Wrap the Distribution in a new struct, so we won't accidentally come in conflict with some other
 # implementation of ArgParse.parse_item(::Type{Distribution}, x::AbstractString)
@@ -18,7 +11,21 @@ struct ArgParseDistribution{Dist<:Distribution}
     dist::Dist
 end
 
-function parse_distribution(x::AbstractString) where Dist<:Distribution
+"""
+    parse_distribution(x::AbstractString)
+
+Parses a `Distribution` from an `AbstractString` and returns it.
+Calls `error` if parsing is unsuccessful. Currently supports the following:
+
+    - "G[0.0,1.0]"  -- a Gaussian/Normal distribution with μ=0.0, σ=1.0
+    - "-0.1285"     -- a Dirac distribution always sampling to `-0.1285`
+
+Spaces within the expressions are not permitted.
+
+!!! note
+    All returned continuous (and Dirac) distributions use Float64 values.
+"""
+function parse_distribution(x::AbstractString)
     if !isletter(x[1])
         # Probably a number, try to parse it as one, then return a Dirac distribution
         num = parse(Float64, x)
@@ -43,13 +50,25 @@ function parse_distribution(x::AbstractString) where Dist<:Distribution
     end
 end
 
-# Shorthand for extracting the contained Distribution from an ArgParseDistribution
-_d(x::ArgParseDistribution) = x.dist
+"""
+    _d(x::ArgParseDistribution{Dist})::Dist = x.dist
+
+Shorthand for extracting the contained Distribution from an ArgParseDistribution
+"""
+function _d(x::ArgParseDistribution{Dist})::Dist where {Dist<:Distribution}
+    x.dist
+end
 
 function ArgParse.parse_item(::Type{ADist}, x::AbstractString) where ADist<:ArgParseDistribution
     return ArgParseDistribution(parse_distribution(x))
 end
 
+"""
+    run_argparse(args)
+
+Defines an ArgParseSettings for this script and runs it on the input argument args.
+For parsing from the command-line, pass the global variable ARGS.
+"""
 function run_argparse(args)
     s = ArgParseSettings()
     @add_arg_table! s begin
@@ -117,17 +136,26 @@ function run_argparse(args)
             help = "The dynamic viscosity of the flow-field"
             default = 1.76e-5  # N2 (nitrogen) at/around room temp
         "--plot"
-            help = "Add this option to plot 100 of the simulated particles and detector hits"
+            help = "Add this option to plot 100 simulated trajectories and detector hits"
             action = :store_true
     end
     return parse_args(args, s)
 end
 
+"""
+    main()
+
+Declares and simulates an `Experiment` with a single `StokesFlowField`
+and `SphericalParticle2D{Float64}` particles, parameterized by the
+command-line arguments (`ARGS`).
+
+Returns a tuple `(solution, detectors, particles, theplot)`.
+`theplot` may be `nothing` if `--plot` was not passed via ARGS.
+"""
 function main()
     args = run_argparse(ARGS)
 
     field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
-
     dists = (
         x  = _d(args["x"]),  z = _d(args["z"]),
         vx = _d(args["x"]), vz = _d(args["vz"]),
@@ -144,17 +172,25 @@ function main()
         time_span=Tuple(args["t"]), time_step=args["dt"],
         solver=EulerHeun(), ensemble_alg=EnsembleThreads()
     )
-    solution, hits, particles = simulate(experiment)
+    solution, detectors, particles = simulate(experiment)
+    theplot = nothing
 
     if args["plot"]
-        plotly()
-        display(plot_results(solution, hits))
+        gr()
+        display(plot_results(solution, detectors))
+
+        # required so the plot doesn't immediately close... there may be better ways.
+        print("Press ENTER to exit.")
+        readline()
     end
 
     if !isnothing(args["o"])
         store = HDF5ResultStorage{ParticleType}(args["o"])
-        store_results!(store, solution, hits, particles; store_trajectories=args["T"])
+        store_results!(store, solution, detectors, particles; store_trajectories=args["T"])
     end
+
+    return solution, detectors, particles, theplot
 end
 
-main()
+# this puts the four result variables into the global namespace when running interactively
+solution, detectors, particles, theplot = main()

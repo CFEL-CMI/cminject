@@ -1,5 +1,8 @@
 #!/bin/bash
+set -e
+
 tmpout="tmpout.h5"
+rm -f "$tmpout"
 
 julia -t 2 --project=@. --startup-file=no --trace-compile=precompile_statements.jl ../run_cminject.jl \
     -f ../data/nitrogen_1.8mbar_extended_nan.h5 -n 100\
@@ -9,7 +12,7 @@ julia -t 2 --project=@. --startup-file=no --trace-compile=precompile_statements.
 
 julia --project=@. --startup-file=no -e '
 using PackageCompiler;
-create_sysimage([:ArgParse, :Plots, :CMInject];
+create_sysimage([:ArgParse, :Plots, :DifferentialEquations, :Random, :GR, :PlotlyBase, :CMInject];
     sysimage_path="CMInject.so",
     precompile_statements_file=["precompile_statements.jl"])
 '
