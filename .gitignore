@@ -3,5 +3,6 @@
 *.jl.mem
 /Manifest.toml
 /docs/build/
+/_depot/
 tags
 *.swp
