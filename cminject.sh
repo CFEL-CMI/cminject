@@ -18,6 +18,6 @@ fi
 # then start an interactive Julia session with the sysimage, using $CORES threads and declaring
 # this script's directory as the project
 julia -t "$CORES"\
-    -J"$SYSIMAGE$ --sysimage-native-code yes\
-    --project="$SCRIPTPATH" "$SCRIPTPATH/run_cminject.jl"\
+    -J"$SYSIMAGE" --sysimage-native-code yes\
+    --project="$SCRIPTPATH" "$SCRIPTPATH/cminject.jl"\
     $@
