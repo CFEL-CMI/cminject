@@ -151,7 +151,7 @@ function main()
         display(plot_results(solution, hits))
     end
 
-    if !isempty(args["o"])
+    if !isnothing(args["o"])
         store = HDF5ResultStorage{ParticleType}(args["o"])
         store_results!(store, solution, hits, particles; store_trajectories=args["T"])
     end
