@@ -19,5 +19,5 @@ fi
 # this script's directory as the project
 julia -t "$CORES"\
     -J"$SYSIMAGE" --sysimage-native-code yes\
-    --project="$SCRIPTPATH" "$SCRIPTPATH/run_cminject.jl"\
+    --project="$SCRIPTPATH" "$SCRIPTPATH/cminject.jl"\
     $@
