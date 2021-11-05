@@ -56,12 +56,14 @@ end
 
 function store_hits!(file::HDF5.File, detector_hits)
     for (i, detector) in enumerate(detector_hits)
-        hits = NamedTuple.(detector)
-        dtype = get_hdf5_datatype(eltype(hits))
-        hits_dset = create_dataset(
-            file, "detectors/$(i)", dtype, dataspace(hits)
-        )
-        write_dataset(hits_dset, dtype, hits)
+        if !isempty(detector)
+            hits = NamedTuple.(detector)
+            dtype = get_hdf5_datatype(eltype(hits))
+            hits_dset = create_dataset(
+                file, "detectors/$(i)", dtype, dataspace(hits)
+            )
+            write_dataset(hits_dset, dtype, hits)
+        end
     end
 
     nothing

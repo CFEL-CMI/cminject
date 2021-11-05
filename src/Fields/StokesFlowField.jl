@@ -2,6 +2,7 @@
 import PhysicalConstants.CODATA2018: k_B
 const kB = k_B.val
 
+
 struct StokesFlowField{T,ITP<:AbstractInterpolation} <: Field
     interpolator::ITP
     T::T
@@ -14,9 +15,6 @@ function StokesFlowField(path::AbstractString, t::T, mᶠ::T, μ::T) where {T}
 end
 Base.show(io::IO, f::StokesFlowField) = print(io, "StokesFlowField(T=$(f.T),mᶠ=$(f.mᶠ),μ=$(f.μ))")
 
-const example_flow_field_file = joinpath(@__DIR__, "../../data/nitrogen_1.8mbar_extended_nan.h5")
-const example_itp = hdf5_to_interpolator(example_flow_field_file)
-const example_field = StokesFlowField(example_itp, 293.15, 4.27e-26, 1.76e-5)
 
 function stokes_vars(particle, field)
     rₚ, mₚ = particle.r, mass(particle)
@@ -33,10 +31,12 @@ function stokes_vars(particle, field)
     return isnan(p), a₀, Δvˣ, Δvᶻ, Cc
 end
 
+
 function acceleration(particle, field::StokesFlowField, time)
     invalid, a₀, Δvˣ, Δvᶻ, _ = stokes_vars(particle, field)
     invalid ? (vx=NaN, vz=NaN) : (vx = a₀ * Δvˣ, vz = a₀ * Δvᶻ)
 end
+
 
 function noise(particle, field::StokesFlowField, time)
     invalid, _, _, _, Cc = stokes_vars(particle, field)

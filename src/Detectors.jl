@@ -1,25 +1,36 @@
 using DifferentialEquations
 
+"""
+Abstract supertype for all particle detectors in CMInject.
+
+Subtypes `MyDetector <: AbstractDetector` should implement:
+
+- `add_hits!(hits::AbstractVector{E}, trajectory::AbstractVector{E}), detector::MyDetector)`
+"""
 abstract type AbstractDetector
 end
 
-#= struct Hits{HitT,VecT<:AbstractVector{HitT}}
-    __vec::VecT
+"""
+    add_hits!(hits, trajectory, detector)
+
+Appends all hits that a single `trajectory` generates on a `detector` to `hits`. Modifies `hits` in-place, and
+returns nothing. If no hits are detected, this function should be a no-op.
+"""
+function add_hits!(hits, trajectory, detector)
+    error(
+        "Missing implementation of add_hits!(hits::$(typeof(hits)), " *
+        "trajectory::$(typeof(trajectory)), detector::$(typeof(detector)))"
+    )
 end
 
-struct DetectorHits{HitsT,VecT<:AbstractVector{HitsT}}
-    __vec::VecT
-end
+"""
+    calculate_hits(solution::EnsembleSolution, detector)
 
-function Base.getindex(hits::Hits{HitT,VecT}, idx) where {HitT,VecT<:AbstractVector{HitT}}
-    [getindex(hit, idx) for hit in hits.__vec]
-end
-function Base.getindex(detector_hits::DetectorHits{HitsT,VecT}, idx) where {HitsT,VecT<:AbstractVector{HitsT}}
-    [getindex(hits, idx) for hits in detector_hits.__vec]
-end =#
-
-
+Returns a vector of all hits on `detector` for all trajectories in a `solution::EnsembleSolution`.
+Uses `add_hits!` internally to achieve this.
+"""
 function calculate_hits(
+    # oh boy - is there a better (and still "API-stable") way to pull out the Eltype?!
     solution::EnsembleSolution{A,B,Vector{RODESolution{C,D,Vector{Eltype},E,F,G,H,I,J,K,L}}},
     detector::Det
 ) where {Det<:AbstractDetector,Eltype,A,B,C,D,E,F,G,H,I,J,K,L}
@@ -32,6 +43,21 @@ function calculate_hits(
 end
 
 
+"""
+    SectionDetector{T,Dim}(at, once)
+
+A detector that intersects the phase-space with the hyperplane where `pos[Dim]`==`at` (where `pos` is a position in
+this phase-space). `T` specifies the type of `Dim` in the phase-space, and `Dim` should typically be a Symbol (or Int).
+If `once` is `true`, only the first hit of each particle is detected, and all subsequent hits of the same particle
+are ignored.
+
+# Examples
+
+    `SectionDetector{Float64,:z}(0.01, true)`
+
+The above line defines a detector at z=0.01, which detects all particles that cross the plane at that z position.
+Because `true` was passed for the `once` parameter, only each particle's first hit will be registered.
+"""
 struct SectionDetector{T,Dim} <: AbstractDetector
     at::T
     once::Bool

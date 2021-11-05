@@ -1,7 +1,23 @@
 """
-The abstract particle type all particle types should derive from.
+Abstract supertype for all particle types in CMInject.
 
-TODO document required methods to implement
+Subtypes `MyParticle <: AbstractParticle` should have (at least) two fields:
+
+- `_u`: The phase-space position, a *named* structure (LabelledArray / NamedTuple / struct /...)
+- `_p`: A *named* structure containing all particle properties
+
+Subtypes should also implement the following methods:
+
+- mass(particle::MyParticle)
+- associated_u_type(::Type{MyParticle})
+- associated_props_type(::Type{MyParticle})
+- associated_particle_type(::Type{PropsType}),
+  where `PropsType` is the type of the `_p` field and
+  `associated_particle_type(associated_props_type(MyParticle)) == MyParticle` must be ensured
+- transfer_velocities!(du, particle::MyParticle)
+
+A comparatively convenient way to define new particle types is using the [`@declare_particle`](@ref) macro: it
+will define all of the above fields and methods automatically based on a declarative syntax.
 """
 abstract type AbstractParticle end
 
@@ -54,11 +70,11 @@ end
 Returns the property `s` of the particle `particle`, where `s` may be part of the phase-space properties or the
 particle properties. This implementation allows you to write code like
 
-    `particle.x * particle.T`
+    particle.x * particle.TSubtypes `MyField <: Field` should implement:
 
 rather than
 
-    `particle._u.x * particle._p.T`
+    particle._u.x * particle._p.T
 """
 Base.@propagate_inbounds function Base.getproperty(particle::AbstractParticle, s::Symbol)
     get_at(particle,Val(s))
@@ -99,7 +115,15 @@ writing each current velocity (e.g., `particle.vx`) to the differential of each 
 """
 transfer_velocities!(du, particle::AbstractParticle) = nothing
 
-# TODO docstring
+
+"""
+    accelerate!(du, acc)
+
+A generated function that applies the acceleration `acc` returned from a field to the differential `du`, in an
+efficient way that specializes on the types of `acc` and `du`.
+
+Unless you change the internals of how CMInject simulations are run, you most likely won't need to call this method.
+"""
 @generated function accelerate!(du, acc)
     # Why is this written the way it is?
     #
@@ -149,7 +173,7 @@ end
 
 Calculates the mass of the particle. The default implementation returns
 
-    `particle.ρ * (4/3)particle.r^3 * π`
+    particle.ρ * (4/3)particle.r^3 * π
 
 and may be overridden for a concrete particle type via multiple dispatch.
 """
@@ -160,14 +184,19 @@ end
 
 ## @declare_particle macro definition
 
+# A pseudo-macro to be used within @declare_particle
+# We may want to do more metaprogramming in the future, so keep it a macro
 macro phase_space(type, names)
     type, names
 end
 
+# A pseudo-macro to be used within @declare_particle
+# We may want to do more metaprogramming in the future, so keep it a macro
 macro velocities(mapping)
     mapping
 end
 
+# Finds a macro-call with a particular name within an Expr
 function _find_macrocall(args, macro_name)
     idx = findfirst(
         (expr) -> typeof(expr) == Expr && expr.head == :macrocall && expr.args[1] == Symbol(macro_name),
@@ -176,14 +205,9 @@ function _find_macrocall(args, macro_name)
     isnothing(idx) ? nothing : args[idx]
 end
 
-"""
-    extract_typename(expr)
-
-Extracts only the typevar name from a type declaration expression,
-e.g., when called on :(A <: AbstractArray), will return just the symbol :A.
-
-When called with a Symbol as `expr`, will return exactly that symbol (no-op).
-"""
+# Extracts only the typevar name from a type declaration expression,
+# e.g., when called on :(A <: AbstractArray), will return just the symbol :A.
+# When called with a Symbol as `expr`, will return exactly that symbol (no-op).
 function _extract_typename(expr::Expr)
     if expr.head == :<:
         expr.args[1]
@@ -195,6 +219,26 @@ _extract_typename(expr::Symbol) = expr
 
 
 # TODO require some additional constraints about field names, e.g. forbid :t (reserved for time, relevant for storing)
+"""
+A macro to conveniently define a new particle struct and let all required methods for a particle type be written
+automatically for you.
+
+# Example
+
+    @declare_particle struct MyParticle
+        @phase_space Float64 (:x, :y, :z, :vx, :vy, :vz)
+        @velocities (:x => :vx, :y => :vy, :z => :vz)
+        r::Float64
+        ρ::Float64
+        T::Float64
+    end
+
+Here, `@phase_space Float64 (:x, :y, ...)` declares that the phase-space position of this particle type consists of
+the named components `x`, `y` and so on, and that these components have the type `Float64`.
+`@velocities (:x => :vx, ...)` declares that `vx` is the velocity for `x`, and so on.
+The declarations for `r`, `ρ` and `T` are just as you would write in a regular struct, and will all become part
+of the particle properties.
+"""
 macro declare_particle(expr::Expr)
     # TODO perhaps force all type vars to be unique through gensym, so we won't get clashes with fieldnames
     # (expected example for error: T as fieldname for temperature, but also as the main type variable {T})
@@ -243,7 +287,7 @@ macro declare_particle(expr::Expr)
     # TODO: move the esc inwards as much as possible, ensuring macro hygiene
     esc(quote
         # Declare the phase-space type
-        $phase_typename{$phase_typevar} = @CMInject.SLVector $phase_typevar $phase_fieldnames_tuple
+        $phase_typename{$phase_typevar} = CMInject.@SLVector $phase_typevar $phase_fieldnames_tuple
 
         # Declare the props type (as a mutable struct)
         mutable struct $props_typename{$(typeargs...)}
@@ -251,7 +295,7 @@ macro declare_particle(expr::Expr)
         end
 
         # Declare the particle type
-        struct $particle_typename{$(typeargs...)} <: CMInject.AbstractParticle
+        struct $particle_typename{$(typeargs...)} <: CMInject.AbstractParticle  # TODO allow a custom supertype!
             _u::$phase_type  # TODO carry over type variables from outer-level declaration!!
             _p::$props_type
 

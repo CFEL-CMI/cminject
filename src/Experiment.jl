@@ -41,8 +41,8 @@ end
 """
     f!(du, u, params, t)
 
-The deterministic part of an SDEProblem, as a generated function which
-specializes on a particular particle type and collection of fields.
+The deterministic part of an SDEProblem, as a generated function which specializes on a particular particle type
+and collection of fields.  Sums together the results from `acceleration(particle, field, t)` calls for all fields.
 """
 @generated function f!(du, u, params, t)
     # TODO this isn't so nice, we need to pass an initial p twice:
@@ -70,8 +70,8 @@ end
 """
     g!(du, u, params, t)
 
-The stochastic part of an SDEProblem, as a generated function which
-specializes on a particular particle type and collection of fields.
+The stochastic part of an SDEProblem, as a generated function which specializes on a particular particle type
+and collection of fields. Sums together the results from `noise(particle, field, t)` calls for all fields.
 
 !!! note "Support of noise types"
     Currently only supports diagonal additive noise, and will sum
@@ -95,9 +95,12 @@ end
 """
     always_false(args...)
 
-Ignores its arguments and always returns false. Useful when a function returning a boolean value is expected and
-you always want to return false. CMInject currently uses it to pass as an `unstable_check` as we are currently
-doing NaN-based handling.
+Ignores its arguments and always returns false. Useful when some function (possibly with arguments) returning a boolean
+value is expected and you always want to return false. CMInject currently uses it to pass as an `unstable_check`, as we
+are doing NaN-based handling for now.
+
+!!! todo
+    This should change in the future when Boundaries are added to CMInject.jl.
 """
 @inline function always_false(args...)
     false
@@ -133,7 +136,12 @@ end
 """
     simulate(exp::Experiment)
 
-Simulates an `Experiment`, returning a tuple of `(trajectories, detector_hits)`.
+Simulates an `Experiment`, returning a tuple of `(solution, detector_hits, particles)`:
+
+- `solution` is a `EnsembleSolution` from `DifferentialEquations.jl`
+- `detector_hits` is a vector of vectors, with the outer dimension indexing the detectors, and the inner dimension
+  indexing the hits. The elements of each inner vector have the phase-space type of the simulated particle type.
+- `particles` is a vector of particle instances of the simulated type, all having their initially generated values.
 """
 function simulate(exp::Experiment)
     u0, params, particles, prob_func = make_initial_values(exp.source, exp.fields, exp.n_particles)
