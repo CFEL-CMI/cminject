@@ -2,8 +2,13 @@ using CMInject
 using Test
 
 @testset "Stark Simulation" begin
-    itp = CMInject.interpolate([2^2+2^2 1^2+2^2 0^2+2^2 1^2+2^2 2^2+2^2; 2^2+1^2 1^2+1^2 0^2+1^2 1^2+1^2 2^2+1^2; 2^2+0^2 1^2+0^2 0^2+0^2 1^2+0^2 2^2+0^2; 2^2+1^2 1^2+1^2 0^2+1^2 1^2+1^2 2^2+1^2; 2^2+2^2 1^2+2^2 0^2+2^2 1^2+2^2 2^2+2^2], CMInject.BSpline(CMInject.Quadratic(CMInject.Natural(CMInject.OnGrid()))))
-    itpScaled = CMInject.itpscale(itp, -2:1:2, -2:1:2)
+    fieldLines=readlines("example_field")
+    initial = [parse(Float64, token) for token ∈ split(fieldLines[1], " ") if length(token) > 0]
+    stepSizes = [parse(Float64, token) for token ∈ split(fieldLines[2], " ") if length(token) > 0]
+    counts = [parse(Int, token) for token ∈ split(fieldLines[3], " ") if length(token) > 0]
+    grid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for y = 0:(counts[2]-1), x = 0:(counts[1]-1)]
+    itp = CMInject.interpolate(grid, CMInject.BSpline(CMInject.Quadratic(CMInject.Natural(CMInject.OnGrid()))))
+    itpScaled = CMInject.itpscale(itp, initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]), initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]))
     dists = Dict(:x => CMInject.Normal(0, 1e-3), :y => CMInject.Dirac(-0.128), :vx => CMInject.Normal(0, 0.1), :vy => CMInject.Dirac(10.0), :m => CMInject.Dirac(2))
     stateDists = Dict(:J => CMInject.DiscreteUniform(2,5), :M => CMInject.DiscreteUniform(0,2))
     source = CMInject.StarkSamplingSource{CMInject.StarkParticle2D{Float64}, Float64}(dists, stateDists, "../cmistark/OCS.molecule")
