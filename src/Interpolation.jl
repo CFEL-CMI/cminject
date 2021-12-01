@@ -119,6 +119,8 @@ function interpolateStarkCurve(filename::AbstractString;
     end
     itp = interpolate(energies, BSpline(Quadratic(Natural(OnGrid()))))
     # TODO: It's not nice that this requires the data to be uniformly spaced
-    scaledItp = itpscale(itp, fields[1]:(fields[2]-fields[1]):fields[end])
+    scaledItp = itpscale(itp, fields[1]:
+                         fields[2]-fields[1]:
+                         fields[end])
     extrapolate(scaledItp, NaN)
 end
