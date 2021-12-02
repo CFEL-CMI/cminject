@@ -17,6 +17,7 @@ using Formatting
     gradCounts = [parse(Int, token) for token ∈ split(gradFieldLines[3], " ") if length(token) > 0]
     gradGrid = [gradFieldLines[4 + y + x * gradCounts[2]] for y = 0:(gradCounts[2]-1), x = 0:(gradCounts[1]-1)]
 
+    # TODO: Find an appropriate distribution
     dists = Dict(:x => CMInject.Normal(0, 1e-3), :y => CMInject.Dirac(-0.128), :vx => CMInject.Normal(0, 0.1), :vy => CMInject.Dirac(10.0), :m => CMInject.Dirac(2))
     stateDists = Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUniform(0,0))
     sourcePyrrole = CMInject.StarkSamplingSource{CMInject.StarkParticle2D{Float64}, Float64}(
@@ -31,23 +32,25 @@ using Formatting
     experimentPyrrole = CMInject.Experiment(;source=sourcePyrrole,
                                             n_particles=10,
                                             fields=(field,),
+                                            # TODO: This detector setup only makes sense if the detectors
+                                            # detect the Y-position too -> validate!
                                             detectors=Tuple(CMInject.SectionDetector{Float64,:y}.(
-                                                             -0.003:0.001:0.003,
+                                                             -0.002:0.0001:0.0012,
                                                              true)),
                                             solver=CMInject.EulerHeun(),
-                                            time_span=(0.0, 0.03),
-                                            time_step=1e-5,
+                                            time_span=(0.0, 0.1),
+                                            time_step=1e-6,
                                             ensemble_alg=CMInject.EnsembleThreads())
     experimentPyrroleWater = CMInject.Experiment(;source=sourcePyrroleWater,
-                                                 n_particles=10,
-                                                 fields=(field,),
-                                                 detectors=Tuple(CMInject.SectionDetector{Float64,:y}.(
-                                                                  -0.003:0.001:0.003,
-                                                                  true)),
-                                                 solver=CMInject.EulerHeun(),
-                                                 time_span=(0.0, 0.03),
-                                                 time_step=1e-5,
-                                                 ensemble_alg=CMInject.EnsembleThreads())
+                                            n_particles=10,
+                                            fields=(field,),
+                                            detectors=Tuple(CMInject.SectionDetector{Float64,:y}.(
+                                                             -0.002:0.0001:0.0012,
+                                                             true)),
+                                            solver=CMInject.EulerHeun(),
+                                            time_span=(0.0, 0.1),
+                                            time_step=1e-6,
+                                            ensemble_alg=CMInject.EnsembleThreads())
     simResPyrrole = CMInject.simulate(experimentPyrrole)
     simResPyrroleWater = CMInject.simulate(experimentPyrroleWater)
     dataPyrrole = simResPyrrole[2]
