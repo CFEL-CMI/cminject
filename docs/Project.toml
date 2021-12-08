@@ -1,0 +1,3 @@
+[deps]
+CMInject = "d64b6d3e-625c-4905-85c2-695248535433"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
