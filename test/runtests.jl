@@ -9,7 +9,8 @@ using Formatting
     counts = [parse(Int, token) for token ∈ split(fieldLines[3], " ") if length(token) > 0]
     grid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for y = 0:(counts[2]-1), x = 0:(counts[1]-1)]
     itp = CMInject.interpolate(grid, CMInject.BSpline(CMInject.Linear()))
-    itpScaled = CMInject.itpscale(itp, initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]), initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]))
+    ext = CMInject.extrapolate(itp, 0)
+    itpScaled = CMInject.itpscale(ext, initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]), initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]))
 
     gradFieldLines=readlines("test/example_gradient")
     gradInitial = [parse(Float64, token) for token ∈ split(gradFieldLines[1], " ") if length(token) > 0]
