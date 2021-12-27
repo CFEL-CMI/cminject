@@ -6,7 +6,8 @@
     ext = CMInject.extrapolate(itp, 0)
     itpScaled = CMInject.itpscale(ext, 0:1:1, -0.5:1:0.5)
 
-    dists = Dict(:x => CMInject.Dirac(0), :y => CMInject.Dirac(0), :vx => CMInject.Dirac(1), :vy => CMInject.Dirac(0), :m => CMInject.Dirac(1e-9))
+    # TODO: Normal distribution of velocities and initial positions
+    dists = Dict(:x => CMInject.Dirac(0), :y => CMInject.Dirac(0), :vx => CMInject.Dirac(1), :vy => CMInject.Dirac(0), :m => CMInject.Dirac((4*12+7*1.0078+14.003+15.995)/9.223e18)
     stateDists = Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUniform(0,0))
     sourcePyrroleWater = CMInject.StarkSamplingSource{CMInject.StarkParticle2D{Float64}, Float64}(
                                      dists, stateDists, "test/pyrrole-water.molecule")
