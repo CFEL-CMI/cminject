@@ -1,9 +1,15 @@
 @testset "Fly Stark Simulation" begin
-    # TODO: Read and shift field
-    grid = [1e7 2e7; 1e7 2e7]
+    fieldLines=readlines("test/example_field")
+    initial = [parse(Float64, token) for token ∈ split(fieldLines[1], " ") if length(token) > 0]
+    initial[2] += 0.367
+    stepSizes = [parse(Float64, token) for token ∈ split(fieldLines[2], " ") if length(token) > 0]
+    counts = [parse(Int, token) for token ∈ split(fieldLines[3], " ") if length(token) > 0]
+    grid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for y = 0:(counts[2]-1), x = 0:(counts[1]-1)]
     itp = CMInject.interpolate(grid, CMInject.BSpline(CMInject.Linear()))
     ext = CMInject.extrapolate(itp, 0)
-    itpScaled = CMInject.itpscale(ext, 0:1:1, -0.5:1:0.5)
+    # TODO: Scale field properly
+    itpScaled = CMInject.itpscale(ext, initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]), initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]))
+    # TODO: Read & use gradient
 
     dists = Dict(:x => CMInject.Normal(0, 0.0001*0.0001),
                  :y => CMInject.Dirac(0),
