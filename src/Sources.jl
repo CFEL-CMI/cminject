@@ -44,6 +44,6 @@ function getStarkCurves(source::StarkSamplingSource{PT}, n::I) where {PT, I<:Int
     [starkCurves[sample] for sample ∈ stateSamples]
 end
 
-function getSamples(dists::Dict{Symbol, Samp}, n::I) where {Symbol, Samp, I<:Integer}
+function getSamples(dists::Union{Dict{Symbol, Samp}, NamedTuple}, n::I) where {Symbol, Samp, I<:Integer}
     samples = [NamedTuple((sym, rand(dists[sym])) for sym in keys(dists)) for i=1:n]
 end
