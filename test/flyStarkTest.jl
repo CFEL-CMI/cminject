@@ -1,3 +1,5 @@
+using Plots
+histogramData = [[], []]
 # TODO: Reduce duplicates resulting from Pyrrole AND Pyrrole Water
 @testset "Fly Stark Simulation" begin
     # TODO: There are contradictoray information for these values
@@ -47,7 +49,7 @@
     @test CMInject.generate(sourcePyrroleWater, 1) != nothing
 
     field = CMInject.ElectricField2D(itpScaled)
-    particles = 100
+    particles = 10000
     @inline function detectHits(args...)
         x = args[2].x
         y = args[2].y
@@ -118,6 +120,7 @@
                 finalCountPyrroleWater += 1
                 averageDeflectionPyrroleWater += u.x
                 print(u.x, ", ", u.y, "\n")
+                push!(histogramData[1], u.x)
                 break
             end
         end
@@ -134,6 +137,9 @@
                 finalCountPyrrole += 1
                 averageDeflectionPyrrole += u.x
                 print(u.x, ", ", u.y, "\n")
+                if (size(histogramData[2]) < size(histogramData[1]))
+                    push!(histogramData[2], u.x)
+                end
                 break
             end
         end
@@ -141,4 +147,6 @@
     averageDeflectionPyrrole /= finalCountPyrrole;
     print("-> average deflection: ", averageDeflectionPyrrole, ", total: ", finalCountPyrrole, "\n");
 end
+plot(histogramData[2], seriestype=:histogram, nbins=10, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][2])
+plot!(histogramData[1], seriestype=:histogram, nbins=10, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][1])
 
