@@ -20,7 +20,7 @@ histogramData = [[], []]
     initial[2] += 0.367
     stepSizes = [parse(Float64, token) for token ∈ split(fieldLines[2], " ") if length(token) > 0]
     counts = [parse(Int, token) for token ∈ split(fieldLines[3], " ") if length(token) > 0]
-    grid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for y = 0:(counts[2]-1), x = 0:(counts[1]-1)]
+    grid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for y = (counts[2]-1):-1:0, x = 0:(counts[1]-1)]
     itp = CMInject.interpolate(grid, CMInject.BSpline(CMInject.Linear()))
     ext = CMInject.extrapolate(itp, 0)
     itpScaled = CMInject.itpscale(ext, initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
@@ -53,26 +53,30 @@ histogramData = [[], []]
     @inline function detectHits(args...)
         x = args[2].x
         y = args[2].y
-        # TODO: Don't ignore deflector hits
         if (y ≥ skimmer1Y-0.01 && y ≤ skimmer1Y &&
             abs(x) ≥ skimmer1R)
             print("HIT skimmer 1\n")
-            return true;
+            return true
         end
         if (y ≥ skimmer2Y-0.01 && y ≤ skimmer2Y &&
             abs(x) ≥ skimmer2R)
             print("HIT skimmer 2\n")
-            return true;
+            return true
         end
         if (y ≥ skimmer3Y-0.01 && y ≤ skimmer3Y &&
             abs(x) ≥ skimmer3R)
             print("HIT skimmer 3\n")
-            return true;
+            return true
         end
         if (y ≥ knifeY-0.01 && y ≤ knifeY &&
-            x ≥ knifeX)
+            x ≤ knifeX)
             print("HIT knife\n")
-            return true;
+            return true
+        end
+        if (y ≥ initial[2]+deflectorY && y ≤ initial[2]+deflectorY+(counts[2]-1)*stepSizes[2] &&
+            (x ≤ initial[1] || x ≥ initial[1]+(counts[1]-1)*stepSizes[1]))
+            print("HIT deflector\n")
+            return true
         end
         false
     end
