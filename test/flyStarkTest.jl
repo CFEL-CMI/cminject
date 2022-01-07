@@ -15,6 +15,8 @@ skimmer2R = 0.0015
 skimmer3R = 0.0015
 destination = skimmer3Z + 0.176
 
+# FIELD START
+
 fieldLines=readlines("test/example_field")
 initial = [parse(Float64, token) for token ∈ split(fieldLines[1], " ") if length(token) > 0]
 stepSizes = [parse(Float64, token) for token ∈ split(fieldLines[2], " ") if length(token) > 0]
@@ -25,12 +27,49 @@ stepSizes[3] = stepSizes[2]
 counts[3] = (deflectorEndZ - deflectorZ) / stepSizes[3] + 1
 
 grid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for x = 0:(counts[1]-1), y = (counts[2]-1):-1:0, z = 0:(counts[3]-1)]
-    print("Grid is: ", size(grid), "\n")
-    itp = CMInject.interpolate(grid, CMInject.BSpline(CMInject.Linear()))
-    ext = CMInject.extrapolate(itp, 0)
-    itpScaled = CMInject.itpscale(ext, initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
-                                  initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]),
-                                  initial[3]:stepSizes[3]:deflectorEndZ)
+print("Grid is: ", size(grid), "\n")
+itp = CMInject.interpolate(grid, CMInject.BSpline(CMInject.Linear()))
+ext = CMInject.extrapolate(itp, 0)
+itpScaled = CMInject.itpscale(ext, initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
+                              initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]),
+                              initial[3]:stepSizes[3]:deflectorEndZ)
+
+# FIELD END
+
+# GRADIENT START
+
+gradFieldLines=readlines("test/example_gradient")
+gradInitial = [parse(Float64, token) for token ∈ split(gradFieldLines[1], " ") if length(token) > 0]
+gradStepSizes = [parse(Float64, token) for token ∈ split(gradFieldLines[2], " ") if length(token) > 0]
+gradCounts = [parse(Int, token) for token ∈ split(gradFieldLines[3], " ") if length(token) > 0]
+
+gradInitial[3] = deflectorZ
+gradStepSizes[3] = stepSizes[2]
+gradCounts[3] = (deflectorEndZ - deflectorZ) / stepSizes[3] + 1
+
+gradGrid = [gradFieldLines[4 + y + x * gradCounts[2]] for x = 0:(gradCounts[1]-1), y = (gradCounts[2]-1):-1:0, z = 0:(gradCounts[3]-1)]
+
+# GRADIENT END
+
+xi = 0
+for x ∈ initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1])
+    yi = 0
+    global xi += 1
+    if (xi > 10)
+        break
+    end
+    for y ∈ initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2])
+        yi += 1
+        if (yi > 10)
+            break
+        end
+        # TODO: Why is there such a huge difference? Somethings wrong...
+        print("Calculated gradient at (", x, ", ", y, "): ", CMInject.gradient(itpScaled, x,y,initial[3]+0.01),
+              "; given gradient at (", xi, ", ", yi, "): ", gradGrid[xi,yi,2], "\n")
+    end
+end
+print("Done printing\n")
+readline()
 
 @testset "Fly Stark Simulation" begin
     # TODO: Check if calculated gradient is much different to given one
