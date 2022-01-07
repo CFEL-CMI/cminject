@@ -1,7 +1,7 @@
 using Plots
 histogramData = [[], []]
 # TODO: Reduce duplicates resulting from Pyrrole AND Pyrrole Water
-#
+
 # TODO: There are contradictoray information for these values
 skimmer1Z = 0.065
 skimmer2Z = 0.302
@@ -29,9 +29,8 @@ grid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for x = 0:(counts[1]-1
     itp = CMInject.interpolate(grid, CMInject.BSpline(CMInject.Linear()))
     ext = CMInject.extrapolate(itp, 0)
     itpScaled = CMInject.itpscale(ext, initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
-                                  (initial[2]+deflectorZ):stepSizes[2]:(initial[2]+deflectorZ+(counts[2]-1)*stepSizes[2]),
+                                  initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]),
                                   initial[3]:stepSizes[3]:deflectorEndZ)
-print("Field at the center is: ", itpScaled(0.001, 0.002, deflectorZ + deflectorEndZ / 2), "\n")
 
 @testset "Fly Stark Simulation" begin
     # TODO: Check if calculated gradient is much different to given one
@@ -63,7 +62,7 @@ print("Field at the center is: ", itpScaled(0.001, 0.002, deflectorZ + deflector
     @test CMInject.generate(sourcePyrroleWater, 1) != nothing
 
     field = CMInject.ElectricField(itpScaled)
-    particles = 10
+    particles = 10000
     @inline function detectHits(args...)
         x = args[2].x
         y = args[2].y
@@ -93,6 +92,7 @@ print("Field at the center is: ", itpScaled(0.001, 0.002, deflectorZ + deflector
              y ≤ initial[2] || y ≥ initial[2]+(counts[2]-1)*stepSizes[2]))
             # TODO: Why is the deflector never hit?
             print("HIT deflector\n")
+            readline()
             return true
         end
         false
@@ -190,5 +190,3 @@ print("Field at the center is: ", itpScaled(0.001, 0.002, deflectorZ + deflector
 end
 plot(histogramData[2], seriestype=:histogram, nbins=10, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][2])
 plot!(histogramData[1], seriestype=:histogram, nbins=10, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][1])
-plot(-0.004:0.0001:0.004, [itpScaled(x, 0.001, deflectorZ + deflectorEndZ / 2) for x ∈ -0.004:0.0001:0.004])
-
