@@ -9,7 +9,7 @@ not merely the values at the grid points are available.
 """
 struct ElectricField2D{ITP<:AbstractInterpolation} <: Field
     norm::ITP
-    gradients::Union{Tuple{ITP,ITP}, Nothing}
+    gradients::Union{Some{Tuple{ITP,ITP}}, Nothing}
 end
 function ElectricField2D(itp::ITP, gradients::Tuple{ITP,ITP}) where ITP
     ElectricField2D{ITP}(itp, Some(gradients))
@@ -28,7 +28,7 @@ not merely the values at the grid points are available.
 """
 struct ElectricField{ITP<:AbstractInterpolation} <: Field
     norm::ITP
-    gradients::Union{Tuple{ITP,ITP,ITP}, Nothing}
+    gradients::Union{Some{Tuple{ITP,ITP,ITP}}, Nothing}
 end
 function ElectricField(itp::ITP, gradients::Tuple{ITP,ITP,ITP}) where ITP
     ElectricField{ITP}(itp, Some(gradients))
@@ -64,6 +64,6 @@ function getEnergyGradient(field, starkCurve, r)::AbstractArray
     if (field.gradients == nothing)
         gradient(starkCurve, field.norm(r...)) .* gradient(field.norm, r...)
     else
-        gradient(starkCurve, field.norm(r...)) .* (@. field.gradients.value(r...))
+        gradient(starkCurve, field.norm(r...)) .* [gradient(r...) for gradient ∈ field.gradients.value]
     end
 end

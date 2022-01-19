@@ -51,9 +51,9 @@ gradGrid = [[map(x->parse(Float64, x), split(gradFieldLines[4 + y + x * gradCoun
              for x = 0:(gradCounts[1]-1), y = (gradCounts[2]-1):-1:0, z = 0:(gradCounts[3]-1)] for i = 1:3]
 gradItps = @. CMInject.interpolate(gradGrid, CMInject.BSpline(CMInject.Linear()))
 gradExts = @. CMInject.extrapolate(gradItps, 0)
-gradItpScaleds = [CMInject.itpscale(gradExts[i], initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
+gradItpScaleds = tuple([CMInject.itpscale(gradExts[i], initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
                               initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]),
-                              initial[3]:stepSizes[3]:deflectorEndZ) for i = 1:3]
+                              initial[3]:stepSizes[3]:deflectorEndZ) for i = 1:3]...)
 
 
 # GRADIENT END
