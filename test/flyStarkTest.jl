@@ -26,9 +26,9 @@ initial[3] = deflectorZ
 stepSizes[3] = stepSizes[2]
 counts[3] = (deflectorEndZ - deflectorZ) / stepSizes[3] + 1
 
-grid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for x = 0:(counts[1]-1), y = (counts[2]-1):-1:0, z = 0:(counts[3]-1)]
-print("Grid is: ", size(grid), "\n")
-itp = CMInject.interpolate(grid, CMInject.BSpline(CMInject.Linear()))
+myGrid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for x = 0:(counts[1]-1), y = (counts[2]-1):-1:0, z = 0:(counts[3]-1)]
+print("Grid is: ", size(myGrid), "\n")
+itp = CMInject.interpolate(myGrid, CMInject.BSpline(CMInject.Linear()))
 ext = CMInject.extrapolate(itp, 0)
 itpScaled = CMInject.itpscale(ext, initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
                               initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]),
@@ -47,29 +47,16 @@ gradInitial[3] = deflectorZ
 gradStepSizes[3] = stepSizes[2]
 gradCounts[3] = (deflectorEndZ - deflectorZ) / stepSizes[3] + 1
 
-gradGrid = [gradFieldLines[4 + y + x * gradCounts[2]] for x = 0:(gradCounts[1]-1), y = (gradCounts[2]-1):-1:0, z = 0:(gradCounts[3]-1)]
+gradGrid = [[map(x->parse(Float64, x), split(gradFieldLines[4 + y + x * gradCounts[2]], " ", keepempty=false))[i]
+             for x = 0:(gradCounts[1]-1), y = (gradCounts[2]-1):-1:0, z = 0:(gradCounts[3]-1)] for i = 1:3]
+gradItps = @. CMInject.interpolate(gradGrid, CMInject.BSpline(CMInject.Linear()))
+gradExts = @. CMInject.extrapolate(gradItps, 0)
+gradItpScaleds = [CMInject.itpscale(gradExts[i], initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
+                              initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]),
+                              initial[3]:stepSizes[3]:deflectorEndZ) for i = 1:3]
+
 
 # GRADIENT END
-
-xi = 0
-for x ∈ initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1])
-    yi = 0
-    global xi += 1
-    if (xi > 10)
-        break
-    end
-    for y ∈ initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2])
-        yi += 1
-        if (yi > 10)
-            break
-        end
-        # TODO: Why is there such a huge difference? Somethings wrong...
-        print("Calculated gradient at (", x, ", ", y, "): ", CMInject.gradient(itpScaled, x,y,initial[3]+0.01),
-              "; given gradient at (", xi, ", ", yi, "): ", gradGrid[xi,yi,2], "\n")
-    end
-end
-print("Done printing\n")
-readline()
 
 @testset "Fly Stark Simulation" begin
     # TODO: Check if calculated gradient is much different to given one
@@ -100,8 +87,8 @@ readline()
 
     @test CMInject.generate(sourcePyrroleWater, 1) != nothing
 
-    field = CMInject.ElectricField(itpScaled)
-    particles = 10000
+    field = CMInject.ElectricField(itpScaled, gradItpScaleds)
+    particles = 10#000
     @inline function detectHits(args...)
         x = args[2].x
         y = args[2].y
@@ -229,3 +216,6 @@ readline()
 end
 plot(histogramData[2], seriestype=:histogram, nbins=10, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][2])
 plot!(histogramData[1], seriestype=:histogram, nbins=10, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][1])
+
+plot(1:81, [[myGrid[41, y, 1] for y ∈ 1:81] [itp(41, y, 1) for y ∈ 1:81] [CMInject.gradient(itp, 41, y, 1)[2] for y ∈ 1:81] [gradGrid[41, y, 1][2] for y ∈ 1:81]], label = ["raw norm" "interpolated norm" "calculated gradient" "given gradient" "transposed gradient"])
+
