@@ -23,15 +23,16 @@ stepSizes = [parse(Float64, token) for token ∈ split(fieldLines[2], " ") if le
 counts = [parse(Int, token) for token ∈ split(fieldLines[3], " ") if length(token) > 0]
 
 initial[3] = deflectorZ
-stepSizes[3] = stepSizes[2]
-counts[3] = (deflectorEndZ - deflectorZ) / stepSizes[3] + 1
+stepSizes[3] = deflectorEndZ - deflectorZ
+counts[3] = 2
 
-myGrid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for x = 0:(counts[1]-1), y = (counts[2]-1):-1:0, z = 0:(counts[3]-1)]
+myGrid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for y = (counts[2]-1):-1:0, x = (counts[1]-1):-1:0, z = 0:(counts[3]-1)]
 print("Grid is: ", size(myGrid), "\n")
 itp = CMInject.interpolate(myGrid, CMInject.BSpline(CMInject.Linear()))
 ext = CMInject.extrapolate(itp, 0)
-itpScaled = CMInject.itpscale(ext, initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
+itpScaled = CMInject.itpscale(ext, 
                               initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]),
+                              initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
                               initial[3]:stepSizes[3]:deflectorEndZ)
 
 # FIELD END
@@ -44,15 +45,20 @@ gradStepSizes = [parse(Float64, token) for token ∈ split(gradFieldLines[2], " 
 gradCounts = [parse(Int, token) for token ∈ split(gradFieldLines[3], " ") if length(token) > 0]
 
 gradInitial[3] = deflectorZ
-gradStepSizes[3] = stepSizes[2]
-gradCounts[3] = (deflectorEndZ - deflectorZ) / stepSizes[3] + 1
+gradStepSizes[3] = deflectorEndZ - deflectorZ
+gradCounts[3] = 2
 
 gradGrid = [[map(x->parse(Float64, x), split(gradFieldLines[4 + y + x * gradCounts[2]], " ", keepempty=false))[i]
-             for x = 0:(gradCounts[1]-1), y = (gradCounts[2]-1):-1:0, z = 0:(gradCounts[3]-1)] for i = 1:3]
+             for y = (gradCounts[2]-1):-1:0, x = (gradCounts[1]-1):-1:0, z = 0:(gradCounts[3]-1)] for i = 1:3]
+# x and y are wrong :/
+tmp = gradGrid[1]
+gradGrid[1] = gradGrid[2]
+gradGrid[2] = (-1) .* tmp
 gradItps = @. CMInject.interpolate(gradGrid, CMInject.BSpline(CMInject.Linear()))
 gradExts = @. CMInject.extrapolate(gradItps, 0)
-gradItpScaleds = tuple([CMInject.itpscale(gradExts[i], initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
+gradItpScaleds = tuple([CMInject.itpscale(gradExts[i], 
                               initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]),
+                              initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
                               initial[3]:stepSizes[3]:deflectorEndZ) for i = 1:3]...)
 
 
@@ -88,7 +94,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i], initial[1]:stepSizes[1]:(
     @test CMInject.generate(sourcePyrroleWater, 1) != nothing
 
     field = CMInject.ElectricField(itpScaled, gradItpScaleds)
-    particles = 10#000
+    particles = 10000
     @inline function detectHits(args...)
         x = args[2].x
         y = args[2].y
@@ -116,9 +122,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i], initial[1]:stepSizes[1]:(
         if (z ≥ deflectorZ && z ≤ deflectorEndZ &&
             (x ≤ initial[1] || x ≥ initial[1]+(counts[1]-1)*stepSizes[1] ||
              y ≤ initial[2] || y ≥ initial[2]+(counts[2]-1)*stepSizes[2]))
-            # TODO: Why is the deflector never hit?
             print("HIT deflector\n")
-            readline()
             return true
         end
         false
@@ -216,6 +220,4 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i], initial[1]:stepSizes[1]:(
 end
 plot(histogramData[2], seriestype=:histogram, nbins=10, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][2])
 plot!(histogramData[1], seriestype=:histogram, nbins=10, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][1])
-
-plot(1:81, [[myGrid[41, y, 1] for y ∈ 1:81] [itp(41, y, 1) for y ∈ 1:81] [CMInject.gradient(itp, 41, y, 1)[2] for y ∈ 1:81] [gradGrid[41, y, 1][2] for y ∈ 1:81]], label = ["raw norm" "interpolated norm" "calculated gradient" "given gradient" "transposed gradient"])
 
