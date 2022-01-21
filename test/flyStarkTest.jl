@@ -68,20 +68,20 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
     # TODO: Check if calculated gradient is much different to given one
     # TODO: Read & use given gradient
 
-    distsPyrrole = Dict(:x => CMInject.Normal(0, 0.0001*0.0001),
-                        :y => CMInject.Normal(0, 0.0001*0.0001),
+    distsPyrrole = Dict(:x => CMInject.Normal(0, 0.0001),
+                        :y => CMInject.Normal(0, 0.0001),
                         :z => CMInject.Dirac(0),
-                        :vx => CMInject.Normal(0, 1.5*1.5),
-                        :vy => CMInject.Normal(0, 1.5*1.5),
-                        :vz => CMInject.Normal(670, 7*7),
+                        :vx => CMInject.Normal(0, 1.5),
+                        :vy => CMInject.Normal(0, 1.5),
+                        :vz => CMInject.Normal(670, 7),
                         # C4H5N
                         :m => CMInject.Dirac((4*12+5*1.0078+14.003)/9.223e18))
-    distsPyrroleWater = Dict(:x => CMInject.Normal(0, 0.0001*0.0001),
-                             :y => CMInject.Normal(0, 0.0001*0.0001),
+    distsPyrroleWater = Dict(:x => CMInject.Normal(0, 0.0001),
+                             :y => CMInject.Normal(0, 0.0001),
                              :z => CMInject.Dirac(0),
-                             :vx => CMInject.Normal(0, 1.5*1.5),
-                             :vy => CMInject.Normal(0, 1.5*1.5),
-                             :vz => CMInject.Normal(670, 7*7),
+                             :vx => CMInject.Normal(0, 1.5),
+                             :vy => CMInject.Normal(0, 1.5),
+                             :vz => CMInject.Normal(670, 7),
                              # C4H7NO
                              :m => CMInject.Dirac((4*12+7*1.0078+14.003+15.995)/9.223e18))
     # TODO: Allow different states
