@@ -149,11 +149,11 @@ function simulate(exp::Experiment)
     ens_prob = EnsembleProblem(prob, prob_func=prob_func, safetycopy=false)
 
     solution = solve(
-        ens_prob, exp.solver, exp.ensemble_alg;
-        trajectories=exp.n_particles,
-        dt=exp.time_step,
-        exp.solver_opts...
-    )
+                     ens_prob, exp.solver, exp.ensemble_alg;
+                     trajectories=exp.n_particles,
+                     dt=exp.time_step,
+                     exp.solver_opts...
+                    )
     hits = [calculate_hits(solution, detector) for detector in exp.detectors]
     return solution, hits, particles
 end

@@ -100,9 +100,9 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
     field = CMInject.ElectricField(itpScaled, gradItpScaleds)
     particles = 10000
     @inline function detectHits(args...)
-        x = args[2].x
-        y = args[2].y
-        z = args[2].z
+        x = args[1].x
+        y = args[1].y
+        z = args[1].z
         if (z ≥ skimmer1Z-0.01 && z ≤ skimmer1Z &&
             sqrt(x*x + y*y) ≥ skimmer1R)
             print("HIT skimmer 1\n")
@@ -118,9 +118,8 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
             print("HIT skimmer 3\n")
             return true
         end
-        # TODO: Re-enable knife
         if (z ≥ knifeZ-0.01 && z ≤ knifeZ &&
-            y ≤ knifeY && false)
+            y ≤ knifeY)
             print("HIT knife\n")
             return true
         end
@@ -133,10 +132,8 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
         false
     end
     solverOpts=(adaptive=false,
-                 dense=false,
-                 # TODO: Use better hit detection -> ContinuousCallback
-                 unstable_check=detectHits,
-                 verbose=false)
+                dense=false,
+                callback=CMInject.DiscreteCallback(detectHits, integrator -> CMInject.terminate!(integrator)))
     experimentPyrroleWater = CMInject.Experiment(;source=sourcePyrroleWater,
                                             n_particles=particles,
                                             fields=(field,),
@@ -228,6 +225,6 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
     print("-> average knife pyrrole: ", averageKnifePyrrole, "\n")
     print("-> average deflection: ", averageDeflectionPyrrole, ", total: ", finalCountPyrrole, "\n");
 end
-plot(histogramData[2], seriestype=:histogram, nbins=10, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][2])
-plot!(histogramData[1], seriestype=:histogram, nbins=10, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][1])
+plot(histogramData[2], seriestype=:histogram, nbins=20, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][2])
+plot!(histogramData[1], seriestype=:histogram, nbins=20, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][1])
 
