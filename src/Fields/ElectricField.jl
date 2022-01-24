@@ -40,7 +40,7 @@ Base.show(io::IO, f::ElectricField) = print(io, "ElectricField")
 
 function acceleration(particle, field::ElectricField2D, time)
     r = [particle.x, particle.y]
-    force = getEnergyGradient(field, particle.starkCurve, r)
+    force = -getEnergyGradient(field, particle.starkCurve, r)
     acceleration = force/mass(particle)
     (vx = acceleration[1], vy = acceleration[2])
 end
@@ -48,7 +48,7 @@ end
 function acceleration(particle, field::ElectricField, time)
     # TODO: Do something such that the number of dimensions is not pre-determined
     r = [particle.x, particle.y, particle.z]
-    force = getEnergyGradient(field, particle.starkCurve, r)
+    force = -getEnergyGradient(field, particle.starkCurve, r)
     acceleration = force/mass(particle)
     (vx = acceleration[1], vy = acceleration[2], vz = acceleration[3])
 end
@@ -64,6 +64,7 @@ function getEnergyGradient(field, starkCurve, r)::AbstractArray
     if (field.gradients == nothing)
         gradient(starkCurve, field.norm(r...)) .* gradient(field.norm, r...)
     else
+        gradients = [gradient(r...) for gradient ∈ field.gradients.value]
         gradient(starkCurve, field.norm(r...)) .* [gradient(r...) for gradient ∈ field.gradients.value]
     end
 end

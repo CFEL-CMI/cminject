@@ -30,6 +30,6 @@
     @test dataPyrroleWater != nothing
 
     for i in 1:particles
-        @test abs(last(dataPyrroleWater[i].u).y + 6.653e-14) < 0.01e-14
+        @test abs(last(dataPyrroleWater[i].u).y - 6.653e-14) < 0.01e-14
     end
 end

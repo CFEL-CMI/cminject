@@ -26,7 +26,10 @@ initial[3] = deflectorZ
 stepSizes[3] = deflectorEndZ - deflectorZ
 counts[3] = 2
 
-myGrid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) for y = (counts[2]-1):-1:0, x = (counts[1]-1):-1:0, z = 0:(counts[3]-1)]
+myGrid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) *
+          # The field was stored with 60kV instead of 14kV
+          14.0 / 60.0
+          for y = (counts[2]-1):-1:0, x = (counts[1]-1):-1:0, z = 0:(counts[3]-1)]
 print("Grid is: ", size(myGrid), "\n")
 itp = CMInject.interpolate(myGrid, CMInject.BSpline(CMInject.Linear()))
 ext = CMInject.extrapolate(itp, 0)
@@ -48,7 +51,10 @@ gradInitial[3] = deflectorZ
 gradStepSizes[3] = deflectorEndZ - deflectorZ
 gradCounts[3] = 2
 
-gradGrid = [[map(x->parse(Float64, x), split(gradFieldLines[4 + y + x * gradCounts[2]], " ", keepempty=false))[i]
+gradGrid = [[map(x->parse(Float64, x) * 
+                 # The field was stored with 60kV instead of 14kV
+                 14.0 / 60.0,
+                 split(gradFieldLines[4 + y + x * gradCounts[2]], " ", keepempty=false))[i]
              for y = (gradCounts[2]-1):-1:0, x = (gradCounts[1]-1):-1:0, z = 0:(gradCounts[3]-1)] for i = 1:3]
 # x and y are wrong :/
 tmp = gradGrid[1]
@@ -65,23 +71,22 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
 # GRADIENT END
 
 @testset "Fly Stark Simulation" begin
-    # TODO: Check if calculated gradient is much different to given one
-    # TODO: Read & use given gradient
 
-    distsPyrrole = Dict(:x => CMInject.Normal(0, 0.0001),
-                        :y => CMInject.Normal(0, 0.0001),
+    # TODO: Re-enable deviation
+    distsPyrrole = Dict(:x => CMInject.Normal(0, 0*0.0001),
+                        :y => CMInject.Normal(0, 0*0.0001),
                         :z => CMInject.Dirac(0),
-                        :vx => CMInject.Normal(0, 1.5),
-                        :vy => CMInject.Normal(0, 1.5),
-                        :vz => CMInject.Normal(670, 7),
+                        :vx => CMInject.Normal(0, 0*1.5),
+                        :vy => CMInject.Normal(0, 0*1.5),
+                        :vz => CMInject.Normal(670, 0*7),
                         # C4H5N
                         :m => CMInject.Dirac((4*12+5*1.0078+14.003)/9.223e18))
-    distsPyrroleWater = Dict(:x => CMInject.Normal(0, 0.0001),
-                             :y => CMInject.Normal(0, 0.0001),
+    distsPyrroleWater = Dict(:x => CMInject.Normal(0, 0*0.0001),
+                             :y => CMInject.Normal(0, 0*0.0001),
                              :z => CMInject.Dirac(0),
-                             :vx => CMInject.Normal(0, 1.5),
-                             :vy => CMInject.Normal(0, 1.5),
-                             :vz => CMInject.Normal(670, 7),
+                             :vx => CMInject.Normal(0, 0*1.5),
+                             :vy => CMInject.Normal(0, 0*1.5),
+                             :vz => CMInject.Normal(670, 0*7),
                              # C4H7NO
                              :m => CMInject.Dirac((4*12+7*1.0078+14.003+15.995)/9.223e18))
     # TODO: Allow different states
@@ -115,7 +120,8 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
             return true
         end
         if (z ≥ knifeZ-0.01 && z ≤ knifeZ &&
-            y ≤ knifeY)
+            # TODO: Re-enable knife
+            y ≤ knifeY && false)
             print("HIT knife\n")
             return true
         end
@@ -127,6 +133,11 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
         end
         false
     end
+    solverOpts=(adaptive=false,
+                 dense=false,
+                 # TODO: Use better hit detection -> ContinuousCallback
+                 unstable_check=detectHits,
+                 verbose=false)
     experimentPyrroleWater = CMInject.Experiment(;source=sourcePyrroleWater,
                                             n_particles=particles,
                                             fields=(field,),
@@ -140,7 +151,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
                                             time_span=(0.0, 2e-3),
                                             time_step=1e-6,
                                             ensemble_alg=CMInject.EnsembleThreads(),
-                                            solver_opts=(adaptive=false, dense=false, unstable_check=detectHits))
+                                            solver_opts=solverOpts)
     experimentPyrrole = CMInject.Experiment(;source=sourcePyrrole,
                                             n_particles=particles,
                                             fields=(field,),
@@ -151,7 +162,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
                                             time_span=(0.0, 2e-3),
                                             time_step=1e-6,
                                             ensemble_alg=CMInject.EnsembleThreads(),
-                                            solver_opts=(adaptive=false, dense=false, unstable_check=detectHits))
+                                            solver_opts=solverOpts)
 
     knifeY = 3.188356743548741e-6
     simResPyrroleWater = CMInject.simulate(experimentPyrroleWater)
