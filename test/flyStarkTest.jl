@@ -72,21 +72,20 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
 
 @testset "Fly Stark Simulation" begin
 
-    # TODO: Re-enable deviation
-    distsPyrrole = Dict(:x => CMInject.Normal(0, 0*0.0001),
-                        :y => CMInject.Normal(0, 0*0.0001),
+    distsPyrrole = Dict(:x => CMInject.Normal(0, 0.0001),
+                        :y => CMInject.Normal(0, 0.0001),
                         :z => CMInject.Dirac(0),
-                        :vx => CMInject.Normal(0, 0*1.5),
-                        :vy => CMInject.Normal(0, 0*1.5),
-                        :vz => CMInject.Normal(670, 0*7),
+                        :vx => CMInject.Normal(0, 1.5),
+                        :vy => CMInject.Normal(0, 1.5),
+                        :vz => CMInject.Normal(670, 7),
                         # C4H5N
                         :m => CMInject.Dirac((4*12+5*1.0078+14.003)/9.223e18))
-    distsPyrroleWater = Dict(:x => CMInject.Normal(0, 0*0.0001),
-                             :y => CMInject.Normal(0, 0*0.0001),
+    distsPyrroleWater = Dict(:x => CMInject.Normal(0, 0.0001),
+                             :y => CMInject.Normal(0, 0.0001),
                              :z => CMInject.Dirac(0),
-                             :vx => CMInject.Normal(0, 0*1.5),
-                             :vy => CMInject.Normal(0, 0*1.5),
-                             :vz => CMInject.Normal(670, 0*7),
+                             :vx => CMInject.Normal(0, 1.5),
+                             :vy => CMInject.Normal(0, 1.5),
+                             :vz => CMInject.Normal(670, 7),
                              # C4H7NO
                              :m => CMInject.Dirac((4*12+7*1.0078+14.003+15.995)/9.223e18))
     # TODO: Allow different states
@@ -119,8 +118,8 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
             print("HIT skimmer 3\n")
             return true
         end
+        # TODO: Re-enable knife
         if (z ≥ knifeZ-0.01 && z ≤ knifeZ &&
-            # TODO: Re-enable knife
             y ≤ knifeY && false)
             print("HIT knife\n")
             return true
@@ -164,9 +163,9 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
                                             ensemble_alg=CMInject.EnsembleThreads(),
                                             solver_opts=solverOpts)
 
-    knifeY = 3.188356743548741e-6
+    knifeY = 0#3.188356743548741e-6
     simResPyrroleWater = CMInject.simulate(experimentPyrroleWater)
-    knifeY = 1.5357245757532834e-6
+    knifeY = 0#1.5357245757532834e-6
     simResPyrrole = CMInject.simulate(experimentPyrrole)
     dataPyrroleWater = simResPyrroleWater[1]
     dataPyrrole = simResPyrrole[1]
