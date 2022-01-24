@@ -72,6 +72,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
 
 @testset "Fly Stark Simulation" begin
 
+    u = 1.66053906660e-27
     distsPyrrole = Dict(:x => CMInject.Normal(0, 0.0001),
                         :y => CMInject.Normal(0, 0.0001),
                         :z => CMInject.Dirac(0),
@@ -79,7 +80,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
                         :vy => CMInject.Normal(0, 1.5),
                         :vz => CMInject.Normal(670, 7),
                         # C4H5N
-                        :m => CMInject.Dirac((4*12+5*1.0078+14.003)/9.223e18))
+                        :m => CMInject.Dirac((4*12+5*1.0078+14.003)*u))
     distsPyrroleWater = Dict(:x => CMInject.Normal(0, 0.0001),
                              :y => CMInject.Normal(0, 0.0001),
                              :z => CMInject.Dirac(0),
@@ -87,7 +88,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
                              :vy => CMInject.Normal(0, 1.5),
                              :vz => CMInject.Normal(670, 7),
                              # C4H7NO
-                             :m => CMInject.Dirac((4*12+7*1.0078+14.003+15.995)/9.223e18))
+                             :m => CMInject.Dirac((4*12+7*1.0078+14.003+15.995)*u))
     # TODO: Allow different states
     stateDists = Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUniform(0,0))
     sourcePyrroleWater = CMInject.StarkSamplingSource{CMInject.StarkParticle{Float64}, Float64}(
@@ -105,28 +106,28 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
         z = args[1].z
         if (z ≥ skimmer1Z-0.01 && z ≤ skimmer1Z &&
             sqrt(x*x + y*y) ≥ skimmer1R)
-            print("HIT skimmer 1\n")
+            #print("HIT skimmer 1\n")
             return true
         end
         if (z ≥ skimmer2Z-0.01 && z ≤ skimmer2Z &&
             sqrt(x*x + y*y) ≥ skimmer2R)
-            print("HIT skimmer 2\n")
+            #print("HIT skimmer 2\n")
             return true
         end
         if (z ≥ skimmer3Z-0.01 && z ≤ skimmer3Z &&
             sqrt(x*x + y*y) ≥ skimmer3R)
-            print("HIT skimmer 3\n")
+            #print("HIT skimmer 3\n")
             return true
         end
         if (z ≥ knifeZ-0.01 && z ≤ knifeZ &&
             y ≤ knifeY)
-            print("HIT knife\n")
+            #print("HIT knife\n")
             return true
         end
         if (z ≥ deflectorZ && z ≤ deflectorEndZ &&
             (x ≤ initial[1] || x ≥ initial[1]+(counts[1]-1)*stepSizes[1] ||
              y ≤ initial[2] || y ≥ initial[2]+(counts[2]-1)*stepSizes[2]))
-            print("HIT deflector\n")
+            #print("HIT deflector\n")
             return true
         end
         false
@@ -225,6 +226,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
     print("-> average knife pyrrole: ", averageKnifePyrrole, "\n")
     print("-> average deflection: ", averageDeflectionPyrrole, ", total: ", finalCountPyrrole, "\n");
 end
-plot(histogramData[2], seriestype=:histogram, nbins=20, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][2])
-plot!(histogramData[1], seriestype=:histogram, nbins=20, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][1])
+range=-0.01:0.0001:0.01
+plot(histogramData[2], seriestype=:histogram, bins=range, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][2])
+plot!(histogramData[1], seriestype=:histogram, bins=range, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][1])
 
