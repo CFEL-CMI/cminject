@@ -44,9 +44,7 @@ end
 function _grid_points_to_range(grid_points)
 	a = grid_points[1]
 	z = grid_points[end]
-	# try to reduce local numerical errors by taking the mean of all neighbor differences
-	spacing = mean(diff(grid_points))
-	a:spacing:z
+    LinRange(a, z, size(grid_points)[1])
 end
 
 function hdf5_to_interpolator(filename::AbstractString, names=:default)
