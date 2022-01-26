@@ -1,19 +1,25 @@
 using Plots
 histogramData = [[], []]
+trajectories = [[], []]
 # TODO: Reduce duplicates resulting from Pyrrole AND Pyrrole Water
 
-# TODO: There are contradictoray information for these values
-skimmer1Z = 0.065
-skimmer2Z = 0.302
-# This value comes from CMIfly and is not available in the paper
-deflectorZ= 0.437
-deflectorEndZ = skimmer2Z + 0.197
-knifeZ    = deflectorEndZ + 0.015
-skimmer3Z = knifeZ + 0.025
-skimmer1R = 0.003
-skimmer2R = 0.0015
-skimmer3R = 0.0015
-destination = skimmer3Z + 0.176
+original0 = 0.34572
+skimmer1Z     = -0.28072 + original0
+skimmer2Z     = -0.044 + original0
+deflectorZ    = 0 + original0
+# 154mm as Sebastian stated
+deflectorEndZ = 0.154 + original0
+knifeZ        = 0.16528 + original0
+skimmer3Z     = 0.19041 + original0
+destination   = 0.36675 + original0
+skimmer1R     = 0.0015
+skimmer2R     = 0.00075
+skimmer3R     = 0.00075
+
+sigmaPos      = 0.00052
+sigmaVtrans   = 10
+sigmaVlong    = 20
+meanVz        = 1860
 
 # FIELD START
 
@@ -73,20 +79,20 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
 @testset "Fly Stark Simulation" begin
 
     u = 1.66053906660e-27
-    distsPyrrole = Dict(:x => CMInject.Normal(0, 0.0001),
-                        :y => CMInject.Normal(0, 0.0001),
+    distsPyrrole = Dict(:x => CMInject.Normal(0, sigmaPos),
+                        :y => CMInject.Normal(0, sigmaPos),
                         :z => CMInject.Dirac(0),
-                        :vx => CMInject.Normal(0, 1.5),
-                        :vy => CMInject.Normal(0, 1.5),
-                        :vz => CMInject.Normal(670, 7),
+                        :vx => CMInject.Normal(0, sigmaVtrans),
+                        :vy => CMInject.Normal(0, sigmaVtrans),
+                        :vz => CMInject.Normal(meanVz, sigmaVlong),
                         # C4H5N
                         :m => CMInject.Dirac((4*12+5*1.0078+14.003)*u))
-    distsPyrroleWater = Dict(:x => CMInject.Normal(0, 0.0001),
-                             :y => CMInject.Normal(0, 0.0001),
+    distsPyrroleWater = Dict(:x => CMInject.Normal(0, sigmaPos),
+                             :y => CMInject.Normal(0, sigmaPos),
                              :z => CMInject.Dirac(0),
-                             :vx => CMInject.Normal(0, 1.5),
-                             :vy => CMInject.Normal(0, 1.5),
-                             :vz => CMInject.Normal(670, 7),
+                             :vx => CMInject.Normal(0, sigmaVtrans),
+                             :vy => CMInject.Normal(0, sigmaVtrans),
+                             :vz => CMInject.Normal(meanVz, sigmaVlong),
                              # C4H7NO
                              :m => CMInject.Dirac((4*12+7*1.0078+14.003+15.995)*u))
     # TODO: Allow different states
@@ -188,10 +194,10 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
             if (u.z ≥ destination-0.001 && u.z ≤ destination+0.005)
                 finalCountPyrroleWater += 1
                 averageDeflectionPyrroleWater += u.y
-                #print(u.x, ", ", u.y, ", ", u.z, "\n")
                 push!(histogramData[1], u.y)
                 break
             end
+            push!(trajectories[1], (u.z, u.y))
         end
     end
     averageDeflectionPyrroleWater /= finalCountPyrroleWater;
@@ -213,12 +219,10 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
             if (u.z ≥ destination-0.001 && u.z ≤ destination+0.005)
                 finalCountPyrrole += 1
                 averageDeflectionPyrrole += u.y
-                #print(u.x, ", ", u.y, ", ", u.z, "\n")
-                if (size(histogramData[2]) < size(histogramData[1]))
-                    push!(histogramData[2], u.y)
-                end
+                push!(histogramData[2], u.y)
                 break
             end
+            push!(trajectories[2], (u.z, u.y))
         end
     end
     averageDeflectionPyrrole /= finalCountPyrrole;
@@ -227,6 +231,8 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
     print("-> average deflection: ", averageDeflectionPyrrole, ", total: ", finalCountPyrrole, "\n");
 end
 range=-0.01:0.0001:0.01
-plot(histogramData[2], seriestype=:histogram, bins=range, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][2])
-plot!(histogramData[1], seriestype=:histogram, bins=range, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][1])
+plot(histogramData[1], seriestype=:histogram, bins=range, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][1])
+plot!(histogramData[2], seriestype=:histogram, bins=range, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][2])
+#plot([trajectory[1] for trajectory ∈ trajectories[1]], [trajectory[2] for trajectory ∈ trajectories[1]], label = "Pyrrole Water")
+#plot!([trajectory[1] for trajectory ∈ trajectories[2]], [trajectory[2] for trajectory ∈ trajectories[2]], label = "Pyrrole")
 
