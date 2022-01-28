@@ -1,6 +1,6 @@
 using Plots
 histogramData = [[], []]
-trajectories = [[], []]
+trajectories = [[[]], [[]]]
 # TODO: Reduce duplicates resulting from Pyrrole AND Pyrrole Water
 
 original0 = 0.34572
@@ -17,8 +17,11 @@ skimmer2R     = 0.00075
 skimmer3R     = 0.00075
 
 sigmaPos      = 0.00052
+limitPos      = 2e-3
 sigmaVtrans   = 10
+limitVtrans   = 10
 sigmaVlong    = 20
+limitVlong    = 50
 meanVz        = 1860
 
 # FIELD START
@@ -35,7 +38,8 @@ counts[3] = 2
 myGrid = [parse(Float64, fieldLines[4 + y + x * counts[2]]) *
           # The field was stored with 60kV instead of 14kV
           14.0 / 60.0
-          for y = (counts[2]-1):-1:0, x = (counts[1]-1):-1:0, z = 0:(counts[3]-1)]
+          # y (later to be x) is stored in reverse order
+          for y = (counts[2]-1):-1:0, x = 0:(counts[1]-1), z = 0:(counts[3]-1)]
 print("Grid is: ", size(myGrid), "\n")
 itp = CMInject.interpolate(myGrid, CMInject.BSpline(CMInject.Linear()))
 ext = CMInject.extrapolate(itp, 0)
@@ -61,11 +65,13 @@ gradGrid = [[map(x->parse(Float64, x) *
                  # The field was stored with 60kV instead of 14kV
                  14.0 / 60.0,
                  split(gradFieldLines[4 + y + x * gradCounts[2]], " ", keepempty=false))[i]
-             for y = (gradCounts[2]-1):-1:0, x = (gradCounts[1]-1):-1:0, z = 0:(gradCounts[3]-1)] for i = 1:3]
+             # y (later to be x) is stored in reverse order
+             for y = (gradCounts[2]-1):-1:0, x = 0:(gradCounts[1]-1), z = 0:(gradCounts[3]-1)] for i = 1:3]
+# TODO: Validate that I can just mirror (instead of rotate) it
 # x and y are wrong :/
 tmp = gradGrid[1]
 gradGrid[1] = gradGrid[2]
-gradGrid[2] = (-1) .* tmp
+gradGrid[2] = tmp
 gradItps = @. CMInject.interpolate(gradGrid, CMInject.BSpline(CMInject.Linear()))
 gradExts = @. CMInject.extrapolate(gradItps, 0)
 gradItpScaleds = tuple([CMInject.itpscale(gradExts[i], 
@@ -76,23 +82,26 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
 
 # GRADIENT END
 
+print("Initialization done\n")
+
 @testset "Fly Stark Simulation" begin
 
     u = 1.66053906660e-27
-    distsPyrrole = Dict(:x => CMInject.Normal(0, sigmaPos),
-                        :y => CMInject.Normal(0, sigmaPos),
+    truncatedNormal(mean, sigma, limit) = CMInject.Truncated(CMInject.Normal(mean, sigma), mean-limit, mean+limit)
+    distsPyrrole = Dict(:x => truncatedNormal(0, sigmaPos, limitPos),
+                        :y => truncatedNormal(0, sigmaPos, limitPos),
                         :z => CMInject.Dirac(0),
-                        :vx => CMInject.Normal(0, sigmaVtrans),
-                        :vy => CMInject.Normal(0, sigmaVtrans),
-                        :vz => CMInject.Normal(meanVz, sigmaVlong),
+                        :vx => truncatedNormal(0, sigmaVtrans, limitVtrans),
+                        :vy => truncatedNormal(0, sigmaVtrans, limitVtrans),
+                        :vz => truncatedNormal(meanVz, sigmaVlong, limitVlong),
                         # C4H5N
                         :m => CMInject.Dirac((4*12+5*1.0078+14.003)*u))
-    distsPyrroleWater = Dict(:x => CMInject.Normal(0, sigmaPos),
-                             :y => CMInject.Normal(0, sigmaPos),
+    distsPyrroleWater = Dict(:x => truncatedNormal(0, sigmaPos, limitPos),
+                             :y => truncatedNormal(0, sigmaPos, limitPos),
                              :z => CMInject.Dirac(0),
-                             :vx => CMInject.Normal(0, sigmaVtrans),
-                             :vy => CMInject.Normal(0, sigmaVtrans),
-                             :vz => CMInject.Normal(meanVz, sigmaVlong),
+                             :vx => truncatedNormal(0, sigmaVtrans, limitVtrans),
+                             :vy => truncatedNormal(0, sigmaVtrans, limitVtrans),
+                             :vz => truncatedNormal(meanVz, sigmaVlong, limitVlong),
                              # C4H7NO
                              :m => CMInject.Dirac((4*12+7*1.0078+14.003+15.995)*u))
     # TODO: Allow different states
@@ -185,6 +194,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
     averageKnifePyrroleWater = 0
     countKnifePyrroleWater = 0
     for i in 1:particles
+        push!(trajectories[1], [])
         # TODO: Validate results
         for u in dataPyrroleWater[i].u
             if (u.z ≥ knifeZ-0.001 && u.z ≤ knifeZ+0.001)
@@ -197,7 +207,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
                 push!(histogramData[1], u.y)
                 break
             end
-            push!(trajectories[1], (u.z, u.y))
+            push!(trajectories[1][i], (u.z, u.y))
         end
     end
     averageDeflectionPyrroleWater /= finalCountPyrroleWater;
@@ -210,6 +220,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
     averageKnifePyrrole = 0
     countKnifePyrrole = 0
     for i in 1:particles
+        push!(trajectories[2], [])
         # TODO: Validate results
         for u in dataPyrrole[i].u
             if (u.z ≥ knifeZ-0.001 && u.z ≤ knifeZ+0.001)
@@ -222,7 +233,7 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
                 push!(histogramData[2], u.y)
                 break
             end
-            push!(trajectories[2], (u.z, u.y))
+            push!(trajectories[2][i], (u.z, u.y))
         end
     end
     averageDeflectionPyrrole /= finalCountPyrrole;
@@ -230,9 +241,11 @@ gradItpScaleds = tuple([CMInject.itpscale(gradExts[i],
     print("-> average knife pyrrole: ", averageKnifePyrrole, "\n")
     print("-> average deflection: ", averageDeflectionPyrrole, ", total: ", finalCountPyrrole, "\n");
 end
-range=-0.01:0.0001:0.01
+range=-0.002:0.0001:0.002
 plot(histogramData[1], seriestype=:histogram, bins=range, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][1])
 plot!(histogramData[2], seriestype=:histogram, bins=range, fillalpha=0.5, labels=["Pyrrole Water", "Pyrrole"][2])
-#plot([trajectory[1] for trajectory ∈ trajectories[1]], [trajectory[2] for trajectory ∈ trajectories[1]], label = "Pyrrole Water")
-#plot!([trajectory[1] for trajectory ∈ trajectories[2]], [trajectory[2] for trajectory ∈ trajectories[2]], label = "Pyrrole")
+#plot([[pair[1] for pair ∈ trajectory] for trajectory ∈ trajectories[1]], [[pair[2] for pair ∈ trajectory] for trajectory ∈ trajectories[1]], legend=false, title="Pyrrole Water")
+#plot([[pair[1] for pair ∈ trajectory] for trajectory ∈ trajectories[2]], [[pair[2] for pair ∈ trajectory] for trajectory ∈ trajectories[2]], legend=false, title="Pyrrole")
+#plot([trajectory[1] for trajectory ∈ trajectories[1][1]], [trajectory[2] for trajectory ∈ trajectories[1][1]], label = "Pyrrole Water")
+#plot!([trajectory[1] for trajectory ∈ trajectories[2][1]], [trajectory[2] for trajectory ∈ trajectories[2][1]], label = "Pyrrole")
 
