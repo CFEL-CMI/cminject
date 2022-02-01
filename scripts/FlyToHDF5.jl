@@ -12,7 +12,7 @@ using HDF5
 6. scaling factor
 Both input files should be in the format that was used by CMIfly.
 
-Example call: julia --project=. .\scripts\FlyToHDF5.jl .\test\example_field .\test\example_gradient .\test\example_field.h5 0.34572 0.49972 0.23333333333333
+Example call: julia --project=. ./scripts/FlyToHDF5.jl ./test/example_field ./test/example_gradient ./test/example_field.h5 0.34572 0.49972 0.23333333333333
 """
 function main(args)
     expectedArgumentCount = 6
@@ -69,15 +69,23 @@ function getGrids(fieldFile, gradientFile, startZ, endZ, scaling)
     gradGrid = [parseGrid(gradCounts, (x,y,z) ->
                           parse(Float64, split(gradFieldLines[4 + y + x * gradCounts[2]], " ", keepempty=false)[i])
                           * scaling) for i ∈ 1:3]
+
+    function swap(a, i, j)
+        tmp = a[i]
+        a[i] = a[j]
+        a[j] = tmp
+    end
     # Swap x and y
-    tmp = gradGrid[1]
-    gradGrid[1] = gradGrid[2]
-    gradGrid[2] = tmp
-    
+    swap(gradGrid, 1, 2)
+
     if (initial != gradInitial || stepSizes != gradStepSizes)
         error("Norm and gradient bases aren't equal!")
     end
 
+    # Swap x and y for initial and step sizes too
+    swap(initial, 1, 2)
+    swap(stepSizes, 1, 2)
+    
     (normGrid, gradGrid, initial, stepSizes)
 end
 
