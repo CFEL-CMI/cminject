@@ -122,3 +122,48 @@ function interpolateStarkCurve(filename::AbstractString;
                          fields[end])
     extrapolate(scaledItp, NaN)
 end
+
+"""
+    interpolateElectricField(filename)
+
+Interpolates the field specified by the HDF5-file pointed to by `filename`.
+Returns a tuple with the norm and gradient interpolations.
+"""
+function interpolateElectricField(filename)
+    h5open(filename, "r") do object
+        normGrid = read(object["field/norm"])
+        gradGrid = read(object["field/gradient"])
+
+        attribs = attributes(object["metadata"])
+        description = read(attribs["description"])
+        dimension = read(attribs["dimension"])
+        initial = read(attribs["initial"])
+        steps = read(attribs["steps"])
+        counts = size(normGrid)
+
+        if (dimension == 3)
+            gradGrid = [gradGrid[:,:,:,i] for i ∈ 1:dimension]
+        elseif (dimension == 2)
+            gradGrid = [gradGrid[:,:,i] for i ∈ 1:dimension]
+        else
+            error("Dimension $dimension not supported - must be 2 or 3")
+        end
+
+        ############## Common stuff for the norm and the gradient
+        interpolate(grid) = CMInject.extrapolate(CMInject.interpolate(grid, CMInject.BSpline(CMInject.Linear())), 0)
+        scale(itp, initial, stepSizes) = CMInject.itpscale(itp,
+                                                       initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
+                                                       initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]),
+                                                       initial[3]:stepSizes[3]:(initial[3]+(counts[3]-1)*stepSizes[3]))
+
+        ############## Norm field
+        ext = interpolate(normGrid)
+        itpScaled = scale(ext, initial, steps)
+
+        ############## Gradient field
+        gradExts = @. interpolate(gradGrid)
+        gradItpScaleds = tuple([scale(gradExts[i], initial, steps) for i ∈ 1:3]...)
+
+        (itpScaled, gradItpScaleds)
+    end
+end

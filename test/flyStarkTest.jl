@@ -11,6 +11,10 @@ skimmer2Z     = -0.044 + original0
 deflectorZ    = 0 + original0
 # 154mm as Sebastian stated
 deflectorEndZ = 0.154 + original0
+deflectorX = -0.00198571
+deflectorEndX = deflectorX + (140-1) * 2.85714e-5
+deflectorY = -0.00398571
+deflectorEndY = deflectorY + (210-1) * 2.85714e-5
 knifeZ        = 0.16528 + original0
 knifeY = 0
 skimmer3Z     = 0.19041 + original0
@@ -38,59 +42,6 @@ recordedVoltage = 60.0
 paperVoltage = 14.0
 
 particles = 10000
-
-############## Common stuff for the norm and the gradient
-function applyZ(initial, stepSizes, counts)
-    initial[3] = deflectorZ
-    stepSizes[3] = deflectorEndZ - deflectorZ
-    counts[3] = zCount
-end
-getInitial(fieldLines) = [parse(Float64, token) for token ∈ split(fieldLines[1], " ") if length(token) > 0]
-getStepSizes(fieldLines) = [parse(Float64, token) for token ∈ split(fieldLines[2], " ") if length(token) > 0]
-getCounts(fieldLines) = [parse(Int, token) for token ∈ split(fieldLines[3], " ") if length(token) > 0]
-parseGrid(counts, parseFunction) = [parseFunction(x, y, z)
-                                    # y (later to be x) is stored in reverse order
-                                    for y ∈ (counts[2]-1):-1:0, x ∈ 0:(counts[1]-1), z ∈ 0:(counts[3]-1)]
-interpolate(grid) = CMInject.extrapolate(CMInject.interpolate(grid, CMInject.BSpline(CMInject.Linear())), 0)
-scale(itp, initial, stepSizes) = CMInject.itpscale(itp,
-                                                   initial[2]:stepSizes[2]:(initial[2]+(counts[2]-1)*stepSizes[2]),
-                                                   initial[1]:stepSizes[1]:(initial[1]+(counts[1]-1)*stepSizes[1]),
-                                                   initial[3]:stepSizes[3]:deflectorEndZ)
-
-############## Norm field
-
-fieldLines = readlines("test/example_field")
-initial = getInitial(fieldLines)
-stepSizes = getStepSizes(fieldLines)
-counts = getCounts(fieldLines)
-
-applyZ(initial, stepSizes, counts)
-
-myGrid = parseGrid(counts, (x,y,z) -> parse(Float64, fieldLines[4 + y + x * counts[2]]) *
-                   paperVoltage / recordedVoltage)
-ext = interpolate(myGrid)
-itpScaled = scale(ext, initial, stepSizes)
-
-############## Gradient field
-
-gradFieldLines = readlines("test/example_gradient")
-gradInitial = getInitial(gradFieldLines)
-gradStepSizes = getStepSizes(gradFieldLines)
-gradCounts = getCounts(gradFieldLines)
-
-applyZ(gradInitial, gradStepSizes, gradCounts)
-
-gradGrid = [parseGrid(gradCounts, (x,y,z) ->
-                      parse(Float64, split(gradFieldLines[4 + y + x * gradCounts[2]], " ", keepempty=false)[i])
-                      * paperVoltage / recordedVoltage) for i ∈ 1:3]
-# Swap x and y
-tmp = gradGrid[1]
-gradGrid[1] = gradGrid[2]
-gradGrid[2] = tmp
-
-gradExts = @. interpolate(gradGrid)
-gradItpScaleds = tuple([scale(gradExts[i], gradInitial, gradStepSizes) for i ∈ 1:3]...)
-
 ############## Distributions
 truncatedNormal(mean, sigma, limit) = CMInject.Truncated(CMInject.Normal(mean, sigma), mean-limit, mean+limit)
 distsPyrrole = Dict(:x => truncatedNormal(0, sigmaPos, limitPos),
@@ -119,7 +70,7 @@ stateDists = Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUn
 
     @test CMInject.generate(sourcePyrroleWater, 1) != nothing
 
-    field = CMInject.ElectricField(itpScaled, gradItpScaleds)
+    field = CMInject.ElectricField("test/example_field.h5")
     @inline function detectHits(args...)
         x = args[1].x
         y = args[1].y
@@ -139,8 +90,8 @@ stateDists = Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUn
             return true
         end
         if (z ≥ deflectorZ && z ≤ deflectorEndZ &&
-            (x ≤ initial[1] || x ≥ initial[1]+(counts[1]-1)*stepSizes[1] ||
-             y ≤ initial[2] || y ≥ initial[2]+(counts[2]-1)*stepSizes[2]))
+            (x ≤ deflectorX || x ≥ deflectorEndX ||
+             y ≤ deflectorY || y ≥ deflectorEndY))
             return true
         end
         # No need to continue simulation when particle has arrived
