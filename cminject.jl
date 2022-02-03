@@ -75,7 +75,15 @@ function run_argparse(args)
         "-f"
             arg_type = String
             help = "Path of a flow-field HDF5 file"
-            required = true
+            default = ""
+        "-e"
+            arg_type = String
+            help = "Path of an electric-field HDF5 file"
+            default = ""
+        "-s"
+            arg_type = String
+            help = "Path of a Stark-curve HDF5 file"
+            default = ""
         "-n"
             arg_type = Int
             help = "The number of particles to simulate"
@@ -155,13 +163,22 @@ Returns a tuple `(solution, detectors, particles, theplot)`.
 function main()
     args = run_argparse(ARGS)
 
-    field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
+    field = Nothing
+    if (length(args["f"]) != 0 && length(args["e"]) == 0)
+        field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
+        ParticleType = SphericalParticle2D{Float64}
+    elseif (length(args["f"]) == 0 && length(args["e"]) != 0)
+        field = ElectricField(args["f"])
+        ParticleType = StarkParticle{Float64}
+    else
+        error("Exactly one of the arguments of f or e has to be specified -",
+              " no field or multiple fields aren't supported (yet)")
+    end
     dists = (
-        x  = _d(args["x"]),  z = _d(args["z"]),
-        vx = _d(args["x"]), vz = _d(args["vz"]),
-        r  = _d(args["r"]),  ρ = _d(args["rho"])
-    )
-    ParticleType = SphericalParticle2D{Float64}
+             x  = _d(args["x"]),  z = _d(args["z"]),
+             vx = _d(args["x"]), vz = _d(args["vz"]),
+             r  = _d(args["r"]),  ρ = _d(args["rho"])
+            )
     source = SamplingSource{ParticleType}(dists)
 
     experiment = Experiment(;
