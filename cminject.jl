@@ -168,7 +168,7 @@ function main()
         field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
         ParticleType = SphericalParticle2D{Float64}
     elseif (length(args["f"]) == 0 && length(args["e"]) != 0)
-        field = ElectricField(args["f"])
+        field = ElectricField(args["e"])
         ParticleType = StarkParticle{Float64}
     else
         error("Exactly one of the arguments of f or e has to be specified -",
