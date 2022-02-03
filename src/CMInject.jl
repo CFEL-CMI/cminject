@@ -2,6 +2,7 @@ module CMInject
 
 export Experiment, simulate,
     SamplingSource,
+    StarkSamplingSource,
     StokesFlowField,
     ElectricField, ElectricField2D,
     SectionDetector,
