@@ -2,7 +2,7 @@
 set -e
 
 # get the number of *physical* cores to use as the number of threads
-CORES=$(cat /sys/devices/system/cpu/cpu[0-9]*/topology/core_cpus_list | sort -u | wc -l)
+CORES=$(getconf _NPROCESSORS_ONLN)
 echo "Running with $CORES threads."
 
 # get the path of this script, since we want to resolve the sysimage and run_cminject.jl
