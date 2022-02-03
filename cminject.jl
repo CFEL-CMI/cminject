@@ -177,7 +177,7 @@ function main()
         field = ElectricField(args["e"])
         ParticleType = StarkParticle{Float64}
         # TODO: Allow state distribution
-        source = StarkSamplingSource{ParticleType, Float64}(dists, Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUniform(0,0)), args["s"])
+        source = StarkSamplingSource{ParticleType, Float64}(Dict(pairs(dists)), Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUniform(0,0)), args["s"])
 
     else
         error("Exactly one of the arguments of f or e has to be specified -",
