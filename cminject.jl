@@ -164,22 +164,25 @@ function main()
     args = run_argparse(ARGS)
 
     field = Nothing
-    if (length(args["f"]) != 0 && length(args["e"]) == 0)
-        field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
-        ParticleType = SphericalParticle2D{Float64}
-    elseif (length(args["f"]) == 0 && length(args["e"]) != 0)
-        field = ElectricField(args["e"])
-        ParticleType = StarkParticle{Float64}
-    else
-        error("Exactly one of the arguments of f or e has to be specified -",
-              " no field or multiple fields aren't supported (yet)")
-    end
     dists = (
              x  = _d(args["x"]),  z = _d(args["z"]),
              vx = _d(args["x"]), vz = _d(args["vz"]),
              r  = _d(args["r"]),  ρ = _d(args["rho"])
             )
-    source = SamplingSource{ParticleType}(dists)
+    if (length(args["f"]) != 0 && length(args["e"]) == 0)
+        field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
+        ParticleType = SphericalParticle2D{Float64}
+        source = SamplingSource{ParticleType}(dists)
+    elseif (length(args["f"]) == 0 && length(args["e"]) != 0)
+        field = ElectricField(args["e"])
+        ParticleType = StarkParticle{Float64}
+        # TODO: Allow state distribution
+        source = StarkSamplingSource{ParticleType, Float64}(dists, Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUniform(0,0)), args["s"])
+
+    else
+        error("Exactly one of the arguments of f or e has to be specified -",
+              " no field or multiple fields aren't supported (yet)")
+    end
 
     experiment = Experiment(;
         source=source,
