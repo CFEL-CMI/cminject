@@ -203,7 +203,7 @@ function main()
         ParticleType = dimensions == 2 ? StarkParticle2D{Float64} : StarkParticle{Float64}
         # TODO: Allow state distribution
         dictDists = Dict(pairs(dists))
-        dictDists[:m] = dists.ρ * 4.0/3.0 * π * dists.r^3
+        dictDists[:m] = dists.ρ * 4.0/3.0 * π * dists.r * dists.r * dists.r
         source = StarkSamplingSource{ParticleType, Float64}(dictDists, Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUniform(0,0)), args["s"])
 
     else
