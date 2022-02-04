@@ -203,7 +203,10 @@ function main()
         ParticleType = dimensions == 2 ? StarkParticle2D{Float64} : StarkParticle{Float64}
         # TODO: Allow state distribution
         dictDists = Dict(pairs(dists))
+        # TODO: Allow something else then Dirac distributions
         dictDists[:m] = Dirac(dists.ρ.value * 4.0/3.0 * π * dists.r.value^3)
+        delete!(dictDists, :r)
+        delete!(dictDists, :ρ)
         source = StarkSamplingSource{ParticleType, Float64}(dictDists, Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUniform(0,0)), args["s"])
 
     else
