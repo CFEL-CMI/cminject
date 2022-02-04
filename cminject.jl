@@ -176,17 +176,24 @@ function main()
     args = run_argparse(ARGS)
 
     dimensions = args["dn"]
-    if (dimensions != 2 && dimensions != 3)
+    field = Nothing
+    dists = Nothing
+    if (dimensions == 2)
+        dists = (
+                 x  = _d(args["x"]),  z = _d(args["z"]),
+                 vx = _d(args["x"]), vz = _d(args["vz"]),
+                 r  = _d(args["r"]),  ρ = _d(args["rho"]),
+                )
+    elseif (dimensions == 3)
+        dists = (
+                 x  = _d(args["x"]),  z = _d(args["z"]),
+                 vx = _d(args["x"]), vz = _d(args["vz"]),
+                 r  = _d(args["r"]),  ρ = _d(args["rho"]),
+                 y  = _d(args["y"]), vy = _d(args["vy"])
+                )
+    else
         error("Only dimensions of 2 or 3 are supported - got $dimensions")
     end
-    field = Nothing
-    dists = (
-             x  = _d(args["x"]),  z = _d(args["z"]),
-             vx = _d(args["x"]), vz = _d(args["vz"]),
-             r  = _d(args["r"]),  ρ = _d(args["rho"]),
-             # 3D - doesn't matter if unused
-             y  = _d(args["y"]), vy = _d(args["vy"])
-            )
     if (length(args["f"]) != 0 && length(args["e"]) == 0)
         field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
         ParticleType = dimensions == 2 ? SphericalParticle2D{Float64} : SphericalParticle3D{Float64}
