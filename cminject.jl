@@ -99,7 +99,7 @@ function run_argparse(args)
         "--y"
             arg_type = ArgParseDistribution
             help = "y (position) distribution. Only necessary for 3 dimensions"
-            default = ""
+            default = ArgParseDistribution("0")
         "--z"
             arg_type = ArgParseDistribution
             help = "z (position) distribution"
@@ -111,7 +111,7 @@ function run_argparse(args)
         "--vy"
             arg_type = ArgParseDistribution
             help = "vy (velocity) distribution. Only necessary for 3 dimensions"
-            default = ""
+            default = ArgParseDistribution("0")
         "--vz"
             arg_type = ArgParseDistribution
             help = "vz (velocity) distribution"
