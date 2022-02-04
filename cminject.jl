@@ -88,10 +88,18 @@ function run_argparse(args)
             arg_type = Int
             help = "The number of particles to simulate"
             required = true
+        "--dn"
+            arg_type = Int
+            help = "the number of dimensions"
+            default = 2
         "--x"
             arg_type = ArgParseDistribution
             help = "x (position) distribution"
             required = true
+        "--y"
+            arg_type = ArgParseDistribution
+            help = "y (position) distribution. Only necessary for 3 dimensions"
+            default = 0
         "--z"
             arg_type = ArgParseDistribution
             help = "z (position) distribution"
@@ -100,6 +108,10 @@ function run_argparse(args)
             arg_type = ArgParseDistribution
             help = "vx (velocity) distribution"
             required = true
+        "--vy"
+            arg_type = ArgParseDistribution
+            help = "vy (velocity) distribution. Only necessary for 3 dimensions"
+            default = 0
         "--vz"
             arg_type = ArgParseDistribution
             help = "vz (velocity) distribution"
@@ -163,19 +175,25 @@ Returns a tuple `(solution, detectors, particles, theplot)`.
 function main()
     args = run_argparse(ARGS)
 
+    dimensions = args["dn"]
+    if (dimensions != 2 && dimensions != 3)
+        error("Only dimensions of 2 or 3 are supported - got $dimensions")
+    end
     field = Nothing
     dists = (
              x  = _d(args["x"]),  z = _d(args["z"]),
              vx = _d(args["x"]), vz = _d(args["vz"]),
-             r  = _d(args["r"]),  ρ = _d(args["rho"])
+             r  = _d(args["r"]),  ρ = _d(args["rho"]),
+             # 3D - doesn't matter if unused
+             y  = _d(args["y"]), vy = _d(args["vy"])
             )
     if (length(args["f"]) != 0 && length(args["e"]) == 0)
         field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
-        ParticleType = SphericalParticle2D{Float64}
+        ParticleType = dimensions == 2 ? SphericalParticle2D{Float64} : SphericalParticle3D{Float64}
         source = SamplingSource{ParticleType}(dists)
     elseif (length(args["f"]) == 0 && length(args["e"]) != 0)
         field = ElectricField(args["e"])
-        ParticleType = StarkParticle{Float64}
+        ParticleType = dimensions == 2 ? StarkParticle2D{Float64} : StarkParticle{Float64}
         # TODO: Allow state distribution
         source = StarkSamplingSource{ParticleType, Float64}(Dict(pairs(dists)), Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUniform(0,0)), args["s"])
 
