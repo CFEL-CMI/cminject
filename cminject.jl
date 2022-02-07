@@ -18,6 +18,7 @@ Parses a `Distribution` from an `AbstractString` and returns it.
 Calls `error` if parsing is unsuccessful. Currently supports the following:
 
     - "G[0.0,1.0]"  -- a Gaussian/Normal distribution with μ=0.0, σ=1.0
+    - "D[0,2]"      -- a Discrete Uniform distribution from between a=0 and b=2
     - "-0.1285"     -- a Dirac distribution always sampling to `-0.1285`
 
 Spaces within the expressions are not permitted.
@@ -43,6 +44,10 @@ function parse_distribution(x::AbstractString)
             # Gaussian/Normal distribution
             mu, sigma = parse.(Float64, split(args, ','))
             return Normal(mu, sigma)
+        elseif x[1] == 'D'
+            # Discrete uniform distribution
+            a, b = parse.(Int32, split(args, ','))
+            return DiscreteUniform(a, b)
         else
             error("I don't know this distribution type: $(x[1])")
             # TODO implement more distributions with some elseif cases...
@@ -198,6 +203,7 @@ function main()
                  )
     if (dimensions == 3)
         dists = merge(dists, (y = _d(args["y"]), vy = _d(args["vy"])))
+    end
 
     # TODO: Merge those sections by generalizing stuff
     if (length(args["f"]) != 0 && length(args["e"]) == 0)
@@ -213,7 +219,7 @@ function main()
         # STARK effect
         # We use m for the stark effect
 
-        dists = merge(dists, (m = _d(args["m"])))
+        dists = merge(dists, (m = _d(args["m"]),))
         field = ElectricField(args["e"])
         ParticleType = dimensions == 2 ? StarkParticle2D{Float64} : StarkParticle{Float64}
 
