@@ -90,7 +90,7 @@ function run_argparse(args)
             required = true
         "--dn"
             arg_type = Int
-            help = "the number of dimensions"
+            help = "The number of dimensions"
             default = 2
         "--x"
             arg_type = ArgParseDistribution
@@ -119,11 +119,23 @@ function run_argparse(args)
         "--r"
             arg_type = ArgParseDistribution
             help = "Radius distribution"
-            required = true
+            default = ArgParseDistribution(Dirac(0))
         "--rho"
             arg_type = ArgParseDistribution
             help = "Material density distribution"
-            required = true
+            default = ArgParseDistribution(Dirac(0))
+        "--m"
+            arg_type = ArgParseDistribution
+            help = "Mass of the particle. Use this parameter for Stark effect"
+            default = ArgParseDistribution(Dirac(0))
+        "--J"
+            arg_type = ArgParseDistribution
+            help = "The distribution of the J quantum number"
+            default = ArgParseDistribution(CMInject.DiscreteUniform(0,0))
+        "--M"
+            arg_type = ArgParseDistribution
+            help = "The distribution of the M quantum number"
+            default = ArgParseDistribution(CMInject.DiscreteUniform(0,0))
         "-t"
             arg_type = Float64
             help = "The time-span (beginning and end) to simulate for"
@@ -177,37 +189,38 @@ function main()
 
     dimensions = args["dn"]
     field = Nothing
-    dists = Nothing
-    if (dimensions == 2)
-        dists = (
-                 x  = _d(args["x"]),  z = _d(args["z"]),
-                 vx = _d(args["x"]), vz = _d(args["vz"]),
-                 r  = _d(args["r"]),  ρ = _d(args["rho"]),
-                )
-    elseif (dimensions == 3)
-        dists = (
-                 x  = _d(args["x"]),  z = _d(args["z"]),
-                 vx = _d(args["x"]), vz = _d(args["vz"]),
-                 r  = _d(args["r"]),  ρ = _d(args["rho"]),
-                 y  = _d(args["y"]), vy = _d(args["vy"])
-                )
-    else
-        error("Only dimensions of 2 or 3 are supported - got $dimensions")
-    end
+    dists = (
+             x  = _d(args["x"]),  z = _d(args["z"]),
+             vx = _d(args["x"]), vz = _d(args["vz"])
+            )
+    stateDists = (
+                  J = _d(args["J"]), M = _d(args["M"])
+                 )
+    if (dimensions == 3)
+        dists = merge(dists, (y = _d(args["y"]), vy = _d(args["vy"])))
+
+    # TODO: Merge those sections by generalizing stuff
     if (length(args["f"]) != 0 && length(args["e"]) == 0)
+        # FLOW field
+        # Fow now we use r and ρ for the flow field
+        
+        dists = merge(dists, (r = _d(args["r"]), ρ = _d(args["rho"])))
         field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
         ParticleType = dimensions == 2 ? SphericalParticle2D{Float64} : SphericalParticle3D{Float64}
         source = SamplingSource{ParticleType}(dists)
+
     elseif (length(args["f"]) == 0 && length(args["e"]) != 0)
+        # STARK effect
+        # We use m for the stark effect
+
+        dists = merge(dists, (m = _d(args["m"])))
         field = ElectricField(args["e"])
         ParticleType = dimensions == 2 ? StarkParticle2D{Float64} : StarkParticle{Float64}
-        # TODO: Allow state distribution
+
         dictDists = Dict(pairs(dists))
-        # TODO: Allow something else then Dirac distributions
-        dictDists[:m] = Dirac(dists.ρ.value * 4.0/3.0 * π * dists.r.value^3)
-        delete!(dictDists, :r)
-        delete!(dictDists, :ρ)
-        source = StarkSamplingSource{ParticleType, Float64}(dictDists, Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUniform(0,0)), args["s"])
+        dictStateDists = Dict(pairs(stateDists))
+
+        source = StarkSamplingSource{ParticleType, Float64}(dictDists, dictStateDists, args["s"])
 
     else
         error("Exactly one of the arguments of f or e has to be specified -",
