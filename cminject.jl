@@ -18,6 +18,7 @@ Parses a `Distribution` from an `AbstractString` and returns it.
 Calls `error` if parsing is unsuccessful. Currently supports the following:
 
     - "G[0.0,1.0]"  -- a Gaussian/Normal distribution with μ=0.0, σ=1.0
+    - "D[0,2]"      -- a Discrete Uniform distribution from between a=0 and b=2
     - "-0.1285"     -- a Dirac distribution always sampling to `-0.1285`
 
 Spaces within the expressions are not permitted.
@@ -43,6 +44,10 @@ function parse_distribution(x::AbstractString)
             # Gaussian/Normal distribution
             mu, sigma = parse.(Float64, split(args, ','))
             return Normal(mu, sigma)
+        elseif x[1] == 'D'
+            # Discrete uniform distribution
+            a, b = parse.(Int32, split(args, ','))
+            return DiscreteUniform(a, b)
         else
             error("I don't know this distribution type: $(x[1])")
             # TODO implement more distributions with some elseif cases...
@@ -75,15 +80,31 @@ function run_argparse(args)
         "-f"
             arg_type = String
             help = "Path of a flow-field HDF5 file"
-            required = true
+            default = ""
+        "-e"
+            arg_type = String
+            help = "Path of an electric-field HDF5 file"
+            default = ""
+        "-s"
+            arg_type = String
+            help = "Path of a Stark-curve HDF5 file"
+            default = ""
         "-n"
             arg_type = Int
             help = "The number of particles to simulate"
             required = true
+        "--dn"
+            arg_type = Int
+            help = "The number of dimensions"
+            default = 2
         "--x"
             arg_type = ArgParseDistribution
             help = "x (position) distribution"
             required = true
+        "--y"
+            arg_type = ArgParseDistribution
+            help = "y (position) distribution. Only necessary for 3 dimensions"
+            default = ArgParseDistribution(Dirac(0))
         "--z"
             arg_type = ArgParseDistribution
             help = "z (position) distribution"
@@ -92,6 +113,10 @@ function run_argparse(args)
             arg_type = ArgParseDistribution
             help = "vx (velocity) distribution"
             required = true
+        "--vy"
+            arg_type = ArgParseDistribution
+            help = "vy (velocity) distribution. Only necessary for 3 dimensions"
+            default = ArgParseDistribution(Dirac(0))
         "--vz"
             arg_type = ArgParseDistribution
             help = "vz (velocity) distribution"
@@ -99,11 +124,23 @@ function run_argparse(args)
         "--r"
             arg_type = ArgParseDistribution
             help = "Radius distribution"
-            required = true
+            default = ArgParseDistribution(Dirac(0))
         "--rho"
             arg_type = ArgParseDistribution
             help = "Material density distribution"
-            required = true
+            default = ArgParseDistribution(Dirac(0))
+        "--m"
+            arg_type = ArgParseDistribution
+            help = "Mass of the particle. Use this parameter for Stark effect"
+            default = ArgParseDistribution(Dirac(0))
+        "--J"
+            arg_type = ArgParseDistribution
+            help = "The distribution of the J quantum number"
+            default = ArgParseDistribution(CMInject.DiscreteUniform(0,0))
+        "--M"
+            arg_type = ArgParseDistribution
+            help = "The distribution of the M quantum number"
+            default = ArgParseDistribution(CMInject.DiscreteUniform(0,0))
         "-t"
             arg_type = Float64
             help = "The time-span (beginning and end) to simulate for"
@@ -155,14 +192,46 @@ Returns a tuple `(solution, detectors, particles, theplot)`.
 function main()
     args = run_argparse(ARGS)
 
-    field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
+    dimensions = args["dn"]
+    field = Nothing
     dists = (
-        x  = _d(args["x"]),  z = _d(args["z"]),
-        vx = _d(args["x"]), vz = _d(args["vz"]),
-        r  = _d(args["r"]),  ρ = _d(args["rho"])
-    )
-    ParticleType = SphericalParticle2D{Float64}
-    source = SamplingSource{ParticleType}(dists)
+             x  = _d(args["x"]),  z = _d(args["z"]),
+             vx = _d(args["x"]), vz = _d(args["vz"])
+            )
+    stateDists = (
+                  J = _d(args["J"]), M = _d(args["M"])
+                 )
+    if (dimensions == 3)
+        dists = merge(dists, (y = _d(args["y"]), vy = _d(args["vy"])))
+    end
+
+    # TODO: Merge those sections by generalizing stuff
+    if (length(args["f"]) != 0 && length(args["e"]) == 0)
+        # FLOW field
+        # Fow now we use r and ρ for the flow field
+        
+        dists = merge(dists, (r = _d(args["r"]), ρ = _d(args["rho"])))
+        field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
+        ParticleType = dimensions == 2 ? SphericalParticle2D{Float64} : SphericalParticle3D{Float64}
+        source = SamplingSource{ParticleType}(dists)
+
+    elseif (length(args["f"]) == 0 && length(args["e"]) != 0)
+        # STARK effect
+        # We use m for the stark effect
+
+        dists = merge(dists, (m = _d(args["m"]),))
+        field = ElectricField(args["e"])
+        ParticleType = dimensions == 2 ? StarkParticle2D{Float64} : StarkParticle{Float64}
+
+        dictDists = Dict(pairs(dists))
+        dictStateDists = Dict(pairs(stateDists))
+
+        source = StarkSamplingSource{ParticleType, Float64}(dictDists, dictStateDists, args["s"])
+
+    else
+        error("Exactly one of the arguments of f or e has to be specified -",
+              " no field or multiple fields aren't supported (yet)")
+    end
 
     experiment = Experiment(;
         source=source,
