@@ -30,18 +30,32 @@ function store_properties!(file::HDF5.File, particles::AbstractVector{PT}) where
     write_dataset(props_dset, dtype, props)
 end
 
+"""
+    pad(array, fill, length)
+
+Pads the array with fill to the specified length
+"""
+function pad(array::V, fill::T, length::N) where {N<:Int, T, V<:AbstractVector{T}}
+    vcat(array, repeat([fill], length-size(array)[1]))
+end
+
 function store_trajectories!(file::HDF5.File, solution)
     # Collect trajectories from `solution[i].u` and `solution[i].t` for every `i`
     # FIXME: this is terribly slow because of type instability from the NamedTuple call - we need to somehow force
     #        HDF5 to accept our structs instead of converting to a NamedTuple...
     #        I've seen this said to be working on some GitHub issue comment for HDF5.jl, but I just got random floats
     #        when I tried passing an array of structs rather than one of NamedTuples :/
-    trajs = (map(sol -> NamedTuple.(sol.u), solution))
+    trajs = map(sol -> NamedTuple.(sol.u), solution)
     times = [[(t=t_,) for t_ in solution[i].t] for i ∈ 1:length(solution)]
+
+    # For now, pad the trajectories with NaN to take different trajectory sizes into account
+    allTrajectories = [merge.(traj, time) for (traj, time) in zip(trajs, times)]
+    maxTrajectoryLength = maximum(size.(a))[1]
+    nanTuple = NamedTuple([(key, NaN) for key ∈ keys(allTrajectories[1][1])])
+    paddedTrajectories = pad.(allTrajectories, nanTuple, maxTrajectoryLength)
+
     # Concatenate them together as one matrix that will be stored
-    # TODO: in the future we'll need to play around with variable lengths, or put each trajectory
-    # in its own dataset: not all trajectories may be equally long!
-    trajs_with_times = hcat([merge.(traj, time) for (traj, time) in zip(trajs, times)]...)
+    trajs_with_times = hcat(paddedTrajectories...)
 
     # Only store trajectories if there is at least one
     if !isempty(trajs)
