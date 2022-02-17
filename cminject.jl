@@ -288,8 +288,8 @@ function main()
         field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
         # TODO: Use more specific type than AbstractInterpolation
         ParticleType = dimensions == 2 ?
-            SphericalParticle2D{Float64,CMInject.AbstractInterpolation} :
-            SphericalParticle3D{Float64,CMInject.AbstractInterpolation}
+            SphericalParticle2D{Float64} :
+            SphericalParticle3D{Float64}
         source = SamplingSource{ParticleType}(dists)
 
     elseif (length(args["f"]) == 0 && length(args["e"]) != 0)
