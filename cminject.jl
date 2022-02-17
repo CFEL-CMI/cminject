@@ -11,6 +11,10 @@ struct ArgParseDistribution{Dist<:Distribution}
     dist::Dist
 end
 
+struct ArgParseBoundary{Boundary<:AbstractBoundary}
+    boundary::Boundary
+end
+
 """
     parse_distribution(x::AbstractString)
 
@@ -66,6 +70,72 @@ end
 
 function ArgParse.parse_item(::Type{ADist}, x::AbstractString) where ADist<:ArgParseDistribution
     return ArgParseDistribution(parse_distribution(x))
+end
+
+"""
+    parse_boundary(x::AbstractString)
+
+Parses a `Boundary` from an `AbstractString` and returns it.
+Calls `error` if parsing is unsuccessful. Currently supports the following (ε is the tolerance and is optional):
+
+    - "S[x,y,z,r,ε]"            -- a skimmer at position x,y,z with radius r. For 2D, the x parameter is ignored
+    - "K[y,z,p,ε]"              -- a knife edge at position y,z in positive (p=1) or negative (p=-1) direction
+    - "C[x1,x2,y1,y2,z1,z2,ε]   -- a cuboid from x1-x2, y1-y2 and z1-z2 with open ends at z1 and z2
+
+Spaces within the expressions are not permitted.
+
+!!! note
+    All returned boundaries use Float64 values.
+"""
+function parse_boundary(x::AbstractString)
+    if !isletter(x[1])
+        error("Boundary type not specified! (you passed $(x[1]))")
+    else
+        # Check that the arguments are neatly wrapped in [] brackets
+        if !(x[2] == '[' && x[end] == ']')
+            error("I expected a boundary specification like S[x,y,z,r,ε] but you passed $(x)")
+        end
+
+        # Pull out the bit of the string that should be the boundary arguments
+        args = x[3:end-1]
+        if x[1] == 'S'
+            # Skimmer
+            count = 4
+            splitted = split(args, ',')
+            x,y,z,r = parse.(Float64, Iterators.take(splitted, count))
+            ε = size(splitted)[1] > count ? parse(Float64, splitted[count+1]) : 0.01
+            return Skimmer(x, y, z, r, ε)
+        elseif x[1] == 'K'
+            # Knife edge
+            count = 3
+            splitted = split(args, ',')
+            y,z,p = parse.(Float64, Iterators.take(splitted, count))
+            ε = size(splitted)[1] > count ? parse(Float64, splitted[count+1]) : 0.01
+            return KnifeEdge(y, z, p, ε)
+        elseif x[1] == 'C'
+            # Cuboid
+            count = 6
+            splitted = split(args, ',')
+            x1,x2,y1,y2,z1,z2 = parse.(Float64, Iterators.take(splitted, count))
+            ε = size(splitted)[1] > count ? parse(Float64, splitted[count+1]) : 0.01
+            return Cuboid(x1, x2, y1, y2, z1, z2, ε)
+        else
+            error("I don't know this boundary type: $(x[1])")
+        end
+    end
+end
+
+"""
+    _d(x::ArgParseBoundary{Bound})::Bound = x.boundary
+
+Shorthand for extracting the contained Boundary from an ArgParseBoundary
+"""
+function _d(x::ArgParseBoundary{Bound})::Bound where {Bound<:AbstractBoundary}
+    x.boundary
+end
+
+function ArgParse.parse_item(::Type{ABound}, x::AbstractString) where ABound<:ArgParseBoundary
+    return ArgParseBoundary(parse_boundary(x))
 end
 
 """
@@ -172,6 +242,10 @@ function run_argparse(args)
             arg_type = Float64
             help = "The dynamic viscosity of the flow-field"
             default = 1.76e-5  # N2 (nitrogen) at/around room temp
+        "--Boundaries"
+            arg_type = Vector{ArgParseBoundary}
+            help = "The boundaries of the experiment"
+            default = ArgParseBoundary[]
         "--plot"
             help = "Add this option to plot 100 simulated trajectories and detector hits"
             action = :store_true
