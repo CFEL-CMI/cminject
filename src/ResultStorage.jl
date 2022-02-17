@@ -64,7 +64,7 @@ function store_trajectories!(file::HDF5.File, solution)
             file, "particles/tracked/trajectories",
             dtype, dataspace(trajs_with_times)
         )
-        write_dataset(trajs_dset, dtype, trajs_with_time)
+        write_dataset(trajs_dset, dtype, trajs_with_times)
     end
 
     nothing
