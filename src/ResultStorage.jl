@@ -62,9 +62,9 @@ function store_trajectories!(file::HDF5.File, solution)
         dtype = get_hdf5_datatype(eltype(trajs_with_times))
         trajs_dset = create_dataset(
             file, "particles/tracked/trajectories",
-            dtype, dataspace(trajs)
+            dtype, dataspace(trajs_with_times)
         )
-        write_dataset(trajs_dset, dtype, trajs)
+        write_dataset(trajs_dset, dtype, trajs_with_time)
     end
 
     nothing
