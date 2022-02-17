@@ -243,9 +243,9 @@ function run_argparse(args)
             help = "The dynamic viscosity of the flow-field"
             default = 1.76e-5  # N2 (nitrogen) at/around room temp
         "--Boundaries"
-            arg_type = Vector{ArgParseBoundary}
+            arg_type = ArgParseBoundary
             help = "The boundaries of the experiment"
-            default = ArgParseBoundary[]
+            nargs = '*'
         "--plot"
             help = "Add this option to plot 100 simulated trajectories and detector hits"
             action = :store_true
@@ -286,7 +286,10 @@ function main()
         
         dists = merge(dists, (r = _d(args["r"]), ρ = _d(args["rho"])))
         field = StokesFlowField(args["f"], args["fT"], args["fM"], args["fMu"])
-        ParticleType = dimensions == 2 ? SphericalParticle2D{Float64} : SphericalParticle3D{Float64}
+        # TODO: Use more specific type than AbstractInterpolation
+        ParticleType = dimensions == 2 ?
+            SphericalParticle2D{Float64,CMInject.AbstractInterpolation} :
+            SphericalParticle3D{Float64,CMInject.AbstractInterpolation}
         source = SamplingSource{ParticleType}(dists)
 
     elseif (length(args["f"]) == 0 && length(args["e"]) != 0)
@@ -295,7 +298,9 @@ function main()
 
         dists = merge(dists, (m = _d(args["m"]),))
         field = ElectricField(args["e"])
-        ParticleType = dimensions == 2 ? StarkParticle2D{Float64} : StarkParticle{Float64}
+        ParticleType = dimensions == 2 ?
+            StarkParticle2D{Float64,CMInject.AbstractInterpolation} :
+            StarkParticle{Float64,CMInject.AbstractInterpolation}
 
         dictDists = Dict(pairs(dists))
         dictStateDists = Dict(pairs(stateDists))
@@ -312,6 +317,7 @@ function main()
         n_particles=args["n"],
         fields=(field,),
         detectors=Tuple(SectionDetector{Float64,:z}.(args["d"], true)),
+        boundaries=Tuple(_d.(args["Boundaries"])),
         time_span=Tuple(args["t"]), time_step=args["dt"],
         solver=EulerHeun(), ensemble_alg=EnsembleThreads()
     )

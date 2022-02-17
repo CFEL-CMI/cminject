@@ -29,7 +29,7 @@ function generate(source::StarkSamplingSource{PT}, n::I)::Vector{PT} where {PT, 
     end
     samples = getSamples(source.distributions, n)
     starkCurves = getStarkCurves(source, n)
-    particles = [PT{typeof(starkCurves[1])}(; starkCurve=starkCurves[i], samples[i]...) for i=1:n]
+    particles = [PT(; starkCurve=starkCurves[i], samples[i]...) for i=1:n]
 end
 
 function getStarkCurves(source::StarkSamplingSource{PT}, n::I) where {PT, I<:Integer}

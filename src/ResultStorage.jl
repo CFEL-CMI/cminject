@@ -13,7 +13,9 @@ end
 function get_hdf5_datatype(::Type{T}) where T
     dtype = HDF5.h5t_create(HDF5.H5T_COMPOUND, sizeof(T))
     @inbounds for i in 1:length(T.types)
-        HDF5.h5t_insert(dtype, fieldname(T,i), fieldoffset(T,i), datatype(fieldtype(T,i)))
+        if (applicable(datatype, fieldtype(T,i)))
+            HDF5.h5t_insert(dtype, fieldname(T,i), fieldoffset(T,i), datatype(fieldtype(T,i)))
+        end
     end
     HDF5.Datatype(dtype)
 end
