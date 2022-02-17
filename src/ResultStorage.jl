@@ -50,9 +50,9 @@ function store_trajectories!(file::HDF5.File, solution)
 
     # For now, pad the trajectories with NaN to take different trajectory sizes into account
     allTrajectories = [merge.(traj, time) for (traj, time) in zip(trajs, times)]
-    maxTrajectoryLength = maximum(size.(a))[1]
+    maxTrajectoryLength = maximum(size.(allTrajectories))[1]
     nanTuple = NamedTuple([(key, NaN) for key ∈ keys(allTrajectories[1][1])])
-    paddedTrajectories = pad.(allTrajectories, nanTuple, maxTrajectoryLength)
+    paddedTrajectories = [pad(trajectory, nanTuple, maxTrajectoryLength) for trajectory ∈ allTrajectories]
 
     # Concatenate them together as one matrix that will be stored
     trajs_with_times = hcat(paddedTrajectories...)
