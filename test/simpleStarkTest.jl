@@ -6,7 +6,8 @@
 
     dists = Dict(:x => CMInject.Dirac(0), :y => CMInject.Dirac(0), :vx => CMInject.Dirac(1), :vy => CMInject.Dirac(0), :m => CMInject.Dirac(1e-9))
     stateDists = Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUniform(0,0))
-    sourcePyrroleWater = CMInject.StarkSamplingSource{CMInject.StarkParticle2D{Float64}, Float64}(
+    sourcePyrroleWater = CMInject.StarkSamplingSource{CMInject.StarkParticle2D{Float64,
+                                                                               CMInject.AbstractInterpolation}, Float64}(
                                      dists, stateDists, "test/pyrrole-water.molecule")
 
     @test CMInject.generate(sourcePyrroleWater, 1) != nothing
