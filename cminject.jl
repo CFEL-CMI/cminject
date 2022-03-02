@@ -163,6 +163,7 @@ function run_argparse(args)
             arg_type = Int
             help = "The number of particles to simulate"
             required = true
+        # TODO: Use -D and document that change, because the python version used -D
         "--dn"
             arg_type = Int
             help = "The number of dimensions"
