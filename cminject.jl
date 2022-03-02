@@ -163,8 +163,7 @@ function run_argparse(args)
             arg_type = Int
             help = "The number of particles to simulate"
             required = true
-        # TODO: Use -D and document that change, because the python version used -D
-        "--dn"
+        "-D"
             arg_type = Int
             help = "The number of dimensions"
             default = 2
@@ -267,7 +266,7 @@ Returns a tuple `(solution, detectors, particles, theplot)`.
 function main()
     args = run_argparse(ARGS)
 
-    dimensions = args["dn"]
+    dimensions = args["D"]
     field = Nothing
     dists = (
              x  = _d(args["x"]),  z = _d(args["z"]),
