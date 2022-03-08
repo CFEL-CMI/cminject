@@ -16,7 +16,7 @@ deflectorEndX = deflectorX + (140-1) * 2.85714e-5
 deflectorY = -0.00398571
 deflectorEndY = deflectorY + (210-1) * 2.85714e-5
 knifeZ        = 0.16528 + original0
-knifeY = 0
+knifeY        = 0.0
 skimmer3Z     = 0.19041 + original0
 destination   = 0.36675 + original0
 skimmer1R     = 0.0015
@@ -63,46 +63,18 @@ stateDists = Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUn
 ############## Simulation
 @testset "Fly Stark Simulation" begin
 
-    sourcePyrroleWater = CMInject.StarkSamplingSource{CMInject.StarkParticle{Float64}, Float64}(
+    sourcePyrroleWater = CMInject.StarkSamplingSource{CMInject.StarkParticle{Float64, CMInject.AbstractInterpolation},
+                                                      Float64}(
                                      distsPyrroleWater, stateDists, "test/pyrrole-water.molecule")
-    sourcePyrrole = CMInject.StarkSamplingSource{CMInject.StarkParticle{Float64}, Float64}(
+    sourcePyrrole = CMInject.StarkSamplingSource{CMInject.StarkParticle{Float64, CMInject.AbstractInterpolation},
+                                                 Float64}(
                                      distsPyrrole, stateDists, "test/pyrrole.molecule")
 
     @test CMInject.generate(sourcePyrroleWater, 1) != nothing
 
     field = CMInject.ElectricField("test/example_field.h5")
-    @inline function detectHits(args...)
-        x = args[1].x
-        y = args[1].y
-        z = args[1].z
-        hitSkimmer(x, y, z, sz, sr) = z ≥ sz-ε && z ≤ sz && sqrt(x*x + y*y) ≥ sr
-        if (hitSkimmer(x, y, z, skimmer1Z, skimmer1R))
-            return true
-        end
-        if (hitSkimmer(x, y, z, skimmer2Z, skimmer2R))
-            return true
-        end
-        if (hitSkimmer(x, y, z, skimmer3Z, skimmer3R))
-            return true
-        end
-        if (z ≥ knifeZ-ε && z ≤ knifeZ &&
-            y ≤ knifeY)
-            return true
-        end
-        if (z ≥ deflectorZ && z ≤ deflectorEndZ &&
-            (x ≤ deflectorX || x ≥ deflectorEndX ||
-             y ≤ deflectorY || y ≥ deflectorEndY))
-            return true
-        end
-        # No need to continue simulation when particle has arrived
-        if (z ≥ destination)
-            return true
-        end
-        false
-    end
     solverOpts=(adaptive=false,
-                dense=false,
-                callback=CMInject.DiscreteCallback(detectHits, integrator -> CMInject.terminate!(integrator)))
+                dense=false)
     getExperiment(source) = CMInject.Experiment(;source=source,
                                             n_particles=particles,
                                             fields=(field,),
@@ -110,6 +82,17 @@ stateDists = Dict(:J => CMInject.DiscreteUniform(0,0), :M => CMInject.DiscreteUn
                                             detectors=Tuple(CMInject.SectionDetector{Float64,:y}.(
                                                              -0.001:0.001:0.001,
                                                              true)),
+                                            boundaries=(
+                                                        Skimmer(0.0, 0.0, skimmer1Z, skimmer1R, ε),
+                                                        Skimmer(0.0, 0.0, skimmer2Z, skimmer2R, ε),
+                                                        Skimmer(0.0, 0.0, skimmer3Z, skimmer3R, ε),
+                                                        KnifeEdge(knifeY, knifeZ, -1, ε),
+                                                        Cuboid(deflectorX, deflectorEndX,
+                                                               deflectorY, deflectorEndY,
+                                                               deflectorZ, deflectorEndZ, ε)
+                                                        # TODO: Implement final boundary at destination
+                                                        #  or properly use detectors
+                                                       ),
                                             # TODO: Try with Runge-Kutta 4/5
                                             solver=CMInject.EulerHeun(),
                                             time_span=(0.0, 2e-3),

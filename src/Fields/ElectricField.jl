@@ -18,7 +18,7 @@ function ElectricField2D(itp::ITP) where ITP
     ElectricField2D{ITP}(itp, nothing)
 end
 function ElectricField2D(hdf5Path::s) where s<:AbstractString
-    ElectricField(interpolateElectricField(hdf5Path)...)
+    ElectricField2D(interpolateElectricField(hdf5Path)...)
 end
 Base.show(io::IO, f::ElectricField2D) = print(io, "ElectricField2D")
 

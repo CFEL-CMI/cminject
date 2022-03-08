@@ -5,6 +5,7 @@ export Experiment, simulate,
     StarkSamplingSource,
     StokesFlowField,
     ElectricField, ElectricField2D,
+    AbstractBoundary, Skimmer, KnifeEdge, Cuboid,
     SectionDetector,
     SphericalParticle2D, SphericalParticle3D,
     StarkParticle, StarkParticle2D,
@@ -15,6 +16,7 @@ include("Particles.jl")
 include("Fields.jl")
 include("Sources.jl")
 include("Detectors.jl")
+include("Boundaries.jl")
 include("ResultPlots.jl")
 include("Experiment.jl")
 include("ResultStorage.jl")

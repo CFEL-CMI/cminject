@@ -4,7 +4,7 @@ using Parameters
 
 """
     Experiment(; source, n_particles, time_span, time_step
-               [fields=(), detectors=(), solver=EulerHeun(),
+               [fields=(), detectors=(), boundaries=(), solver=EulerHeun(),
                 solver_opts=(adaptive=false, dense=false, unstable_check=always_false),
                 ensemble_alg=EnsembleThreads()])
 
@@ -16,13 +16,14 @@ Fully specifies a particle trajectory simulation experiment in CMInject, consist
 - `time_step`, the macro-timestep for the integrator
 - `fields`, a tuple of (acceleration) fields - none by default
 - `detectors`, a tuple of detectors - none by default
+- `boundaries`, a tuple of boundaries - none by default
 - `solver`: A solver algorithm for `SDEProblem`s
-- `solver_opts`: A (Named)Tuple of options to be passed to the solver
+- `solver_opts`: A (Named)Tuple of options to be passed to the solver. Note that you can't specify a callback, as this is used for boundary detection
 - `ensemble_alg`: The ensemble algorithm to use for parallelizing over the particles,
    see the DifferentialEquations.jl docs
 """
 @with_kw struct Experiment{
-    Src<:AbstractSource,Fields,Dets,
+    Src<:AbstractSource,Fields,Dets,Bounds,
     TimeStep,SolvAlg<:AbstractSDEAlgorithm,SolvOpts,EnsAlg<:EnsembleAlgorithm
 }
     source::Src
@@ -31,12 +32,12 @@ Fully specifies a particle trajectory simulation experiment in CMInject, consist
     time_step::TimeStep
     fields::Fields = ()
     detectors::Dets = ()
+    boundaries::Bounds = ()
 
     solver::SolvAlg = EulerHeun()
     solver_opts::SolvOpts = (adaptive=false, dense=false, unstable_check=always_false)
     ensemble_alg::EnsAlg = EnsembleThreads()
 end
-
 
 """
     f!(du, u, params, t)
@@ -152,7 +153,12 @@ function simulate(exp::Experiment)
                      ens_prob, exp.solver, exp.ensemble_alg;
                      trajectories=exp.n_particles,
                      dt=exp.time_step,
-                     exp.solver_opts...
+                     exp.solver_opts...,
+                     # TODO: Allow custom callback as well
+                     callback=DiscreteCallback((u,t,integrator)->
+                                               any([is_boundary_hit(boundary, u)
+                                                    for boundary ∈ exp.boundaries]),
+                                               integrator -> terminate!(integrator))
                     )
     hits = [calculate_hits(solution, detector) for detector in exp.detectors]
     return solution, hits, particles
