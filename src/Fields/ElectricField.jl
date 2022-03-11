@@ -55,22 +55,20 @@ end
 Base.show(io::IO, f::ElectricField) = print(io, "ElectricField")
 
 function acceleration(particle, field::ElectricField2D, time)
-    r = [particle.x, particle.y]
-    force = -getEnergyGradient(field, particle.starkCurve, r)
+    force = -getEnergyGradient(field, particle.starkCurve, particle.x, particle.y)
     acceleration = force/mass(particle)
     (vx = acceleration[1], vy = acceleration[2])
 end
 
 function acceleration(particle, field::ElectricField, time)
     # TODO: Do something such that the number of dimensions is not pre-determined
-    r = [particle.x, particle.y, particle.z]
-    force = -getEnergyGradient(field, particle.starkCurve, r)
+    force = -getEnergyGradient(field, particle.starkCurve, particle.x, particle.y, particle.z)
     acceleration = force/mass(particle)
     (vx = acceleration[1], vy = acceleration[2], vz = acceleration[3])
 end
 
 """
-    getEnergyGradient(field, starkCurve, r)
+    getEnergyGradient(field, starkCurve, x, y, z)
 
 Calculates the energy gradient of the specified electric field
 for a particle with the specified stark curve at the specified point in space.
@@ -78,15 +76,37 @@ for a particle with the specified stark curve at the specified point in space.
 The arguments are:
 - `field`, the electric field the particle is in
 - `starkCurve`, the stark curve for the particle
-- `r`, the point in space of the particle
+- `x,y,z`, the point in space of the particle
 """
-function getEnergyGradient(field, starkCurve, r)::AbstractArray
+function getEnergyGradient(field, starkCurve, x::T, y::T, z::T)::Vector{T} where T<:Number
     # The gradient of the energy over space is given by
     # ∇E(r) = E'(ε(r))⋅∇ε(r)
-    if (field.gradients == nothing)
-        gradient(starkCurve, field.norm(r...)) .* gradient(field.norm, r...)
+    if (field.gradients === nothing)
+        gradient(starkCurve, field.norm(x,y,z)) .* gradient(field.norm, x,y,z)
     else
-        gradients = [gradient(r...) for gradient ∈ field.gradients.value]
-        gradient(starkCurve, field.norm(r...)) .* gradients
+        gradients = [gradient(x,y,z) for gradient ∈ field.gradients.value]
+        gradient(starkCurve, field.norm(x,y,z)) .* gradients
+    end
+end
+
+"""
+    getEnergyGradient(field, starkCurve, x, y)
+
+Calculates the energy gradient of the specified electric field
+for a particle with the specified stark curve at the specified point in space.
+
+The arguments are:
+- `field`, the electric field the particle is in
+- `starkCurve`, the stark curve for the particle
+- `x,y`, the point in space of the particle
+"""
+function getEnergyGradient(field, starkCurve, x::T, y::T)::Vector{T} where T<:Number
+    # The gradient of the energy over space is given by
+    # ∇E(r) = E'(ε(r))⋅∇ε(r)
+    if (field.gradients === nothing)
+        gradient(starkCurve, field.norm(x,y)) .* gradient(field.norm, x,y)
+    else
+        gradients = [gradient(x,y) for gradient ∈ field.gradients.value]
+        gradient(starkCurve, field.norm(x,y)) .* gradients
     end
 end
