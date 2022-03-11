@@ -16,10 +16,11 @@ True if the `phasePosition` is considered to have hit the `boundary`.
 Converts the `phasePosition` labelled array into function arguments for the internal methods.
 """
 function is_boundary_hit(boundary::B, phasePosition::LArray) where B<:AbstractBoundary
-    asTuple = convert(NamedTuple, phasePosition)
-    # Heavily inspired by https://discourse.julialang.org/t/get-fieldnames-and-values-of-struct-as-namedtuple/8991
-    is_boundary_hit(boundary; (v=>getfield(asTuple, v) 
-                               for v ∈ fieldnames(typeof(asTuple)) 
-                               # Filter out velocities
-                               if String(v)[1] != 'v')...)
+    if (size(phasePosition)[1] == 6)
+        is_boundary_hit(boundary; x=phasePosition.x, y=phasePosition.y, z=phasePosition.z)
+    elseif (size(phasePosition)[1] == 4)
+        is_boundary_hit(boundary; y=phasePosition.y, z=phasePosition.z)
+    else
+        error("Dimensions $(size(phasePosition)) not (yet) supported.")
+    end
 end
