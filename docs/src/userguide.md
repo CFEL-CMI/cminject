@@ -5,8 +5,10 @@
 Please follow these steps:
 
 - Install Julia 1.6 on your machine, [see here for instructions](https://julialang.org/downloads/)
-- Clone or download [CMInject.jl](https://github.com/CFEL-CMI/CMInject.jl)
-- Open a terminal and enter the `build/` subfolder
+- Clone or download [CMInject](https://github.com/CFEL-CMI/cminject)
+- Open a terminal and enter the `cminject/` folder
+- Run `julia --project=. -e 'using Pkg; Pkg.instantiate()'`
+- Enter the `build/` subfolder
 - Execute `./create_sysimage.sh` -- this may take a while, but it will make your simulations much faster!
 - You should now be able to run `./cminject.sh` without errors occurring. Use `./cminject.sh -h` to get help with running the program.
 
