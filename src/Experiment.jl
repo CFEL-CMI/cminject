@@ -1,5 +1,5 @@
 using DifferentialEquations
-import SciMLBase: AbstractSDEAlgorithm, EnsembleAlgorithm
+import SciMLBase: AbstractSDEAlgorithm, AbstractODEAlgorithm, EnsembleAlgorithm
 using Parameters
 
 """
