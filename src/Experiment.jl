@@ -146,7 +146,11 @@ Simulates an `Experiment`, returning a tuple of `(solution, detector_hits, parti
 """
 function simulate(exp::Experiment)
     u0, params, particles, prob_func = make_initial_values(exp.source, exp.fields, exp.n_particles)
-    prob = SDEProblem{true}(f!, g!, u0, exp.time_span, params)
+    prob = ODEProblem{true}(f!, u0, exp.time_span, params)
+    if (exp.solver == EulerHeun())
+        # EulerHeun is an SDE solver
+        prob = SDEProblem{true}(f!, g!, u0, exp.time_span, params)
+    end
     ens_prob = EnsembleProblem(prob, prob_func=prob_func, safetycopy=false)
 
     solution = solve(

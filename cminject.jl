@@ -249,8 +249,35 @@ function run_argparse(args)
         "--plot"
             help = "Add this option to plot 100 simulated trajectories and detector hits"
             action = :store_true
+        "--solver"
+            arg_type = String
+            help = "Specify the solver to use for the numerical integration. Defaults to EulerHeun"
+            default = "EulerHeun"
     end
     return parse_args(args, s)
+end
+
+"""
+    getSolver(solverString)
+
+Converts the `solverString` into a solver
+"""
+function getSolver(solverString::AbstractString)
+    if (solverString == "EulerHeun")
+        return EulerHeun()
+    elseif (solverString == "RK4")
+        return RK4()
+    elseif (solverString == "Euler")
+        return Euler()
+    elseif (solverString == "Midpoint")
+        return Midpoint()
+    elseif (solverString == "Tsit5")
+        return Tsit5()
+    elseif (solverString == "Vern6")
+        return Vern6
+    else
+        error("Unknown solver: $solverString")
+    end
 end
 
 """
@@ -312,6 +339,8 @@ function main()
               " no field or multiple fields aren't supported (yet)")
     end
 
+    solver = getSolver(args["Solver"])
+
     experiment = Experiment(;
         source=source,
         n_particles=args["n"],
@@ -319,7 +348,7 @@ function main()
         detectors=Tuple(SectionDetector{Float64,:z}.(args["d"], true)),
         boundaries=Tuple(_d.(args["Boundaries"])),
         time_span=Tuple(args["t"]), time_step=args["dt"],
-        solver=EulerHeun(), ensemble_alg=EnsembleThreads()
+        solver=solver, ensemble_alg=EnsembleThreads()
     )
     solution, detectors, particles = simulate(experiment)
     theplot = nothing

@@ -87,6 +87,6 @@ function getEnergyGradient(field, starkCurve, r)::AbstractArray
         gradient(starkCurve, field.norm(r...)) .* gradient(field.norm, r...)
     else
         gradients = [gradient(r...) for gradient ∈ field.gradients.value]
-        gradient(starkCurve, field.norm(r...)) .* [gradient(r...) for gradient ∈ field.gradients.value]
+        gradient(starkCurve, field.norm(r...)) .* gradients
     end
 end

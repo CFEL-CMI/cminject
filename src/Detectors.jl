@@ -30,10 +30,13 @@ Returns a vector of all hits on `detector` for all trajectories in a `solution::
 Uses `add_hits!` internally to achieve this.
 """
 function calculate_hits(
-    # oh boy - is there a better (and still "API-stable") way to pull out the Eltype?!
-    solution::EnsembleSolution{A,B,Vector{RODESolution{C,D,Vector{Eltype},E,F,G,H,I,J,K,L}}},
+    solution::EnsembleSolution{A,B,Vector{C}},
     detector::Det
-) where {Det<:AbstractDetector,Eltype,A,B,C,D,E,F,G,H,I,J,K,L}
+) where {Det<:AbstractDetector,A,B,C}
+    if (size(solution)[1] == 0 || size(solution[1])[1] == 0)
+        return []
+    end
+    Eltype = typeof(solution[1][1])
     hits = Eltype[]  # initialize empty vector
     for one_solution ∈ solution
         trajectory = one_solution.u

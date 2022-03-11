@@ -115,7 +115,7 @@ function interpolateStarkCurve(filename::AbstractString;
     if length(fields) < 2
         error("Has to contain at least two data points")
     end
-    itp = interpolate(energies, BSpline(Quadratic(Natural(OnGrid()))))
+    itp = interpolate(energies, BSpline(Linear()))
     # TODO: It's not nice that this requires the data to be uniformly spaced
     scaledItp = itpscale(itp, fields[1]:
                          fields[2]-fields[1]:
