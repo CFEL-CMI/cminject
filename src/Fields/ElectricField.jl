@@ -1,11 +1,16 @@
 # Note that you can't directly include this file, you'll have to include "Fields.jl"
 
 """
-    ElectricField2d
+    ElectricField2d(; norm, gradients)
 
 Representation of a 2d electric field.
 The data is stored in an interpolated form,
 not merely the values at the grid points are available.
+
+It consists of:
+- `norm`, the (two dimensional) interpolator for the norm of the field
+- `gradients`, either the two gradient interpolators or nothing,
+    if the gradients should be calculated via the `norm`
 """
 struct ElectricField2D{ITP<:AbstractInterpolation} <: Field
     norm::ITP
@@ -23,11 +28,16 @@ end
 Base.show(io::IO, f::ElectricField2D) = print(io, "ElectricField2D")
 
 """
-    ElectricField
+    ElectricField(; norm, gradients)
 
 Representation of an electric field.
 The data is stored in an interpolated form,
 not merely the values at the grid points are available.
+
+It consists of:
+- `norm`, the (three dimensional) interpolator for the norm of the field
+- `gradients`, either the three gradient interpolators or nothing,
+    if the gradients should be calculated via the `norm`
 """
 struct ElectricField{ITP<:AbstractInterpolation} <: Field
     norm::ITP
@@ -63,6 +73,12 @@ end
     getEnergyGradient(field, starkCurve, r)
 
 Calculates the energy gradient of the specified electric field
+for a particle with the specified stark curve at the specified point in space.
+
+The arguments are:
+- `field`, the electric field the particle is in
+- `starkCurve`, the stark curve for the particle
+- `r`, the point in space of the particle
 """
 function getEnergyGradient(field, starkCurve, r)::AbstractArray
     # The gradient of the energy over space is given by

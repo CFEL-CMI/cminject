@@ -16,11 +16,3 @@ CurrentModule = CMInject
 ```@autodocs
 Modules = [CMInject]
 ```
-
-## Stark effect
-
-This section documents the parts of CMInject relevant for simulating the Stark effect.
-
-```@autodocs
-Modules = [CMInject.StarkEffect]
-```

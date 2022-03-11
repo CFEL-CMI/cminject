@@ -9,6 +9,12 @@ They should also implement the following methods:
 """
 abstract type AbstractBoundary end
 
+"""
+    is_boundary_hit(boundary, phasePosition)
+
+True if the `phasePosition` is considered to have hit the `boundary`.
+Converts the `phasePosition` labelled array into function arguments for the internal methods.
+"""
 function is_boundary_hit(boundary::B, phasePosition::LArray) where B<:AbstractBoundary
     asTuple = convert(NamedTuple, phasePosition)
     # Heavily inspired by https://discourse.julialang.org/t/get-fieldnames-and-values-of-struct-as-namedtuple/8991

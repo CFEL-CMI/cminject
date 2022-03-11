@@ -270,7 +270,7 @@ function main()
     field = Nothing
     dists = (
              x  = _d(args["x"]),  z = _d(args["z"]),
-             vx = _d(args["x"]), vz = _d(args["vz"])
+             vx = _d(args["vx"]), vz = _d(args["vz"])
             )
     stateDists = (
                   J = _d(args["J"]), M = _d(args["M"])
