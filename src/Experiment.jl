@@ -24,7 +24,7 @@ Fully specifies a particle trajectory simulation experiment in CMInject, consist
 """
 @with_kw struct Experiment{
     Src<:AbstractSource,Fields,Dets,Bounds,
-    TimeStep,SolvAlg<:AbstractSDEAlgorithm,SolvOpts,EnsAlg<:EnsembleAlgorithm
+    TimeStep,SolvAlg<:Union{AbstractSDEAlgorithm,AbstractODEAlgorithm},SolvOpts,EnsAlg<:EnsembleAlgorithm
 }
     source::Src
     n_particles::Int64

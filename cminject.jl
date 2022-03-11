@@ -80,7 +80,7 @@ Calls `error` if parsing is unsuccessful. Currently supports the following (ε i
 
     - "S[x,y,z,r,ε]"            -- a skimmer at position x,y,z with radius r. For 2D, the x parameter is ignored
     - "K[y,z,p,ε]"              -- a knife edge at position y,z in positive (p=1) or negative (p=-1) direction
-    - "C[x1,x2,y1,y2,z1,z2,ε]   -- a cuboid from x1-x2, y1-y2 and z1-z2 with open ends at z1 and z2
+    - "C[x1,x2,y1,y2,z1,z2,ε]"  -- a cuboid from x1-x2, y1-y2 and z1-z2 with open ends at z1 and z2
 
 Spaces within the expressions are not permitted.
 
