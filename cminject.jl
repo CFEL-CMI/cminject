@@ -249,7 +249,7 @@ function run_argparse(args)
         "--plot"
             help = "Add this option to plot 100 simulated trajectories and detector hits"
             action = :store_true
-        "--solver"
+        "--Solver"
             arg_type = String
             help = "Specify the solver to use for the numerical integration. Defaults to EulerHeun"
             default = "EulerHeun"
