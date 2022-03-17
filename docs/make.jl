@@ -5,7 +5,7 @@ DocMeta.setdocmeta!(CMInject, :DocTestSetup, :(using CMInject); recursive=true)
 
 makedocs(;
     modules=[CMInject],
-    authors="Simon Welker <simon.welker@cfel.de> and contributors",
+    authors="Simon Welker <simon.welker@cfel.de>, Timo Borner <timo.borner@cfel.de> and contributors",
     repo="https://github.com/CFEL-CMI/cminject/blob/{commit}{path}#{line}",
     sitename="CMInject.jl",
     format=Documenter.HTML(;
