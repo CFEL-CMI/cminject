@@ -6,11 +6,11 @@ DocMeta.setdocmeta!(CMInject, :DocTestSetup, :(using CMInject); recursive=true)
 makedocs(;
     modules=[CMInject],
     authors="Simon Welker <simon.welker@cfel.de> and contributors",
-    repo="https://github.com/CFEL-CMI/CMInject.jl/blob/{commit}{path}#{line}",
+    repo="https://github.com/CFEL-CMI/cminject/blob/{commit}{path}#{line}",
     sitename="CMInject.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://CFEL-CMI.github.io/CMInject.jl",
+        canonical="https://CFEL-CMI.github.io/cminject",
         assets=String[],
     ),
     pages=[
@@ -22,5 +22,5 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/CFEL-CMI/CMInject.jl",
+    repo="github.com/CFEL-CMI/cminject",
 )
