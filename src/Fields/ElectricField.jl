@@ -11,6 +11,8 @@ It consists of:
 - `norm`, the (two dimensional) interpolator for the norm of the field
 - `gradients`, either the two gradient interpolators or nothing,
     if the gradients should be calculated via the `norm`
+
+*Author:* Timo Borner
 """
 struct ElectricField2D{ITP<:AbstractInterpolation} <: Field
     norm::ITP
@@ -38,6 +40,8 @@ It consists of:
 - `norm`, the (three dimensional) interpolator for the norm of the field
 - `gradients`, either the three gradient interpolators or nothing,
     if the gradients should be calculated via the `norm`
+
+*Author:* Timo Borner
 """
 struct ElectricField{ITP<:AbstractInterpolation} <: Field
     norm::ITP
@@ -77,6 +81,8 @@ The arguments are:
 - `field`, the electric field the particle is in
 - `starkCurve`, the stark curve for the particle
 - `x,y,z`, the point in space of the particle
+
+*Author:* Timo Borner
 """
 function getEnergyGradient(field, starkCurve, x::T, y::T, z::T)::Vector{T} where T<:Number
     # The gradient of the energy over space is given by
@@ -99,6 +105,8 @@ The arguments are:
 - `field`, the electric field the particle is in
 - `starkCurve`, the stark curve for the particle
 - `x,y`, the point in space of the particle
+
+*Author:* Timo Borner
 """
 function getEnergyGradient(field, starkCurve, x::T, y::T)::Vector{T} where T<:Number
     # The gradient of the energy over space is given by

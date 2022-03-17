@@ -21,6 +21,8 @@ Fully specifies a particle trajectory simulation experiment in CMInject, consist
 - `solver_opts`: A (Named)Tuple of options to be passed to the solver. Note that you can't specify a callback, as this is used for boundary detection
 - `ensemble_alg`: The ensemble algorithm to use for parallelizing over the particles,
    see the DifferentialEquations.jl docs
+
+*Author:* Simon Welker
 """
 @with_kw struct Experiment{
     Src<:AbstractSource,Fields,Dets,Bounds,
@@ -44,6 +46,8 @@ end
 
 The deterministic part of an SDEProblem, as a generated function which specializes on a particular particle type
 and collection of fields.  Sums together the results from `acceleration(particle, field, t)` calls for all fields.
+
+*Author:* Simon Welker
 """
 @generated function f!(du, u, params, t)
     # TODO this isn't so nice, we need to pass an initial p twice:
@@ -77,6 +81,8 @@ and collection of fields. Sums together the results from `noise(particle, field,
 !!! note "Support of noise types"
     Currently only supports diagonal additive noise, and will sum
     the noise terms of all locally applicable fields together.
+
+*Author:* Simon Welker
 """
 @generated function g!(du, u, params, t)
     ptype = associated_particle_type(params.types[1])
@@ -102,6 +108,8 @@ are doing NaN-based handling for now.
 
 !!! todo
     This should change in the future when Boundaries are added to CMInject.jl.
+
+*Author:* Simon Welker
 """
 @inline function always_false(args...)
     false
@@ -116,6 +124,8 @@ From a `source` and a collection of `fields`, generates `n` initial particle val
 - `u₀` is the phase-space position of the first generated particle
 - `p₀` is the set of particle properties of the first generated particle
 - `prob_func` is a function that returns an updated DEProblem within an ensemble, as required by `EnsembleProblem`.
+
+*Author:* Simon Welker
 """
 function make_initial_values(source, fields, n::Integer)
     particles = generate(source, n)
@@ -143,6 +153,8 @@ Simulates an `Experiment`, returning a tuple of `(solution, detector_hits, parti
 - `detector_hits` is a vector of vectors, with the outer dimension indexing the detectors, and the inner dimension
   indexing the hits. The elements of each inner vector have the phase-space type of the simulated particle type.
 - `particles` is a vector of particle instances of the simulated type, all having their initially generated values.
+
+*Author:* Simon Welker
 """
 function simulate(exp::Experiment)
     u0, params, particles, prob_func = make_initial_values(exp.source, exp.fields, exp.n_particles)

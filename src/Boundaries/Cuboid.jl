@@ -3,6 +3,8 @@
 
 Represents a cuboid (e.g. a detector) from `x1`-`x2`, `y1`-`y2` and `z1`-`z2`
 with open ends at `z1` and `z2` with tolerance `ε`.
+
+*Author:* Timo Borner
 """
 struct Cuboid{T} <: AbstractBoundary where T<:Number
     x1::T

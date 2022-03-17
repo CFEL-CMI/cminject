@@ -3,6 +3,8 @@
 
 Represents a skimmer at position (`x`),`y`,`z` with radius `r`.
 The tolerance `ε` is considered into the negative z direction.
+
+*Author:* Timo Borner
 """
 struct Skimmer{T} <: AbstractBoundary where T<:Number
     x::T

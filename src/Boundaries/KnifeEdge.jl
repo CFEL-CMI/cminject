@@ -8,6 +8,8 @@ It consists of:
 - `z`, the z position of the knife edge
 - `p`, whether it extends to the negative (`p<0`) or positive (`p>0`) y direction
 - `ε`, the tolerance for `z`
+
+*Author:* Timo Borner
 """
 struct KnifeEdge{T,B} <: AbstractBoundary where {T<:Number, B<:Signed}
     y::T

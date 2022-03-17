@@ -2,10 +2,12 @@
 Abstract supertype for all boundary types in CMInject.
 
 Subtypes `MyBoundary <: AbstractBoundary` should at least contain the following fields:
-- ε: The tolerance
+- `ε`: The tolerance
 
 They should also implement the following methods:
-- is_boundary_hit(boundary::MyBoundary)
+- `is_boundary_hit(boundary::MyBoundary)`
+
+*Author:* Timo Borner
 """
 abstract type AbstractBoundary end
 
@@ -14,6 +16,8 @@ abstract type AbstractBoundary end
 
 True if the `phasePosition` is considered to have hit the `boundary`.
 Converts the `phasePosition` labelled array into function arguments for the internal methods.
+
+*Author:* Timo Borner
 """
 function is_boundary_hit(boundary::B, phasePosition::LArray) where B<:AbstractBoundary
     if (size(phasePosition)[1] == 6)

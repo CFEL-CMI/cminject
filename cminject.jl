@@ -29,6 +29,8 @@ Spaces within the expressions are not permitted.
 
 !!! note
     All returned continuous (and Dirac) distributions use Float64 values.
+
+*Author:* Simon Welker and Timo Borner
 """
 function parse_distribution(x::AbstractString)
     if !isletter(x[1])
@@ -63,6 +65,8 @@ end
     _d(x::ArgParseDistribution{Dist})::Dist = x.dist
 
 Shorthand for extracting the contained Distribution from an ArgParseDistribution
+
+*Author:* Simon Welker
 """
 function _d(x::ArgParseDistribution{Dist})::Dist where {Dist<:Distribution}
     x.dist
@@ -86,6 +90,8 @@ Spaces within the expressions are not permitted.
 
 !!! note
     All returned boundaries use Float64 values.
+
+*Author:* Timo Borner
 """
 function parse_boundary(x::AbstractString)
     if !isletter(x[1])
@@ -129,6 +135,8 @@ end
     _d(x::ArgParseBoundary{Bound})::Bound = x.boundary
 
 Shorthand for extracting the contained Boundary from an ArgParseBoundary
+
+*Author:* Timo Borner
 """
 function _d(x::ArgParseBoundary{Bound})::Bound where {Bound<:AbstractBoundary}
     x.boundary
@@ -143,6 +151,8 @@ end
 
 Defines an ArgParseSettings for this script and runs it on the input argument args.
 For parsing from the command-line, pass the global variable ARGS.
+
+*Author:* Simon Welker and Timo Borner
 """
 function run_argparse(args)
     s = ArgParseSettings()
@@ -261,6 +271,8 @@ end
     getSolver(solverString)
 
 Converts the `solverString` into a solver
+
+*Author:* Timo Borner
 """
 function getSolver(solverString::AbstractString)
     if (solverString == "EulerHeun")
@@ -289,6 +301,8 @@ command-line arguments (`ARGS`).
 
 Returns a tuple `(solution, detectors, particles, theplot)`.
 `theplot` may be `nothing` if `--plot` was not passed via ARGS.
+
+*Author:* Simon Welker and Timo Borner
 """
 function main()
     args = run_argparse(ARGS)

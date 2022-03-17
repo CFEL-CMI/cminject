@@ -88,6 +88,8 @@ end
     interpolateStarkCurve(filename; J, Ka, Kc, M, Iso)
 
 Note that the data HAS to be UNIFORMLY spaced and has to contain at least 2 data points.
+
+*Author:* Timo Borner
 """
 function interpolateStarkCurve(filename::AbstractString;
         J::I=0, Ka::I=0, Kc::I=0, M::I=0, Iso::I=0)::AbstractInterpolation where {T<:Real, I<:Int}
@@ -128,6 +130,8 @@ end
 
 Interpolates the field specified by the HDF5-file pointed to by `filename`.
 Returns a tuple with the norm and gradient interpolations.
+
+*Author:* Timo Borner
 """
 function interpolateElectricField(filename)
     h5open(filename, "r") do object
