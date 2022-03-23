@@ -48,6 +48,8 @@ Returns a NamedTuple containing example instances of some CMInject, including a 
 - `detectors`: A Tuple of `SectionDetector{Float64, :z}`s at z positions (-3e-3, -2e-3, -1e-3, 0, 1e-3, 2e-3, 3e-3)
 - `experiment`: An Experiment tying all of the above together and simulating 1000 particles for the timespan
   t = [0s, 0.05s].
+
+*Author:* Simon Welker
 """
 function get_example_instances()
     example_flow_field_file = joinpath(@__DIR__, "../data/nitrogen_1.8mbar_extended_nan.h5")

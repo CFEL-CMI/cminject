@@ -8,16 +8,18 @@ Subtypes `MyParticle <: AbstractParticle` should have (at least) two fields:
 
 Subtypes should also implement the following methods:
 
-- mass(particle::MyParticle)
-- associated_u_type(::Type{MyParticle})
-- associated_props_type(::Type{MyParticle})
-- associated_particle_type(::Type{PropsType}),
+- `mass(particle::MyParticle)`
+- `associated_u_type(::Type{MyParticle})`
+- `associated_props_type(::Type{MyParticle})`
+- `associated_particle_type(::Type{PropsType})`,
   where `PropsType` is the type of the `_p` field and
   `associated_particle_type(associated_props_type(MyParticle)) == MyParticle` must be ensured
-- transfer_velocities!(du, particle::MyParticle)
+- `transfer_velocities!(du, particle::MyParticle)`
 
 A comparatively convenient way to define new particle types is using the [`@declare_particle`](@ref) macro: it
 will define all of the above fields and methods automatically based on a declarative syntax.
+
+*Author:* Simon Welker
 """
 abstract type AbstractParticle end
 
@@ -33,13 +35,15 @@ abstract type AbstractParticle end
     get_at(x::P,::Val{s}) where {s, P<:AbstractParticle}
 
 Given a particle of some specific particle type and a `Val(s)` indicating a property of the particle,
-e.g., Val(:x) and a SphericalParticle2D instance, returns this property of the particle.
+e.g., `Val(:x)` and a SphericalParticle2D instance, returns this property of the particle.
 
 This is a generated function, meaning to generate the most efficient code possible for each specific field. It's used
 to define a specific `Base.getproperty` for all particle types. See also the blog post by Chris Rackauckas on
 zero-overhead abstractions, which this is heavily based on:
 
 http://www.stochasticlifestyle.com/zero-cost-abstractions-in-julia-indexing-vectors-by-name-with-labelledarrays/
+
+*Author:* Simon Welker
 """
 @generated function get_at(x::P,::Val{s}) where {s, P<:AbstractParticle}
     _utype = _get_fieldtype(x, :_u)
@@ -75,6 +79,8 @@ particle properties. This implementation allows you to write code like
 rather than
 
     particle._u.x * particle._p.T
+
+*Author:* Simon Welker
 """
 Base.@propagate_inbounds function Base.getproperty(particle::AbstractParticle, s::Symbol)
     get_at(particle,Val(s))
@@ -88,6 +94,8 @@ end
 
 Must return the associated particle type given the particle props type that's nested within this particle type.
 When using the @declare_particle macro, a implementation for each new particle type will automatically be created.
+
+*Author:* Simon Welker
 """
 associated_particle_type(props_type) = error("Don't know the particle type of $(props_type)")
 
@@ -96,6 +104,8 @@ associated_particle_type(props_type) = error("Don't know the particle type of $(
 
 Must return the associated particle props type given the particle type that's nesting this props type.
 When using the @declare_particle macro, a implementation for each new particle type will automatically be created.
+
+*Author:* Simon Welker
 """
 associated_props_type(particle_type) = error("Don't know the particle props type of $(particle_type)")
 
@@ -104,6 +114,8 @@ associated_props_type(particle_type) = error("Don't know the particle props type
 
 Must return the associated particle phase-space type given the particle type that's nesting this props type.
 When using the @declare_particle macro, a implementation for each new particle type will automatically be created.
+
+*Author:* Simon Welker
 """
 associated_u_type(particle_type) = error("Don't know the phase-space type of $(particle_type)")
 
@@ -112,6 +124,8 @@ associated_u_type(particle_type) = error("Don't know the phase-space type of $(p
 
 Enforces second-order dynamics for each particle type as declared by `@velocities` in the `@declare_particle` macro, by
 writing each current velocity (e.g., `particle.vx`) to the differential of each associated position (e.g., `du.x`).
+
+*Author:* Simon Welker
 """
 transfer_velocities!(du, particle::AbstractParticle) = nothing
 
@@ -123,6 +137,8 @@ A generated function that applies the acceleration `acc` returned from a field t
 efficient way that specializes on the types of `acc` and `du`.
 
 Unless you change the internals of how CMInject simulations are run, you most likely won't need to call this method.
+
+*Author:* Simon Welker
 """
 @generated function accelerate!(du, acc)
     # Why is this written the way it is?
@@ -176,6 +192,8 @@ Calculates the mass of the particle. The default implementation returns
     particle.ρ * (4/3)particle.r^3 * π
 
 and may be overridden for a concrete particle type via multiple dispatch.
+
+*Author:* Simon Welker
 """
 function mass(particle::P) where P <: AbstractParticle
     particle.ρ * (4/3)particle.r^3 * π
@@ -238,6 +256,8 @@ the named components `x`, `y` and so on, and that these components have the type
 `@velocities (:x => :vx, ...)` declares that `vx` is the velocity for `x`, and so on.
 The declarations for `r`, `ρ` and `T` are just as you would write in a regular struct, and will all become part
 of the particle properties.
+
+*Author:* Simon Welker
 """
 macro declare_particle(expr::Expr)
     # TODO perhaps force all type vars to be unique through gensym, so we won't get clashes with fieldnames

@@ -34,6 +34,8 @@ end
     pad(array, fill, length)
 
 Pads the array with fill to the specified length
+
+*Author:* Timo Borner
 """
 function pad(array::V, fill::T, length::N) where {N<:Int, T, V<:AbstractVector{T}}
     vcat(array, repeat([fill], length-size(array)[1]))

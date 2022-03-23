@@ -6,6 +6,8 @@ Abstract supertype for all particle detectors in CMInject.
 Subtypes `MyDetector <: AbstractDetector` should implement:
 
 - `add_hits!(hits::AbstractVector{E}, trajectory::AbstractVector{E}), detector::MyDetector)`
+
+*Author:* Simon Welker
 """
 abstract type AbstractDetector
 end
@@ -15,6 +17,8 @@ end
 
 Appends all hits that a single `trajectory` generates on a `detector` to `hits`. Modifies `hits` in-place, and
 returns nothing. If no hits are detected, this function should be a no-op.
+
+*Author:* Simon Welker
 """
 function add_hits!(hits, trajectory, detector)
     error(
@@ -28,12 +32,17 @@ end
 
 Returns a vector of all hits on `detector` for all trajectories in a `solution::EnsembleSolution`.
 Uses `add_hits!` internally to achieve this.
+
+*Author:* Simon Welker
 """
 function calculate_hits(
-    # oh boy - is there a better (and still "API-stable") way to pull out the Eltype?!
-    solution::EnsembleSolution{A,B,Vector{RODESolution{C,D,Vector{Eltype},E,F,G,H,I,J,K,L}}},
+    solution::EnsembleSolution{A,B,Vector{C}},
     detector::Det
-) where {Det<:AbstractDetector,Eltype,A,B,C,D,E,F,G,H,I,J,K,L}
+) where {Det<:AbstractDetector,A,B,C}
+    if (size(solution)[1] == 0 || size(solution[1])[1] == 0)
+        return []
+    end
+    Eltype = typeof(solution[1][1])
     hits = Eltype[]  # initialize empty vector
     for one_solution ∈ solution
         trajectory = one_solution.u
@@ -57,6 +66,8 @@ are ignored.
 
 The above line defines a detector at z=0.01, which detects all particles that cross the plane at that z position.
 Because `true` was passed for the `once` parameter, only each particle's first hit will be registered.
+
+*Author:* Simon Welker
 """
 struct SectionDetector{T,Dim} <: AbstractDetector
     at::T

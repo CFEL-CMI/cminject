@@ -88,6 +88,8 @@ end
     interpolateStarkCurve(filename; J, Ka, Kc, M, Iso)
 
 Note that the data HAS to be UNIFORMLY spaced and has to contain at least 2 data points.
+
+*Author:* Timo Borner
 """
 function interpolateStarkCurve(filename::AbstractString;
         J::I=0, Ka::I=0, Kc::I=0, M::I=0, Iso::I=0)::AbstractInterpolation where {T<:Real, I<:Int}
@@ -115,7 +117,7 @@ function interpolateStarkCurve(filename::AbstractString;
     if length(fields) < 2
         error("Has to contain at least two data points")
     end
-    itp = interpolate(energies, BSpline(Quadratic(Natural(OnGrid()))))
+    itp = interpolate(energies, BSpline(Linear()))
     # TODO: It's not nice that this requires the data to be uniformly spaced
     scaledItp = itpscale(itp, fields[1]:
                          fields[2]-fields[1]:
@@ -128,6 +130,8 @@ end
 
 Interpolates the field specified by the HDF5-file pointed to by `filename`.
 Returns a tuple with the norm and gradient interpolations.
+
+*Author:* Timo Borner
 """
 function interpolateElectricField(filename)
     h5open(filename, "r") do object

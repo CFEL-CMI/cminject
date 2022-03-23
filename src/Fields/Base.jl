@@ -11,6 +11,8 @@ They may also implement, if there is a noise term:
 
 Note that both methods must return `NamedTuple`s, with the names of the affected parts of the phase-space position
 as the keys. See the documentation of `acceleration` and `noise` for more details.
+
+*Author:* Simon Welker
 """
 abstract type Field
 end
@@ -55,6 +57,8 @@ phase-space position as the keys, and the change (differential) in these quantit
 
 Here, our new `GravitationalField` affects the `vz` part of the phase-space position, and thereby implements a constant
 acceleration in the `z` direction.
+
+*Author:* Simon Welker
 """
 function acceleration(particle, field::Field, time)
     error(
@@ -86,5 +90,7 @@ Note that the noise from acceleration fields should typically only affect veloci
 
 Here, our new `DecreasingNoiseField` adds noise to `vx` and `vy`, with a strength that is dependent on the `x` and `y`
 positions, respectively, and exponentially decreases over time.
+
+*Author:* Simon Welker
 """
 noise(particle, field::Field, time) = ()  # no noise term for fields required by default: return an empty tuple

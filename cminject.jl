@@ -29,6 +29,8 @@ Spaces within the expressions are not permitted.
 
 !!! note
     All returned continuous (and Dirac) distributions use Float64 values.
+
+*Author:* Simon Welker and Timo Borner
 """
 function parse_distribution(x::AbstractString)
     if !isletter(x[1])
@@ -63,6 +65,8 @@ end
     _d(x::ArgParseDistribution{Dist})::Dist = x.dist
 
 Shorthand for extracting the contained Distribution from an ArgParseDistribution
+
+*Author:* Simon Welker
 """
 function _d(x::ArgParseDistribution{Dist})::Dist where {Dist<:Distribution}
     x.dist
@@ -80,12 +84,14 @@ Calls `error` if parsing is unsuccessful. Currently supports the following (ε i
 
     - "S[x,y,z,r,ε]"            -- a skimmer at position x,y,z with radius r. For 2D, the x parameter is ignored
     - "K[y,z,p,ε]"              -- a knife edge at position y,z in positive (p=1) or negative (p=-1) direction
-    - "C[x1,x2,y1,y2,z1,z2,ε]   -- a cuboid from x1-x2, y1-y2 and z1-z2 with open ends at z1 and z2
+    - "C[x1,x2,y1,y2,z1,z2,ε]"  -- a cuboid from x1-x2, y1-y2 and z1-z2 with open ends at z1 and z2
 
 Spaces within the expressions are not permitted.
 
 !!! note
     All returned boundaries use Float64 values.
+
+*Author:* Timo Borner
 """
 function parse_boundary(x::AbstractString)
     if !isletter(x[1])
@@ -129,6 +135,8 @@ end
     _d(x::ArgParseBoundary{Bound})::Bound = x.boundary
 
 Shorthand for extracting the contained Boundary from an ArgParseBoundary
+
+*Author:* Timo Borner
 """
 function _d(x::ArgParseBoundary{Bound})::Bound where {Bound<:AbstractBoundary}
     x.boundary
@@ -143,6 +151,8 @@ end
 
 Defines an ArgParseSettings for this script and runs it on the input argument args.
 For parsing from the command-line, pass the global variable ARGS.
+
+*Author:* Simon Welker and Timo Borner
 """
 function run_argparse(args)
     s = ArgParseSettings()
@@ -249,8 +259,37 @@ function run_argparse(args)
         "--plot"
             help = "Add this option to plot 100 simulated trajectories and detector hits"
             action = :store_true
+        "--Solver"
+            arg_type = String
+            help = "Specify the solver to use for the numerical integration. Defaults to EulerHeun"
+            default = "EulerHeun"
     end
     return parse_args(args, s)
+end
+
+"""
+    getSolver(solverString)
+
+Converts the `solverString` into a solver
+
+*Author:* Timo Borner
+"""
+function getSolver(solverString::AbstractString)
+    if (solverString == "EulerHeun")
+        return EulerHeun()
+    elseif (solverString == "RK4")
+        return RK4()
+    elseif (solverString == "Euler")
+        return Euler()
+    elseif (solverString == "Midpoint")
+        return Midpoint()
+    elseif (solverString == "Tsit5")
+        return Tsit5()
+    elseif (solverString == "Vern6")
+        return Vern6
+    else
+        error("Unknown solver: $solverString")
+    end
 end
 
 """
@@ -262,6 +301,8 @@ command-line arguments (`ARGS`).
 
 Returns a tuple `(solution, detectors, particles, theplot)`.
 `theplot` may be `nothing` if `--plot` was not passed via ARGS.
+
+*Author:* Simon Welker and Timo Borner
 """
 function main()
     args = run_argparse(ARGS)
@@ -270,7 +311,7 @@ function main()
     field = Nothing
     dists = (
              x  = _d(args["x"]),  z = _d(args["z"]),
-             vx = _d(args["x"]), vz = _d(args["vz"])
+             vx = _d(args["vx"]), vz = _d(args["vz"])
             )
     stateDists = (
                   J = _d(args["J"]), M = _d(args["M"])
@@ -312,6 +353,8 @@ function main()
               " no field or multiple fields aren't supported (yet)")
     end
 
+    solver = getSolver(args["Solver"])
+
     experiment = Experiment(;
         source=source,
         n_particles=args["n"],
@@ -319,7 +362,7 @@ function main()
         detectors=Tuple(SectionDetector{Float64,:z}.(args["d"], true)),
         boundaries=Tuple(_d.(args["Boundaries"])),
         time_span=Tuple(args["t"]), time_step=args["dt"],
-        solver=EulerHeun(), ensemble_alg=EnsembleThreads()
+        solver=solver, ensemble_alg=EnsembleThreads()
     )
     solution, detectors, particles = simulate(experiment)
     theplot = nothing
