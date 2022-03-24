@@ -37,13 +37,42 @@ Let's look at an example command to run a simulation with CMInject. It's a 2D si
     -o example_results.hdf5 \
     --plot
 ```
-
 `-f` determines the flow-field file to use - in this case, an example ALS flow field delivered with this repository in the `data/` subfolder. The options `--x`, `--z`, `--vx`, `--vz` determine the position and velocity distributions: For example, `--x "G[0,1e-3]"` means that the `x` position will be distributed like a Gaussian with µ=0 and σ=0.001. `--z -0.1285` means that the `z` position will be exactly -0.1285 for all particles. `--r` and `--rho` determine the distribution of the particle radius and material density.
 
 The `-d` option will put detectors at each given `z` position, in this case from -0.003 to 0.003 in steps of 0.001. `-t 0 0.05 --dt 1e-5` means that we will simulate for the timespan [0s, 0.05s] with an integrator time step of 10^-5.
 
 `-n 10000` tells CMInject to simulate 10,000 particles, `-o example_results.hdf5` makes it write results (detector hits and particle properties) to the HDF5 file `example_results.hdf5`, and using `--plot` will show a plot of 100 particle trajectories and detector hits (this is of course optional).
 
+Another example of running a Stark simulation:
+
+```bash
+./cminject.sh \
+    -n 10000 \
+    -D 3 \
+    --x G[0,0.00052] \
+    --y G[0,0.00052] \
+    --z 0 \
+    --vx G[0,10] \
+    --vy G[0,10] \
+    --vz G[1860,20] \
+    --m 1.412436264e-25 \
+    --J D[0,0] \
+    --M D[0,0] \
+    -t 0 2e-3 \
+    --dt 1e-6 \
+    -e test/example_field.h5 \
+    -s test/pyrrole-water.molecule \
+    -o results.h5 \
+    --Boundaries S[0,0,0.065,0.0015,0.002] \
+                 S[0,0,0.30172,0.00075,0.002] \
+                 S[0,0,0.53613,0.00075,0.002] \
+                 K[0,0.511,-1,0.002] \
+                 C[-0.00198571,0.00198571,-0.00398571,0.00198571,0.34572,0.49972,0.002] \
+    -d 0.71247 \
+    --Solver RK4
+```
+
+Help can be obtained with the `--help` option.
 
 ## Running CMInject on Maxwell
 
