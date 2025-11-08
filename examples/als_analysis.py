@@ -6,7 +6,7 @@ from cminject.result_storages import HDF5ResultStorage
 
 
 # Global settings for LaTex output
-plt.rcParams['text.usetex'] = True
+plt.rcParams['text.usetex'] = False #True
 plt.rcParams['text.latex.preamble'] = '\DeclareUnicodeCharacter{2212}{-}'
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.size'] = 16
