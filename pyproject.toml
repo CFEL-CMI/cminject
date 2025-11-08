@@ -1,0 +1,10 @@
+[build-system]
+requires = [
+  "setuptools>=68",
+  "wheel",
+  # needed at build time for cythonize + headers
+  "cython>=3.0",
+  "numpy>=1.23.5"
+]
+build-backend = "setuptools.build_meta"
+

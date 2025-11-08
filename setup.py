@@ -18,23 +18,16 @@
 # <http://www.gnu.org/licenses/>.
 
 import sys
-from setuptools import setup, find_packages, Extension, dist
+from setuptools import setup, find_packages, Extension
 
-# https://luminousmen.com/post/resolve-cython-and-numpy-dependencies
-cython_numpy = ['Cython<0.29.21,>0.29.0', 'numpy~=1.19.0']
-dist.Distribution().fetch_build_eggs(cython_numpy)
-from Cython.Build import cythonize
-import numpy
-
+# ---- Project metadata ----
 name = 'cminject'
 version = '1.0.8'
 release = version
-author = 'Simon Welker, Muhamed Amin, and the CFEL Controlled Molecule Imaging group'
-copyright = f'2021, {author}'
+author = 'Simon Welker, Surya Kiran Peravali, Muhamed Amin, and the CFEL Controlled Molecule Imaging group'
+curr_maintainer_name = 'Surya Kiran Peravali'
+curr_maintainer_email = 'surya.kiran.peravali@desy.de'
 description = 'A Python framework for defining and executing particle trajectory simulations for sample injection.'
-
-curr_maintainer_name = 'Simon Welker'
-curr_maintainer_email = 'simon.welker@cfel.de'
 
 long_description = f"""
 CMInject -- {description}.
@@ -49,6 +42,7 @@ Current maintainer: {curr_maintainer_name} <{curr_maintainer_email}> and the Con
 if sys.version_info < (3, 6):
     sys.exit('Sorry, Python < 3.6 is not supported')
 
+# ---- Package discovery ----
 package_dir = {'': 'lib'}
 packages = find_packages(where='lib')
 
@@ -60,23 +54,84 @@ scripts = [
     'bin/cminject_analyze-beam'
 ]
 
-install_requires = cython_numpy + [
-    'scipy~=1.5.0',
-    'numba~=0.53.1',
-    'pandas~=1.0.5',
-    'matplotlib~=3.3.4',
-    'h5py~=3.3.0',
-    'Sphinx~=3.4.3',
-    'docutils<0.16',  # see e.g. https://github.com/matplotlib/matplotlib/pull/16358
-    'sphinx_rtd_theme~=0.5.1',
-    'tqdm~=4.56.0',
+# ---- Runtime dependencies (version-conditioned) ----
+# Keep legacy pins for Py<3.9, use modern wheels for Py>=3.9
+install_requires = [
+    # numpy
+    'numpy>=1.23.5,<2.0; python_version >= "3.9"',
+    'numpy>=1.19.5,<1.20; python_version < "3.9"',
+
+    # scipy
+    'scipy>=1.10,<1.12; python_version >= "3.9"',
+    'scipy>=1.5,<1.6; python_version < "3.9"',
+
+    # numba
+    'numba>=0.57,<0.59; python_version >= "3.9"',
+    'numba>=0.53,<0.54; python_version < "3.9"',
+
+    # pandas
+    'pandas>=1.5.3,<2.0; python_version >= "3.9"',
+    'pandas>=1.0.5,<1.1; python_version < "3.9"',
+
+    # matplotlib
+    'matplotlib>=3.7,<3.9; python_version >= "3.9"',
+    'matplotlib>=3.3.4,<3.4; python_version < "3.9"',
+
+    # h5py
+    'h5py>=3.8,<3.11; python_version >= "3.9"',
+    'h5py>=3.1,<3.2; python_version < "3.9"',
+
+    # tqdm
+    'tqdm>=4.66,<5',
 ]
 
+# ---- Optional deps (docs moved out of install_requires) ----
+extras_require = {
+    'docs': [
+        # modern docs toolchain for Py>=3.9
+        'Sphinx>=7,<8; python_version >= "3.9"',
+        'sphinx_rtd_theme>=2.0,<3; python_version >= "3.9"',
+        'docutils>=0.19,<0.21; python_version >= "3.9"',
+
+        # legacy docs toolchain for Py<3.9
+        'Sphinx~=3.4.3; python_version < "3.9"',
+        'sphinx_rtd_theme~=0.5.1; python_version < "3.9"',
+        'docutils<0.16; python_version < "3.9"',
+    ],
+    'dev': [
+        'pytest>=7,<8',
+    ],
+}
+
+# ---- Extensions ----
+# Note: NumPy headers are provided by pyproject.toml (build-system.requires)
+try:
+    import numpy
+except Exception:
+    # setuptools with build isolation will install numpy before reaching here
+    numpy = None
+
+include_dirs = []
+if numpy is not None:
+    include_dirs.append(numpy.get_include())
+include_dirs.append('.')
+
 extensions = [
-    Extension('cminject.utils.cython_interpolation',
-              ['lib/cminject/utils/cython_interpolation.pyx'],
-              include_dirs=[numpy.get_include(), '.'])
+    Extension(
+        'cminject.utils.cython_interpolation',
+        ['lib/cminject/utils/cython_interpolation.pyx'],
+        include_dirs=include_dirs,
+        language='c'
+    )
 ]
+
+# cythonize at build time (requires cython in pyproject)
+from Cython.Build import cythonize
+ext_modules = cythonize(
+    extensions,
+    language_level=3,
+    compiler_directives={"boundscheck": False, "wraparound": False}
+)
 
 classifiers = [
     'Development Status :: 5 - Production/Stable',
@@ -88,12 +143,12 @@ classifiers = [
     'Operating System :: POSIX',
     'Operating System :: POSIX :: Linux',
     'Operating System :: Unix',
-    'Operating System :: OS Independent',
     'Programming Language :: Python',
     'Programming Language :: Python :: 3 :: Only',
     'Programming Language :: Python :: 3.6',
     'Programming Language :: Python :: 3.7',
     'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
     'Topic :: Scientific/Engineering',
     'Topic :: Software Development :: Libraries',
 ]
@@ -103,26 +158,29 @@ build_sphinx_options = {
     'version': ('setup.py', version),
     'release': ('setup.py', release),
     'source_dir': ('setup.py', 'doc'),
-    'copyright': ('setup.py', copyright)
+    'copyright': ('setup.py', f'2021, {author}')
 }
 
-setup(name=name,
-      version=release,
-      description=description,
-      long_description=long_description,
-      author=author,
-      author_email=curr_maintainer_email,
-      maintainer='CFEL Controlled Molecule Imaging group',
-      maintainer_email='cminject@desy.de',  # need to set up an email list with that name ;-)
-      url='https://github.com/CFEL-CMI/cminject',  # put on github and adjust
-      package_dir=package_dir,
-      packages=packages,
-      scripts=scripts,
-      python_requires='>=3.6',
-      install_requires=install_requires,
-      setup_requires=['pytest-runner~=5.3.0'],
-      tests_require=['pytest~=6.2.3'],
-      ext_modules=cythonize(extensions),
-      command_options={'build_sphinx': build_sphinx_options},
-      classifiers=classifiers
+setup(
+    name=name,
+    version=release,
+    description=description,
+    long_description=long_description,
+    author=author,
+    author_email=curr_maintainer_email,
+    maintainer='CFEL Controlled Molecule Imaging group',
+    maintainer_email='cminject@desy.de',
+    url='https://github.com/CFEL-CMI/cminject',
+    package_dir=package_dir,
+    packages=packages,
+    scripts=scripts,
+    python_requires='>=3.6',
+    install_requires=install_requires,
+    extras_require=extras_require,
+    # REMOVE legacy setup_requires/fetch_build_eggs (deprecated)
+    tests_require=['pytest~=6.2.3'],
+    ext_modules=ext_modules,
+    command_options={'build_sphinx': build_sphinx_options},
+    classifiers=classifiers
 )
+
