@@ -211,7 +211,7 @@ def txt_to_hdf5(infile_name: str, outfile_name: str, dimensions: int = 3, mirror
     index_n = [len(i) for i in index]
 
     for i in range(len(headers)):
-        val_arr = np.array(values[headers[i][0]], dtype=np.float)
+        val_arr = np.array(values[headers[i][0]], dtype=float)
         if flip_indices:
             # Transpose the whole array to match "normal" X/Y/Z/... iteration order. The order
             # that the dimensions
